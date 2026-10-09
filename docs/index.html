@@ -122,7 +122,7 @@ a { color: var(--accent); }
   <header class="hero">
     <div class="matrix big" data-anim="PET_LOOK" aria-label="The pet's eyes on the LED matrix"></div>
     <div>
-      <span class="eyebrow">M5Stack Atom Matrix · firmware 2.3</span>
+      <span class="eyebrow">M5Stack Atom Matrix · firmware 2.5</span>
       <h1>Pocket Nova</h1>
       <p>A pocket remote, clicker and pet on a 5×5 LED screen, with a control panel on your PC. One button and a tilt sensor run everything. This guide covers every control, every app, Nova the pet, the PC panel and the phone remote.</p>
       <div class="actions">
@@ -265,15 +265,37 @@ a { color: var(--accent); }
         <div class="app-body">
           <span class="tag">Bluetooth</span>
           <h3>Keys</h3>
-          <p>Windows shortcuts. Tilt to choose one, then tap to run it.</p>
+          <p>Windows shortcuts. Tilt to choose one, then tap to run it. Pick up to 12 of these 27, in any order, in the PC panel's <b>Keys</b> tab, and add up to 3 of your own (any of Win, Ctrl, Alt or Shift plus a key).</p>
           <div class="gestures">
             <div class="gesture"><div class="matrix" data-sprite="SPR_LOCK"></div><b>Lock PC</b><span>Win+L</span></div>
             <div class="gesture"><div class="matrix" data-sprite="SPR_SNIP"></div><b>Snip</b><span>Win+Shift+S</span></div>
             <div class="gesture"><div class="matrix" data-sprite="SPR_DESK"></div><b>Desktop</b><span>Win+D</span></div>
             <div class="gesture"><div class="matrix" data-sprite="SPR_TASK"></div><b>Task Mgr</b><span>Ctrl+Shift+Esc</span></div>
-            <div class="gesture"><div class="matrix" data-sprite="SPR_CALC"></div><b>Calculator</b></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_CALC"></div><b>Calculator</b><span>calc key</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_MIC"></div><b>Mic mute</b><span>Win+Alt+K</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_ALTTAB"></div><b>Switch app</b><span>Alt+Tab</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_TASKVIEW"></div><b>Task view</b><span>Win+Tab</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_FILES"></div><b>Files</b><span>Win+E</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_CLIP"></div><b>Clipboard</b><span>Win+V</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_EMOJI"></div><b>Emoji</b><span>Win+.</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_SHOT"></div><b>Screenshot</b><span>Win+PrtSc</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_REC"></div><b>Record</b><span>Win+Shift+R</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_VOICE"></div><b>Voice type</b><span>Win+H</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_DESKL"></div><b>Desk left</b><span>Win+Ctrl+←</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_DESKR"></div><b>Desk right</b><span>Win+Ctrl+→</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_NEWTAB"></div><b>New tab</b><span>Ctrl+T</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_REOPEN"></div><b>Reopen tab</b><span>Ctrl+Shift+T</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_MIN"></div><b>Minimize</b><span>Win+↓</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_CLOSE"></div><b>Close</b><span>Alt+F4</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_GEAR"></div><b>Settings</b><span>Win+I</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_COPY"></div><b>Copy</b><span>Ctrl+C</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_PASTE"></div><b>Paste</b><span>Ctrl+V</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_UNDO"></div><b>Undo</b><span>Ctrl+Z</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_GAME"></div><b>Game clip</b><span>Win+Alt+G</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_BELL"></div><b>Notifications</b><span>Win+N</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_QUICK"></div><b>Quick settings</b><span>Win+A</span></div>
           </div>
-          <p class="muted"><b>Lock PC needs two taps.</b> The first tap shows a blinking "?", and a second tap within 2 seconds locks the PC. This stops a bump from locking your computer.</p>
+          <p class="muted"><b>Lock PC and Close need two taps.</b> The first tap shows a blinking "?", and a second tap within 2 seconds sends it. This stops a bump from locking your computer or closing a window. Your own shortcuts show their first letter in pink.</p>
         </div>
       </article>
 
@@ -370,7 +392,8 @@ a { color: var(--accent); }
           <tr><td><b>Live screen</b></td><td>A copy of the 5×5 screen that updates as it happens, plus what Nova is feeling and whether Bluetooth is connected.</td></tr>
           <tr><td><b>Remote control</b></td><td>Press tap, double, triple, hold, tilt, shake or rock from the PC.</td></tr>
           <tr><td><b>Device</b></td><td>Brightness, rotation, auto-rotate, swapping tilt directions, which app a double tap opens, the Bluetooth name, and replaying the tutorial.</td></tr>
-          <tr><td><b>Bluetooth</b></td><td>The 3 slots, a list of paired devices you can name and remove, "Forget all and pair new", and the Windows "Connect" pop-up switch.</td></tr>
+          <tr><td><b>Bluetooth</b></td><td>Which slot is in use and what's connected, each slot's own devices (named and removable), live progress while switching slot, and the Windows "Connect" pop-up switch.</td></tr>
+          <tr><td><b>Keys</b></td><td>Which shortcuts are in the Keys app and their order, the full library with a Test button for each, and your 3 custom shortcuts.</td></tr>
           <tr><td><b>Wi-Fi</b></td><td>Status and address, the on/off switch, "Open setup network" (shows its name and password) and "Forget saved network".</td></tr>
           <tr><td><b>TV remote</b></td><td>Pick the brand and test each button.</td></tr>
           <tr><td><b>Nova</b></td><td>Mood, affection, day or night, Snake best score, and buttons to play with Nova.</td></tr>
@@ -380,6 +403,7 @@ a { color: var(--accent); }
     </div>
     <div class="note"><p><b>Bluetooth slots:</b> each slot is a separate Bluetooth identity, so your devices don't fight over Pocket Nova. Pair your PC on slot 1 and your phone on slot 2, then switch slots in the panel (or Settings → Bluetooth, double tap) to change which one it controls.</p></div>
     <div class="note"><p><b>Factory reset</b> erases every setting, forgets every paired device and resets Nova's affection. Pocket Nova then starts again with the tutorial. In the panel, type RESET to unlock the button.</p></div>
+    <div class="note"><p><b>No cable? Bluetooth mode.</b> If this PC is paired with Pocket Nova, the panel also works over Bluetooth while it's on a charger nearby (within a few metres). Everything works except firmware updates, which need the cable, and the live screen is a little choppier. Plug the cable in and it switches back to USB by itself. If your PC was paired before firmware 2.4, remove Pocket Nova in Windows Bluetooth settings and pair it again once.</p></div>
     <p class="muted">The panel only listens to this PC. Other websites can't control Pocket Nova through it.</p>
   </section>
 
@@ -553,6 +577,28 @@ const SPRITES = {
   SPR_DESK: S("BBBBB","BbbbB","BBBBB","..B..",".BBB."),
   SPR_TASK: S("....G","..G.G","..G.G","G.G.G","G.G.G"),
   SPR_CALC: S("OOOOO","O.O.O","OOOOO","O.O.O","OOOOO"),
+  SPR_MIC: S(".CCC.",".CCC.","C.C.C",".CCC.","..C.."),
+  SPR_ALTTAB: S("BBB..","B.B..","BBBBB","..B.B","..BBB"),
+  SPR_TASKVIEW: S("GG.GG","GG.GG",".....","GG.GG","GG.GG"),
+  SPR_FILES: S("YY...","YYYYY","Y...Y","Y...Y","YYYYY"),
+  SPR_CLIP: S(".OWO.","O...O","O.W.O","O.W.O","OOOOO"),
+  SPR_EMOJI: S(".YYY.","Y.Y.Y","YYYYY","Y...Y",".YYY."),
+  SPR_SHOT: S(".WW..","WWWWW","WW.WW","WWWWW","....."),
+  SPR_REC: S(".RRR.","RRRRR","RRRRR","RRRRR",".RRR."),
+  SPR_VOICE: S("..M..","M.M.M","MMMMM","M.M.M","..M.."),
+  SPR_DESKL: S("..B..",".B...","BBBBB",".B...","..B.."),
+  SPR_DESKR: S("..B..","...B.","BBBBB","...B.","..B.."),
+  SPR_NEWTAB: S("WW...","WWWWW","W.G.W","WGGGW","WWWWW"),
+  SPR_REOPEN: S(".CCC.","C...C","C....","C..C.",".CCCC"),
+  SPR_MIN: S("..W..","..W..","W.W.W",".WWW.","WWWWW"),
+  SPR_CLOSE: S("R...R",".R.R.","..R..",".R.R.","R...R"),
+  SPR_GEAR: S(".w.w.","wWWWw",".W.W.","wWWWw",".w.w."),
+  SPR_COPY: S("WWW..","W.W..","WWWWW","..W.W","..WWW"),
+  SPR_PASTE: S(".OWO.","OWWWO","OWWWO","OWWWO","OOOOO"),
+  SPR_UNDO: S(".Y...","YYYY.",".Y..Y","....Y",".YYY."),
+  SPR_GAME: S(".....","GGGGG","G.GRG","GGGGG","G...G"),
+  SPR_BELL: S("..Y..",".YYY.",".YYY.","YYYYY","..Y.."),
+  SPR_QUICK: S("WW.WW","WW.WW",".....","WWWWW","WWWWW"),
   SPR_SUN: S("Y.Y.Y",".YYY.","YYYYY",".YYY.","Y.Y.Y"),
   SPR_ROT: S("..C..",".CCC.","C.C.C","..C..","..C.."),
   SPR_CALIB: S(".GGG.","G...G","G.G.G","G...G",".GGG."),
