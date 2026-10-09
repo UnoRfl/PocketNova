@@ -22,6 +22,7 @@
  *    Input.h    button/tilt events   Ir.h      TV code table
  *    BleCtl.h   Bluetooth slots and pairings
  *    Wifi.h     Wi-Fi setup page and internet time
+ *    Shortcuts.h  the Keys app's shortcut library and your picks
  *    NovaRemote.h  Bluetooth service for the phone remote web page
  *    Apps.h     every app            Pet.h     Nova the pet
  *    Remote.h   commands from the PC app
@@ -44,7 +45,7 @@
 #include "Input.h"
 #include "Ir.h"
 
-const char* const FW_VERSION = "2.4.1";
+const char* const FW_VERSION = "2.5.0";
 
 // The phone remote's Bluetooth service and its two characteristics
 // (NovaRemote.h). Made-up IDs; the web page uses the same ones.
@@ -68,6 +69,7 @@ PocketKeyboard bleKeyboard("Pocket Nova", "M5Stack", 100);
 
 #include "BleCtl.h"
 #include "Wifi.h"
+#include "Shortcuts.h"
 #include "Apps.h"
 #include "Pet.h"
 
@@ -331,6 +333,7 @@ void bootAnimation() {
 void setup() {
   M5.begin(true, false, false);   // Serial yes, I2C no (IMU has its own), LEDs: we drive them
   loadConfig();
+  keysLoad();
   displayBegin();
 
   if (M5.IMU.Init() != 0) Serial.println("[ERROR] IMU not found");

@@ -107,6 +107,30 @@ SPRITE(SPR_DESK, "BBBBB" "BbbbB" "BBBBB" "..B.." ".BBB.")
 SPRITE(SPR_TASK, "....G" "..G.G" "..G.G" "G.G.G" "G.G.G")
 SPRITE(SPR_CALC, "OOOOO" "O.O.O" "OOOOO" "O.O.O" "OOOOO")
 
+// ---------- more Keys shortcuts (Shortcuts.h) ----------
+SPRITE(SPR_MIC,      ".CCC." ".CCC." "C.C.C" ".CCC." "..C..")   // microphone on a stand
+SPRITE(SPR_ALTTAB,   "BBB.." "B.B.." "BBBBB" "..B.B" "..BBB")   // two windows
+SPRITE(SPR_TASKVIEW, "GG.GG" "GG.GG" "....." "GG.GG" "GG.GG")   // four tiles
+SPRITE(SPR_FILES,    "YY..." "YYYYY" "Y...Y" "Y...Y" "YYYYY")   // folder
+SPRITE(SPR_CLIP,     ".OWO." "O...O" "O.W.O" "O.W.O" "OOOOO")   // clipboard
+SPRITE(SPR_EMOJI,    ".YYY." "Y.Y.Y" "YYYYY" "Y...Y" ".YYY.")   // smiley
+SPRITE(SPR_SHOT,     ".WW.." "WWWWW" "WW.WW" "WWWWW" ".....")   // camera
+SPRITE(SPR_REC,      ".RRR." "RRRRR" "RRRRR" "RRRRR" ".RRR.")   // record dot
+SPRITE(SPR_VOICE,    "..M.." "M.M.M" "MMMMM" "M.M.M" "..M..")   // sound wave
+SPRITE(SPR_DESKL,    "..B.." ".B..." "BBBBB" ".B..." "..B..")
+SPRITE(SPR_DESKR,    "..B.." "...B." "BBBBB" "...B." "..B..")
+SPRITE(SPR_NEWTAB,   "WW..." "WWWWW" "W.G.W" "WGGGW" "WWWWW")   // window with a plus
+SPRITE(SPR_REOPEN,   ".CCC." "C...C" "C...." "C..C." ".CCCC")   // turn-back arrow
+SPRITE(SPR_MIN,      "..W.." "..W.." "W.W.W" ".WWW." "WWWWW")   // down onto the taskbar
+SPRITE(SPR_CLOSE,    "R...R" ".R.R." "..R.." ".R.R." "R...R")
+SPRITE(SPR_GEAR,     ".w.w." "wWWWw" ".W.W." "wWWWw" ".w.w.")
+SPRITE(SPR_COPY,     "WWW.." "W.W.." "WWWWW" "..W.W" "..WWW")
+SPRITE(SPR_PASTE,    ".OWO." "OWWWO" "OWWWO" "OWWWO" "OOOOO")
+SPRITE(SPR_UNDO,     ".Y..." "YYYY." ".Y..Y" "....Y" ".YYY.")
+SPRITE(SPR_GAME,     "....." "GGGGG" "G.GRG" "GGGGG" "G...G")   // game controller
+SPRITE(SPR_BELL,     "..Y.." ".YYY." ".YYY." "YYYYY" "..Y..")
+SPRITE(SPR_QUICK,    "WW.WW" "WW.WW" "....." "WWWWW" "WWWWW")   // quick-settings tiles
+
 // ---------- dice faces ----------
 SPRITE(DICE_1, "....." "....." "..W.." "....." ".....")
 SPRITE(DICE_2, "W...." "....." "....." "....." "....W")

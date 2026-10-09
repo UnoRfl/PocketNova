@@ -9,6 +9,7 @@ A pocket remote, presentation clicker and virtual pet for the **M5Stack Atom Mat
 
 - **Nova, the pet.** Reacts to taps, tilts, shaking and rocking. Sleeps at night and remembers how much you like it.
 - **11 apps.** Media remote, universal TV remote (infrared, 20 brands), slide clicker, Windows shortcuts, spirit level, dice, timer, mood lights, torch, Snake and settings.
+- **Keys app.** 27 Windows shortcuts to choose from (mic mute, Alt+Tab, clipboard, screenshot, virtual desktops...) plus 3 of your own. Pick and order them in the PC panel.
 - **Bluetooth keyboard.** 3 device slots. On Windows, a "Connect" pop-up appears while it's ready to pair (Swift Pair).
 - **Wi-Fi.** Its own setup network with a sign-in page that opens by itself. Gets the time from the internet.
 - **Phone remote.** A web page that controls it over Bluetooth, protected by a code shown on the LEDs.

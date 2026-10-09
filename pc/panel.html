@@ -222,6 +222,32 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
 .toast[hidden] { display: none; }
 @keyframes fly { from { transform: translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
 
+/* Keys tab */
+.klist { display: grid; gap: 6px; }
+.krow { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; background: var(--panel-2);
+        box-shadow: inset 0 0 0 2px var(--line); padding: 8px 10px; --px: 5px; }
+.krow.drop { animation: rise .25s ease-out; }
+.krow .num { font-family: var(--font-tiny); font-size: .7rem; color: var(--muted); width: 1.6em; text-align: right; }
+.kwho { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.kwho .t { display: grid; min-width: 0; }
+.kwho b { font-family: var(--font-pixel); font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.combo { font-family: var(--font-mono); font-size: .78rem; color: var(--muted); }
+.combo kbd { font: inherit; background: #120f1c; box-shadow: inset 0 0 0 1px var(--line); padding: 0 5px; color: var(--fg); }
+.kbtns { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.kbtns .btn { padding: 5px 9px; font-size: .82rem; }
+.mini { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; width: 30px; height: 30px; padding: 3px; background: #06050a; flex: none; --px: 3px; }
+.mini i { background: var(--led-off); }
+.kgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+.kcard { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; background: var(--panel-2);
+         box-shadow: inset 0 0 0 2px var(--line); padding: 10px; --px: 5px; }
+.kcard .kbtns { grid-column: 1 / -1; justify-content: flex-start; }
+.kcard.in { opacity: .45; }
+.custom { display: grid; gap: 10px; background: var(--panel-2); box-shadow: inset 0 0 0 2px var(--line); padding: 12px; --px: 6px; }
+.mods { display: flex; gap: 6px; flex-wrap: wrap; }
+.mods button { background: #120f1c; border: 0; box-shadow: inset 0 0 0 2px var(--line); padding: 5px 10px; cursor: pointer; --px: 3px; }
+.mods button[aria-pressed="true"] { background: var(--star); color: #241500; font-weight: 700; box-shadow: inset 0 0 0 2px #ffe58a; }
+.count { font-family: var(--font-tiny); font-size: .72rem; color: var(--nova-hi); }
+
 /* Bluetooth mode pop-up */
 .modal { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: rgba(7, 6, 13, .7); backdrop-filter: blur(3px); }
 .modal[hidden] { display: none; }
@@ -295,6 +321,7 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
       <button class="tab pix" role="tab" aria-selected="true" data-tab="device" data-icon="device">Device</button>
       <button class="tab pix" role="tab" aria-selected="false" data-tab="bt" data-icon="bt">Bluetooth</button>
       <button class="tab pix" role="tab" aria-selected="false" data-tab="wifi" data-icon="wifi">Wi-Fi</button>
+      <button class="tab pix" role="tab" aria-selected="false" data-tab="keys" data-icon="keys">Keys</button>
       <button class="tab pix" role="tab" aria-selected="false" data-tab="tv" data-icon="tv">TV remote</button>
       <button class="tab pix" role="tab" aria-selected="false" data-tab="pet" data-icon="pet">Nova</button>
       <button class="tab pix" role="tab" aria-selected="false" data-tab="system" data-icon="gear">System</button>
@@ -379,6 +406,24 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
         </div>
         <div class="inline"><button class="btn primary pix" id="wfSetupBtn">Open setup network</button>
           <button class="btn danger pix" id="wfForget" data-confirm="Click again to forget it">Forget saved network</button></div>
+      </div>
+    </section>
+
+    <!-- KEYS -->
+    <section class="pane" id="pane-keys" hidden>
+      <div class="section">
+        <h2>On Pocket Nova <span class="count" id="kCount"></span></h2>
+        <p class="hint">These are the shortcuts in the Atom's <b>Keys</b> app, in this order: tilt to pick, tap to send. <b>Lock PC</b> and <b>Close</b> need a second tap so a bump can't trigger them. <b>Test</b> sends one to this PC right now.</p>
+        <div class="klist" id="kList"></div>
+      </div>
+      <div class="section">
+        <h2>Add shortcuts</h2>
+        <div class="kgrid" id="kLib"></div>
+      </div>
+      <div class="section">
+        <h2>Your own shortcuts</h2>
+        <p class="hint">Make up to three of your own: hold any of Win, Ctrl, Alt or Shift plus one key. The name scrolls on the Atom (letters, digits and <span class="mono">+ - . : / ?</span>), and its first letter is its icon.</p>
+        <div class="kgrid" id="kCustom"></div>
       </div>
     </section>
 
@@ -646,6 +691,7 @@ const ICONS = {
   pet:    ["...Y....", "..PPPP..", ".PDDDDP.", ".PWDDWP.", ".PDDDDP.", ".PDMMDP.", "..PPPP..", "..P..P.."],
   gear:   ["...ww...", ".w.ww.w.", "..wwww..", "wwwKKwww", "wwwKKwww", "..wwww..", ".w.ww.w.", "...ww..."],
   pc:     ["........", "wwwwwwww", "wBBBBBBw", "wBBBBBBw", "wBBBBBBw", "wwwwwwww", "...ww...", "..wwww.."],
+  keys:   ["........", "OOOOOOOO", "OwOwOwOO", "OOOOOOOO", "OwOwOwOO", "OOOOOOOO", "OwwwwwOO", "OOOOOOOO"],
 };
 function iconSvg(name, cls) {
   const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -843,6 +889,134 @@ document.querySelectorAll(".tab").forEach((t) => (t.onclick = () => {
 }));
 try { const last = localStorage.getItem("pn-tab"); if (last) document.querySelector(`.tab[data-tab="${last}"]`)?.click(); } catch (e) {}
 
+// ======================================================================
+//  Keys tab
+// ======================================================================
+const LED = { R: "#ff2a2a", G: "#2aff4a", B: "#2a62ff", C: "#2affd2", M: "#ff2abb", Y: "#ffcc22", O: "#ff6a1a",
+              P: "#9a2aff", W: "#ffffff", w: "#5d5d72", g: "#1f7a2c", b: "#22337a", r: "#7a1f1f" };
+function mini(spr, letter) {
+  const m = document.createElement("div"); m.className = "mini pix"; m.setAttribute("aria-hidden", "true");
+  for (let i = 0; i < 25; i++) { const d = document.createElement("i"); const c = spr && LED[spr[i]]; if (c) { d.style.background = c; d.style.boxShadow = `0 0 4px ${c}`; } m.appendChild(d); }
+  if (!spr && letter) { m.style.placeItems = "center"; m.innerHTML = `<span style="grid-column:1/-1;grid-row:1/-1;font-family:var(--font-pixel);font-size:1.1rem;color:#ff4dd2">${esc(letter)}</span>`; }
+  return m;
+}
+// Key codes match NovaKeyboard.h (ASCII for normal keys).
+const KEY_LABELS = { 0xB0: "Enter", 0xB1: "Esc", 0xB2: "Backspace", 0xB3: "Tab", 32: "Space", 0xD1: "Insert", 0xD4: "Delete",
+  0xD2: "Home", 0xD5: "End", 0xD3: "Page Up", 0xD6: "Page Down", 0xDA: "↑", 0xD9: "↓", 0xD8: "←", 0xD7: "→", 0xCE: "PrtSc", 0xC1: "Caps Lock" };
+for (let i = 1; i <= 12; i++) KEY_LABELS[0xC1 + i] = "F" + i;
+const keyLabel = (k) => KEY_LABELS[k] || (k >= 33 && k < 127 ? String.fromCharCode(k).toUpperCase() : "?");
+function comboHtml(o) {
+  if (o.media) return `<kbd>Calculator key</kbd>`;
+  const parts = [];
+  if (o.mods & 8) parts.push("Win"); if (o.mods & 1) parts.push("Ctrl"); if (o.mods & 4) parts.push("Alt"); if (o.mods & 2) parts.push("Shift");
+  if (o.key) parts.push(keyLabel(o.key));
+  return parts.map((p) => `<kbd>${esc(p)}</kbd>`).join(" + ");
+}
+const titleCase = (n) => n.split(" ").map((w) => w === "PC" ? w : w[0] + w.slice(1).toLowerCase()).join(" ");
+function keyInfo(id) {
+  const K = S.keys;
+  if (id < K.lib.length) return { ...K.lib[id], id };
+  const c = K.custom[id - K.customId];
+  return c ? { ...c, id, custom: true } : null;
+}
+const sendKeyList = (list) => cmd({ cmd: "keys", list });
+function testKey(id) { cmd({ cmd: "keytest", id }); hop(); }
+function kbtn(text, fn, cls = "") { const b = document.createElement("button"); b.className = "btn pix " + cls; b.textContent = text; b.onclick = fn; return b; }
+
+let keysKey = "";
+function renderKeys() {
+  const K = S.keys;
+  if (!K) return;
+  const key = JSON.stringify(K);
+  if (key === keysKey) return;
+  const editing = document.activeElement && document.activeElement.closest && document.activeElement.closest("#kCustom");
+  keysKey = key;
+  const list = K.list;
+  $("kCount").textContent = `${list.length} / ${K.max}`;
+
+  const box = $("kList"); box.innerHTML = "";
+  if (!list.length) box.innerHTML = `<div class="empty">Nothing on Pocket Nova yet. Add some below.</div>`;
+  list.forEach((id, i) => {
+    const o = keyInfo(id); if (!o) return;
+    const row = document.createElement("div"); row.className = "krow pix";
+    const who = document.createElement("div"); who.className = "kwho";
+    who.innerHTML = `<span class="num">${i + 1}</span>`;
+    who.appendChild(mini(o.spr, o.name[0]));
+    const t = document.createElement("span"); t.className = "t";
+    t.innerHTML = `<b>${esc(titleCase(o.name))}${o.confirm ? ' <span class="badge wait">2 taps</span>' : ""}${o.custom ? ' <span class="badge on">yours</span>' : ""}</b><span class="combo">${comboHtml(o)}</span>`;
+    who.appendChild(t);
+    const btns = document.createElement("div"); btns.className = "kbtns";
+    const up = kbtn("▲", () => { const l = [...list]; [l[i - 1], l[i]] = [l[i], l[i - 1]]; sendKeyList(l); }); up.disabled = i === 0; up.setAttribute("aria-label", "Move up");
+    const dn = kbtn("▼", () => { const l = [...list]; [l[i + 1], l[i]] = [l[i], l[i + 1]]; sendKeyList(l); }); dn.disabled = i === list.length - 1; dn.setAttribute("aria-label", "Move down");
+    btns.append(up, dn, kbtn("Test", () => testKey(id)), kbtn("Remove", () => sendKeyList(list.filter((x) => x !== id)), "danger"));
+    row.append(who, btns);
+    box.appendChild(row);
+  });
+
+  const lib = $("kLib"); lib.innerHTML = "";
+  K.lib.forEach((o, id) => {
+    const inList = list.includes(id);
+    const c = document.createElement("div"); c.className = "kcard pix" + (inList ? " in" : "");
+    c.appendChild(mini(o.spr));
+    const t = document.createElement("div"); t.className = "kwho";
+    t.innerHTML = `<span class="t"><b>${esc(titleCase(o.name))}</b><span class="combo">${comboHtml(o)}</span></span>`;
+    c.appendChild(t);
+    const btns = document.createElement("div"); btns.className = "kbtns";
+    const add = kbtn(inList ? "On Pocket Nova" : "Add", () => sendKeyList([...list, id]), inList ? "" : "primary");
+    add.disabled = inList || list.length >= K.max;
+    btns.append(add, kbtn("Test", () => testKey(id)));
+    c.appendChild(btns);
+    lib.appendChild(c);
+  });
+
+  if (editing) return;   // don't wipe a custom slot while you're typing in it
+  const cu = $("kCustom"); cu.innerHTML = "";
+  K.custom.forEach((o, n) => {
+    const id = K.customId + n, inList = list.includes(id);
+    const card = document.createElement("div"); card.className = "custom pix";
+    card.innerHTML = `<div class="kwho"></div>
+      <input type="text" class="pix" maxlength="11" placeholder="Name, e.g. MUTE ZOOM" aria-label="Name for custom shortcut ${n + 1}">
+      <div class="mods"></div>
+      <select class="pix" aria-label="Key for custom shortcut ${n + 1}"></select>
+      <div class="kbtns" style="justify-content:flex-start"></div>`;
+    card.querySelector(".kwho").append(mini(null, (o.name || String(n + 1))[0]));
+    const head = document.createElement("span"); head.className = "t";
+    head.innerHTML = `<b>Custom ${n + 1}</b><span class="combo">${o.key ? comboHtml(o) : "empty"}</span>`;
+    card.querySelector(".kwho").append(head);
+    const name = card.querySelector("input"); name.value = o.key ? o.name : "";
+    let mods = o.mods;
+    const modBox = card.querySelector(".mods");
+    [["Win", 8], ["Ctrl", 1], ["Alt", 4], ["Shift", 2]].forEach(([label, bit]) => {
+      const b = document.createElement("button"); b.className = "pix"; b.textContent = label;
+      b.setAttribute("aria-pressed", String(!!(mods & bit)));
+      b.onclick = () => { mods ^= bit; b.setAttribute("aria-pressed", String(!!(mods & bit))); };
+      modBox.appendChild(b);
+    });
+    const sel = card.querySelector("select");
+    const opts = [[0, "Pick a key…"]];
+    for (let c = 97; c <= 122; c++) opts.push([c, String.fromCharCode(c).toUpperCase()]);
+    for (let c = 48; c <= 57; c++) opts.push([c, String.fromCharCode(c)]);
+    for (let i = 1; i <= 12; i++) opts.push([0xC1 + i, "F" + i]);
+    [0xB0, 0xB1, 0xB3, 32, 0xB2, 0xD4, 0xD1, 0xD2, 0xD5, 0xD3, 0xD6, 0xDA, 0xD9, 0xD8, 0xD7, 0xCE].forEach((k) => opts.push([k, KEY_LABELS[k]]));
+    [".", ",", "/", ";", "'", "[", "]", "-", "=", "`", "\\"].forEach((ch) => opts.push([ch.charCodeAt(0), ch]));
+    sel.innerHTML = opts.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("");
+    sel.value = o.key || 0;
+    const btns = card.querySelector(".kbtns");
+    btns.append(kbtn("Save", () => {
+      const k = +sel.value;
+      if (!k) return toast("Pick a key first", true);
+      cmd({ cmd: "keys", custom: [{ n, name: name.value.trim() || "CUSTOM " + (n + 1), mods, key: k }] });
+      toast(`Saved custom ${n + 1}`);
+    }, "primary"));
+    const test = kbtn("Test", () => testKey(id)); test.disabled = !o.key;
+    const add = kbtn(inList ? "On Pocket Nova" : "Add", () => sendKeyList([...list, id]));
+    add.disabled = !o.key || inList || list.length >= K.max;
+    const clear = kbtn("Clear", () => cmd({ cmd: "keys", custom: [{ n, name: "", mods: 0, key: 0 }] }), "danger"); clear.disabled = !o.key;
+    btns.append(test, add, clear);
+    cu.appendChild(card);
+  });
+}
+
 // ---- rendering
 // "TCL ROKU TV" -> "TCL Roku TV": title case, but keep acronyms.
 const ACRONYMS = new Set(["LG", "JVC", "TCL", "TV", "RC5", "RC6", "OKI"]);
@@ -1026,10 +1200,12 @@ function chip(el, cls, text, textEl) {
 
 function render() {
   const on = S.connected;
-  $("offline").hidden = !!on || !!switching;   // a slot switch restarts it: no "plug in" flash
+  const relink = !on && S.bleReconnecting;
+  $("offline").hidden = !!on || !!switching || relink;   // short drops and slot switches: no "looking" flash
   const viaBt = S.transport === "bluetooth";
   checkTransport();
-  chip($("usbChip"), on ? "good" : "bad", on ? (viaBt ? "Linked by Bluetooth" : "Linked by USB") : switching ? "Restarting…" : "Not linked", $("usbText"));
+  chip($("usbChip"), on ? "good" : relink ? "warn" : "bad",
+       on ? (viaBt ? "Linked by Bluetooth" : "Linked by USB") : relink ? "Reconnecting (Bluetooth)…" : switching ? "Restarting…" : "Not linked", $("usbText"));
   if (S.paused) chip($("usbChip"), "warn", "Updating firmware", $("usbText"));
 
   const h = S.hello, c = S.config, st = S.status;
@@ -1086,6 +1262,7 @@ function render() {
   if (document.activeElement !== $("autostart")) $("autostart").checked = !!S.autostart;
   paintHex($("mirror"), S.fb);
   renderBt();
+  renderKeys();
   renderDevices();
   renderBrands();
 
@@ -1126,7 +1303,7 @@ function handleReplies(replies) {
 async function poll() {
   try {
     const s = await (await fetch(`/api/state?since=${logSince}&rsince=${replySince}`)).json();
-    if (!s.connected) { s.hello = S.hello; }
+    if (!s.connected) { s.hello = s.hello || S.hello; }
     S = s;
     $("offTitle").textContent = "Looking for Pocket Nova";
     $("offText").textContent = !s.bleAvailable

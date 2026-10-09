@@ -19,14 +19,6 @@ void drawBleWaiting() {   // pulsing yellow Bluetooth rune = "pair me first"
   drawSpriteTint(SPR_BT, 0, 0, CRGB(v, v * 3 / 4, 0));
 }
 
-// Hold up to two modifier keys + a key, then let go of everything.
-void sendCombo(uint8_t mod1, uint8_t mod2, uint8_t key) {
-  if (mod1) bleKeyboard.press(mod1);
-  if (mod2) bleKeyboard.press(mod2);
-  bleKeyboard.press(key);
-  delay(40);
-  bleKeyboard.releaseAll();
-}
 
 // =====================================================================
 //  MEDIA - Bluetooth music remote. Tilt picks the action, tap sends it.
@@ -417,25 +409,28 @@ bool slidesFrame(Event e) {
 //  KEYS - Windows shortcuts. Tilt to pick, tap to fire.
 // =====================================================================
 
-const char* const KEY_NAMES[] = {"LOCK PC", "SNIP", "DESKTOP", "TASK MGR", "CALC"};
-const char* const KEY_SPR[]   = {SPR_LOCK, SPR_SNIP, SPR_DESK, SPR_TASK, SPR_CALC};
+// The shortcuts and your list live in Shortcuts.h; pick them in the PC
+// panel's Keys tab. LOCK PC and CLOSE need a second tap within 2 s, so a
+// bump can't lock your computer or close a window.
 const CRGB KEYS_COLOR(255, 120, 0);
 Carousel keysMenu;
-
-// LOCK PC needs a second tap within 2 s, so a bump can't lock your computer.
 const uint16_t LOCK_CONFIRM_MS = 2000;
 uint32_t lockArmedAt = 0;
 
 void keysDrawItem(int i, int xo) {
-  bool armed = i == 0 && lockArmedAt && millis() - lockArmedAt < LOCK_CONFIRM_MS;
+  uint8_t id = keyList[i];
+  bool armed = keyNeedsConfirm(id) && lockArmedAt && millis() - lockArmedAt < LOCK_CONFIRM_MS;
   if (armed && xo == 0) {   // blinking "?" = tap again to confirm
     if ((millis() / 180) % 2) drawGlyph('?', 1, 0, CRGB(255, 200, 0));
     return;
   }
-  drawSpriteFx(KEY_SPR[i], xo, 0);
+  if (id < SHORTCUT_COUNT) { drawSpriteFx(SHORTCUTS[id].sprite, xo, 0); return; }
+  // A custom shortcut: its first letter, with a corner dot so it reads as "yours".
+  drawGlyph(keyName(id)[0], xo + 1, 0, CRGB(255, 60, 200));
+  px(xo + 4, 0, CRGB(255, 200, 0));
 }
-const char* keysName(int i) { return KEY_NAMES[i]; }
-void keysEnter() { keysMenu.reset(FRAMES(KEY_NAMES)); lockArmedAt = 0; }
+const char* keysName(int i) { return keyName(keyList[i]); }
+void keysEnter() { keysMenu.reset(keyListLen ? keyListLen : 1); lockArmedAt = 0; }
 
 bool keysFrame(Event e) {
   if (e == EV_HOLD) return false;
@@ -445,29 +440,30 @@ bool keysFrame(Event e) {
     drawBleWaiting();
     return true;
   }
+  if (!keyListLen) {                   // everything was removed in the panel
+    static Scroller none;
+    if (!none.active) none.start("NO KEYS - PICK IN PANEL", KEYS_COLOR);
+    none.draw();
+    return true;
+  }
+  if (keysMenu.count != keyListLen) keysMenu.reset(keyListLen, min<int>(keysMenu.index, keyListLen - 1));
   if (e == EV_LEFT || e == EV_RIGHT) lockArmedAt = 0;
   if (e == EV_LEFT)  keysMenu.move(-1);
   if (e == EV_RIGHT) keysMenu.move(+1);
-  if (e == EV_TAP && keysMenu.index == 0) {
+  uint8_t id = keyList[keysMenu.index];
+  if (e == EV_TAP && keyNeedsConfirm(id)) {
     if (!lockArmedAt || millis() - lockArmedAt > LOCK_CONFIRM_MS) {
       lockArmedAt = millis();          // first tap: arm and wait for the second
-      Serial.println("[KEYS] Tap again to lock the PC");
+      Serial.printf("[KEYS] Tap again for %s\n", keyName(id));
       e = EV_NONE;
     } else {
       lockArmedAt = 0;                 // second tap: go
     }
   }
   if (e == EV_TAP) {
-    switch (keysMenu.index) {
-      case 0: sendCombo(KEY_LEFT_GUI, 0, 'l'); break;                    // Win+L
-      case 1: sendCombo(KEY_LEFT_GUI, KEY_LEFT_SHIFT, 's'); break;       // Win+Shift+S
-      case 2: sendCombo(KEY_LEFT_GUI, 0, 'd'); break;                    // Win+D
-      case 3: sendCombo(KEY_LEFT_CTRL, KEY_LEFT_SHIFT, KEY_ESC); break;  // Ctrl+Shift+Esc
-      case 4: bleKeyboard.write(KEY_MEDIA_CALCULATOR); break;
-    }
+    keyFire(id);
     flash();
     fxRipple(KEYS_COLOR);
-    Serial.printf("[KEYS] %s\n", KEY_NAMES[keysMenu.index]);
   }
   keysMenu.draw(keysDrawItem, keysName, KEYS_COLOR);
   return true;

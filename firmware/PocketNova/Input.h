@@ -40,6 +40,8 @@ const uint16_t NAV_HOLD_MS    = 150;   // must stay tilted this long (ignores bu
 const uint16_t NAV_MIN_GAP_MS = 650;   // at least this long between two steps
 const uint16_t NAV_AFTER_PRESS_MS = 400; // ignore tilt right after a button press
 const float    TILT_DIR_G     = 0.45f; // ~27 deg: tilt needed for gesture apps
+const float    TILT_REACH     = 0.85f; // a step never needs more than this reading (~58 deg)
+const float    TILT_MIN_STEP  = 0.30f; // ...nor less than this much tilt (~17 deg)
 const float    SHAKE_G        = 1.1f;  // jolt above 1g of gravity
 const float    FACE_UP_Z      = -1.0f; // sign of Z when the screen faces up (measured: -0.93)
 const float    VERTICAL_Z     = 0.45f; // |Z| below this = held upright like a phone
@@ -245,23 +247,40 @@ void readTilt() {
   float gx = tiltX - tiltBaseX, gy = tiltY - tiltBaseY;
   bool upright = cfg.autoRotate && fabsf(rawSz) < VERTICAL_Z && !tiltOverride;
 
+  // REACHABLE STEPS: the sensor only feels gravity, so it can never read
+  // much past 1 g on an axis. If the rest pose already leans right (a
+  // charger cable propping it up, say), "rest + 0.6 g" to the right can be
+  // impossible while left stays easy. So each side's step is capped at what
+  // can still be reached from the rest pose (TILT_REACH), but never less
+  // than a clear tilt (TILT_MIN_STEP).
+  float onR  = constrain(fminf(NAV_ON, TILT_REACH - tiltBaseX), TILT_MIN_STEP, NAV_ON);
+  float onL  = constrain(fminf(NAV_ON, TILT_REACH + tiltBaseX), TILT_MIN_STEP, NAV_ON);
+  float dirR = onR * (TILT_DIR_G / NAV_ON), dirL = onL * (TILT_DIR_G / NAV_ON);
+  float dirF = constrain(fminf(TILT_DIR_G, TILT_REACH - tiltBaseY), TILT_MIN_STEP * 0.8f, TILT_DIR_G);
+  float dirK = constrain(fminf(TILT_DIR_G, TILT_REACH + tiltBaseY), TILT_MIN_STEP * 0.8f, TILT_DIR_G);
+  // Tilt as a fraction of each side's step: 1.0 = exactly at the step.
+  float nx = gx >= 0 ? gx / dirR : gx / dirL;
+  float ny = gy >= 0 ? gy / dirF : gy / dirK;
+
   // Strongest axis decides the direction.
-  if (upright || fmaxf(fabsf(gx), fabsf(gy)) < TILT_DIR_G) tiltDir = T_LEVEL;
-  else if (fabsf(gx) >= fabsf(gy)) tiltDir = gx > 0 ? T_RIGHT : T_LEFT;
+  if (upright || fmaxf(fabsf(nx), fabsf(ny)) < 1.0f) tiltDir = T_LEVEL;
+  else if (fabsf(nx) >= fabsf(ny)) tiltDir = gx > 0 ? T_RIGHT : T_LEFT;
   else tiltDir = gy > 0 ? T_FWD : T_BACK;
 
   rockCheck(gx, now);
 
   // How close are we to a LEFT/RIGHT step? (drives the edge glow hint)
+  float on   = gx >= 0 ? onR : onL;
+  float hint = on * (NAV_HINT / NAV_ON), off = on * (NAV_OFF / NAV_ON);
   navProgress = 0;
-  if (!upright && fabsf(gx) > NAV_HINT && fabsf(gx) >= fabsf(gy))
-    navProgress = constrain((fabsf(gx) - NAV_HINT) / (NAV_ON - NAV_HINT), 0.0f, 1.0f)
+  if (!upright && fabsf(gx) > hint && fabsf(gx) >= fabsf(gy))
+    navProgress = constrain((fabsf(gx) - hint) / (on - hint), 0.0f, 1.0f)
                   * (gx > 0 ? 1 : -1);
 
-  // LEFT/RIGHT events: ONE step per tilt. Tilt past NAV_ON and hold it
+  // LEFT/RIGHT events: ONE step per tilt. Tilt past the step and hold it
   // there briefly -> one step. Then you must come back near level
-  // (under NAV_OFF) before the next step. No racing through lists.
-  int8_t want = gx > NAV_ON ? 1 : (gx < -NAV_ON ? -1 : 0);
+  // (under `off`) before the next step. No racing through lists.
+  int8_t want = gx > onR ? 1 : (gx < -onL ? -1 : 0);
   if (fabsf(gy) > fabsf(gx) || upright || faceDown) want = 0;
   if (now - lastPressMs < NAV_AFTER_PRESS_MS) want = 0;   // pressing jolts it
 
@@ -276,7 +295,7 @@ void readTilt() {
       navPendingSince = 0;
       pushEvent(want > 0 ? EV_RIGHT : EV_LEFT);
     }
-  } else if (fabsf(gx) < NAV_OFF) {
+  } else if (fabsf(gx) < off) {
     navDir = 0;                          // back near level: re-armed
   }
 }

@@ -55,7 +55,7 @@ KNOWN_USB = {(0x0403, 0x6001), (0x1A86, 0x55D4), (0x1A86, 0x7523), (0x10C4, 0xEA
 ALLOWED_CMDS = {
     "hello", "get", "status", "bonds", "set", "flip", "unbond", "unbond_all", "slot",
     "factory_reset", "reboot", "input", "tilt", "ir", "time", "mirror", "tutorial", "pet",
-    "tvbrands", "findtv", "wifi",
+    "tvbrands", "findtv", "wifi", "keys", "keytest",
 }
 
 STARTUP_LNK = os.path.join(os.environ.get("APPDATA", ""), r"Microsoft\Windows\Start Menu\Programs\Startup",
@@ -142,10 +142,17 @@ class BleLink:
     async def _connect(self):
         try:
             dev = await BleakScanner.find_device_by_filter(
-                lambda d, a: REMOTE_SVC in [u.lower() for u in a.service_uuids], timeout=6)
+                lambda d, a: REMOTE_SVC in [u.lower() for u in a.service_uuids], timeout=5)
             if not dev:
-                self.last_error = "not found nearby"
-                return
+                # The service ID is in the second broadcast packet (the scan
+                # response), which is easy to miss at weak signal. A device
+                # we've linked to before can be reached by its address.
+                with settings_lock:
+                    known = settings.get("bleAddress")
+                if not known:
+                    self.last_error = "not found nearby"
+                    return
+                dev = known
             # Ask for just the remote service, read fresh from the device.
             # Windows keeps an old copy of a paired device's services, and a
             # fresh read of ALL of them fails while the keyboard driver holds
@@ -159,14 +166,19 @@ class BleLink:
                 return
             await client.start_notify(REMOTE_OUT, self._notify)
             self._client, self.connected = client, True
-            self.name, self.address = dev.name or "Pocket Nova", dev.address
+            self.address = dev if isinstance(dev, str) else dev.address
+            self.name = getattr(dev, "name", None) or "Pocket Nova"
+            with settings_lock:
+                if settings.get("bleAddress") != self.address:
+                    settings["bleAddress"] = self.address
+                    save_settings(settings)
             self.last_error = ""
             log(f"Connected over Bluetooth to {self.name} ({self.address})")
             # on_up() sends commands, and sending waits on this event loop,
             # so it must run on another thread or it would wait for itself.
             threading.Thread(target=self.on_up, daemon=True).start()
         except Exception as e:
-            self.last_error = f"{type(e).__name__}: {e}"
+            self.last_error = f"{type(e).__name__}: {e}" if str(e) else type(e).__name__
         finally:
             self._busy = False
 
@@ -229,6 +241,7 @@ class DeviceLink:
         self._failed = {}                     # port -> time of last failed probe
         self.ble = BleLink(self._ble_line, self._ble_up, self._ble_down)
         self._next_ble = 0.0
+        self.ble_lost_at = 0.0                # when the Bluetooth link last dropped
         self.ble.start()
 
     # ---- helpers
@@ -242,24 +255,32 @@ class DeviceLink:
     def transport(self):
         return "usb" if self.ser is not None else "bluetooth" if self.ble.connected else ""
 
+    def ble_reconnecting(self):
+        """A short Bluetooth drop: keep showing the last state while it relinks."""
+        return self.ser is None and not self.ble.connected and time.time() - self.ble_lost_at < 20
+
     # ---- Bluetooth callbacks (from the Bluetooth thread)
     def _ble_line(self, line):
         if self.ser is None:                  # USB wins if both are up
             self._handle_line(line)
 
     def _ble_up(self):
+        quick = time.time() - self.ble_lost_at < 20
+        self.ble_lost_at = 0.0
         with self.lock:
-            self.state = {}
-            self._add_log(f"-- Connected to {self.ble.name} over Bluetooth (no cable)")
+            if not quick:
+                self.state = {}
+            self._add_log("-- Bluetooth link back" if quick else f"-- Connected to {self.ble.name} over Bluetooth (no cable)")
         self.send({"cmd": "hello"})
         self._after_connect()
 
     def _ble_down(self):
         self.mirror_on = False
         if self.ser is None:
+            self.ble_lost_at = time.time()
+            self._next_ble = time.time() + 2      # try again soon: drops are usually brief
             with self.lock:
-                self.state = {}
-                self._add_log("-- Bluetooth link closed")
+                self._add_log("-- Bluetooth link dropped, reconnecting...")
 
     def ui_active(self):
         return time.time() - self.ui_seen < 5
@@ -338,6 +359,7 @@ class DeviceLink:
         self.send({"cmd": "get"})
         self.send({"cmd": "bonds"})
         self.send({"cmd": "tvbrands"})
+        self.send({"cmd": "keys"})
         self.send({"cmd": "status"})
         self.mirror_on = False
         self._next_time = now + 600
@@ -359,6 +381,12 @@ class DeviceLink:
             log(f"Connected on {dev}: {hello}")
             if self.ble.connected:           # the cable is back: it takes over
                 self.ble.close()
+            addr = hello.get("address")      # remember it for the Bluetooth fallback
+            if addr:
+                with settings_lock:
+                    if settings.get("bleAddress") != addr:
+                        settings["bleAddress"] = addr
+                        save_settings(settings)
             self._after_connect()
             return True
         return False
@@ -372,7 +400,7 @@ class DeviceLink:
                 return
             t = msg.get("t")
             with self.lock:
-                if t in ("hello", "config", "status", "bonds", "tvbrands"):
+                if t in ("hello", "config", "status", "bonds", "tvbrands", "keys"):
                     self.state[t] = msg
                 elif t == "fb":
                     self.state["fb"] = msg.get("d")
@@ -391,7 +419,8 @@ class DeviceLink:
         active = self.ui_active()
         if now >= self._next_status:
             self.send({"cmd": "status"})
-            self._next_status = now + (0.8 if active else 5)
+            fast = 1.5 if self.ser is None else 0.8   # Bluetooth: fewer, slower updates
+            self._next_status = now + (fast if active else 5)
         if active and now >= self._next_bonds:
             self.send({"cmd": "bonds"})
             self.send({"cmd": "tvbrands"})
@@ -418,8 +447,12 @@ class DeviceLink:
                     time.sleep(0.05)
                     continue
                 if time.time() >= self._next_ble:   # no cable: look for it over Bluetooth
-                    self._next_ble = time.time() + 15
+                    self._next_ble = time.time() + (4 if self.ble_reconnecting() else 15)
                     self.ble.try_connect()
+                if not self.ble_reconnecting() and self.ble_lost_at:
+                    self.ble_lost_at = 0.0
+                    with self.lock:
+                        self.state = {}
                 time.sleep(1.5)
                 continue
             try:
@@ -620,6 +653,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {
                 "connected": link.connected(),
                 "transport": link.transport(),
+                "bleReconnecting": link.ble_reconnecting(),
                 "bleError": link.ble.last_error,
                 "bleAvailable": HAVE_BLEAK,
                 "port": link.port,

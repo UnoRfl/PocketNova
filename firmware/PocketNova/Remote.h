@@ -27,7 +27,10 @@
 //    tvbrands                     brand list with verification counts
 //    findtv                       open TV and start FIND TV
 //    time  {"epoch":n,"tz":seconds}  set the clock (for night mode)
-//    wifi  {"action":"setup"|"stop"|"on"|"off"|"join"|"forget"}   Wi-Fi (Wifi.h)
+//    wifi  {"action":"setup"|"stop"|"on"|"off"|"join"|"forget"}
+//    keys  {"list":[ids], "custom":[{"n":0,"name":"..","mods":n,"key":n}]}
+//                                 Keys app: the library, your list, custom slots
+//    keytest {"id":n}             send one shortcut now   Wi-Fi (Wifi.h)
 //    mirror {"on":true}           stream the screen (@{"t":"fb",...} 10x/s)
 //    tutorial                     play the tutorial
 //    pet   {"mood":"happy"|"love"|"dizzy"|"sleep"|"wake"}
@@ -106,6 +109,34 @@ void sendConfig() {
   sendJson(d);
 }
 
+// The Keys app: every shortcut in the library, your list and custom slots.
+void sendKeysInfo() {
+  JsonDocument d;
+  d["t"] = "keys";
+  d["max"] = KEY_LIST_MAX;
+  d["customId"] = CUSTOM_ID;
+  JsonArray lib = d["lib"].to<JsonArray>();
+  for (int i = 0; i < SHORTCUT_COUNT; i++) {
+    JsonObject o = lib.add<JsonObject>();
+    o["name"] = SHORTCUTS[i].name;
+    o["spr"] = SHORTCUTS[i].sprite;          // the 5x5 picture, for the panel
+    o["mods"] = SHORTCUTS[i].mods;
+    o["key"] = SHORTCUTS[i].key;
+    if (SHORTCUTS[i].media) o["media"] = SHORTCUTS[i].media;
+    if (SHORTCUTS[i].confirm) o["confirm"] = true;
+  }
+  JsonArray cu = d["custom"].to<JsonArray>();
+  for (auto& c : customKeys) {
+    JsonObject o = cu.add<JsonObject>();
+    o["name"] = c.name;
+    o["mods"] = c.mods;
+    o["key"] = c.key;
+  }
+  JsonArray l = d["list"].to<JsonArray>();
+  for (uint8_t i = 0; i < keyListLen; i++) l.add(keyList[i]);
+  sendJson(d);
+}
+
 // Per-brand detail for the panel: how many buttons, how well verified, protocol.
 void sendTvBrands() {
   JsonDocument d;
@@ -153,6 +184,8 @@ void sendStatus() {
   }
   d["tiltX"] = serialized(String(tiltX - tiltBaseX, 2));
   d["tiltY"] = serialized(String(tiltY - tiltBaseY, 2));
+  d["baseX"] = serialized(String(tiltBaseX, 2));   // the rest pose tilt is measured from
+  d["baseY"] = serialized(String(tiltBaseY, 2));
   d["faceDown"] = faceDown;
   d["pet"] = PET_MOOD_NAMES[petMood];
   d["love"] = cfg.petLove;
@@ -271,6 +304,7 @@ void handleRemoteLine(const char* line) {
   }
   if (!strcmp(cmd, "factory_reset")) {
     bleRemoveAllBonds();
+    prefs.begin("keys", false); prefs.clear(); prefs.end();
     eraseConfig();
     replyOk(cmd, "restarting");
     restartSoon("factory reset");
@@ -328,6 +362,49 @@ void handleRemoteLine(const char* line) {
     else { replyError("unknown wifi action"); return; }
     replyOk(cmd, a);
     sendStatus();
+    return;
+  }
+  if (!strcmp(cmd, "keys")) {
+    if (in["custom"].is<JsonArray>()) {
+      for (JsonObject o : in["custom"].as<JsonArray>()) {
+        int n = o["n"] | -1;
+        if (n < 0 || n >= CUSTOM_SLOTS) continue;
+        CustomKey& c = customKeys[n];
+        const char* name = o["name"] | "";
+        size_t k = 0;                    // keep what the 3x5 font can show
+        for (const char* p = name; *p && k < sizeof(c.name) - 1; p++)
+          if (isalnum((unsigned char)*p) || strchr(" +-.:/?", *p)) c.name[k++] = toupper((unsigned char)*p);
+        c.name[k] = 0;
+        if (!k) strcpy(c.name, "CUSTOM");
+        c.mods = (o["mods"] | 0) & 15;
+        c.key = o["key"] | 0;
+      }
+    }
+    if (in["list"].is<JsonArray>()) {
+      keyListLen = 0;
+      for (JsonVariant v : in["list"].as<JsonArray>()) {
+        int id = v | -1;
+        if (id < 0 || id > 255 || !keyIdValid(id) || keyListLen >= KEY_LIST_MAX) continue;
+        bool dup = false;
+        for (uint8_t i = 0; i < keyListLen; i++) if (keyList[i] == id) dup = true;
+        if (!dup) keyList[keyListLen++] = id;
+      }
+    } else {                             // a custom slot was cleared: drop it from the list
+      uint8_t n = 0;
+      for (uint8_t i = 0; i < keyListLen; i++) if (keyIdValid(keyList[i])) keyList[n++] = keyList[i];
+      keyListLen = n;
+    }
+    if (in["custom"].is<JsonArray>() || in["list"].is<JsonArray>()) keysSave();
+    sendKeysInfo();
+    return;
+  }
+  if (!strcmp(cmd, "keytest")) {
+    int id = in["id"] | -1;
+    if (id < 0 || id > 255 || !keyIdValid(id)) { replyError("no such shortcut"); return; }
+    if (!bleOK()) { replyError("Bluetooth isn't connected to a PC"); return; }
+    keyFire(id);
+    fxRipple(CRGB(255, 120, 0));
+    replyOk(cmd, keyName(id));
     return;
   }
   if (!strcmp(cmd, "tvbrands")) { sendTvBrands(); return; }
