@@ -45,7 +45,7 @@
 #include "Input.h"
 #include "Ir.h"
 
-const char* const FW_VERSION = "2.5.0";
+const char* const FW_VERSION = "2.6.0";
 
 // The phone remote's Bluetooth service and its two characteristics
 // (NovaRemote.h). Made-up IDs; the web page uses the same ones.

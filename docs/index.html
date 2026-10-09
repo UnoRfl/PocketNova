@@ -412,11 +412,13 @@ a { color: var(--accent); }
     <p>Wi-Fi lets Pocket Nova get the time from the internet, so Nova knows when it's night even on a phone charger. It's off until you set it up.</p>
     <ol class="steps">
       <li>On the Atom, go to Settings → <b>Wi-Fi</b> and <b>double tap</b>. Or use the PC panel: Wi-Fi → Open setup network.</li>
-      <li>The icon pulses magenta, and the network name (<b>NOVA-</b> plus 4 characters) and an 8-digit password scroll past. Tap the icon to see them again.</li>
+      <li>The icon pulses magenta, and the network name (Pocket Nova's name plus <b>Setup</b>, like <b>Pocket Nova Setup</b>) and an 8-digit password scroll past. Tap the icon to see them again.</li>
       <li>On your phone, join that network with that password. A setup page opens by itself. If it doesn't, open <code>http://192.168.4.1</code>.</li>
       <li>Pick your home network, type its password and tap <b>Connect</b>. The page shows "Connected!" and the setup network closes.</li>
     </ol>
     <div class="note"><p>The icon is green when online, yellow while joining and red if joining failed (tap it to see why). The setup network closes by itself after 10 minutes, and each time it opens it has a new password.</p></div>
+    <div class="note"><p><b>Your name, your network.</b> In the panel's Wi-Fi tab, give Pocket Nova its own name (like "Uno's Pocket Nova"). Your router lists it under that name (as <code>Unos-Pocket-Nova</code>: routers only allow letters, numbers and dashes), and it's used for the setup network and Bluetooth too.</p></div>
+    <div class="note"><p><b>Who's on your Wi-Fi?</b> Wi-Fi tab → <b>Scan now</b> lists every device on your home network with its address. Pocket Nova remembers them, so a device it has never seen gets a <b>new</b> tag. Turn on <b>Watch for new devices</b> to rescan every 2 minutes and get a pop-up when someone joins. Name the devices you know.</p></div>
   </section>
 
   <section>

@@ -28,6 +28,8 @@
 //    findtv                       open TV and start FIND TV
 //    time  {"epoch":n,"tz":seconds}  set the clock (for night mode)
 //    wifi  {"action":"setup"|"stop"|"on"|"off"|"join"|"forget"}
+//    netscan                      list the devices on your Wi-Fi network
+//                                 (answers @{"t":"netscan",...} when done)
 //    keys  {"list":[ids], "custom":[{"n":0,"name":"..","mods":n,"key":n}]}
 //                                 Keys app: the library, your list, custom slots
 //    keytest {"id":n}             send one shortcut now   Wi-Fi (Wifi.h)
@@ -38,6 +40,7 @@
 
 #include <ArduinoJson.h>
 #include <sys/time.h>
+#include <algorithm>
 
 extern bool replyBle;                   // NovaRemote.h: answering the phone page
 void remoteNotify(const String& line);
@@ -174,6 +177,8 @@ void sendStatus() {
   w["state"] = WIFI_STATE_NAMES[wifiState];
   w["ssid"] = wifiSsid;                         // never the password
   w["ip"] = wifiIp();
+  w["host"] = wifiHostname;
+  if (netScanning) w["scan"] = netScanPercent();
   if (wifiState == WF_ONLINE) w["rssi"] = WiFi.RSSI();
   if (wifiState == WF_FAILED) w["reason"] = wifiReason();
   w["setup"] = setupOn;
@@ -181,6 +186,16 @@ void sendStatus() {
     w["apSsid"] = apSsid;
     w["apPass"] = apPass;
     w["setupLeft"] = (int32_t)(setupUntil - millis()) / 1000;
+    // Phones and laptops joined to the setup network right now.
+    wifi_sta_list_t sl;
+    esp_netif_sta_list_t nl;
+    JsonArray cl = w["apClients"].to<JsonArray>();
+    if (esp_wifi_ap_get_sta_list(&sl) == ESP_OK && esp_netif_get_sta_list(&sl, &nl) == ESP_OK)
+      for (int i = 0; i < nl.num; i++) {
+        JsonObject o = cl.add<JsonObject>();
+        o["mac"] = macToString(nl.sta[i].mac);
+        if (nl.sta[i].ip.addr) o["ip"] = IPAddress(nl.sta[i].ip.addr).toString();
+      }
   }
   d["tiltX"] = serialized(String(tiltX - tiltBaseX, 2));
   d["tiltY"] = serialized(String(tiltY - tiltBaseY, 2));
@@ -236,6 +251,26 @@ Event eventFromName(const char* s) {
   if (!strcmp(s, "shake")) return EV_SHAKE;
   if (!strcmp(s, "rock")) return EV_ROCK;
   return EV_NONE;
+}
+
+// The result of a network scan (Wifi.h), sorted by address.
+void sendNetScan() {
+  JsonDocument d;
+  d["t"] = "netscan";
+  d["me"] = WiFi.localIP().toString();
+  d["myMac"] = WiFi.macAddress();
+  d["router"] = WiFi.gatewayIP().toString();
+  d["host"] = wifiHostname;
+  d["ssid"] = wifiSsid;
+  int n = netCount;
+  std::sort(netFound, netFound + n, [](const NetDevice& a, const NetDevice& b) { return ntohl(a.ip) < ntohl(b.ip); });
+  JsonArray a = d["list"].to<JsonArray>();
+  for (int i = 0; i < n; i++) {
+    JsonObject o = a.add<JsonObject>();
+    o["ip"] = IPAddress(netFound[i].ip).toString();
+    o["mac"] = macToString(netFound[i].mac);
+  }
+  sendJson(d);
 }
 
 void applySettings(JsonObject c) {
@@ -362,6 +397,11 @@ void handleRemoteLine(const char* line) {
     else { replyError("unknown wifi action"); return; }
     replyOk(cmd, a);
     sendStatus();
+    return;
+  }
+  if (!strcmp(cmd, "netscan")) {
+    if (!netScanStart()) { replyError("join a Wi-Fi network first"); return; }
+    replyOk(cmd);
     return;
   }
   if (!strcmp(cmd, "keys")) {

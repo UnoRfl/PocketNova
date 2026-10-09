@@ -195,6 +195,10 @@ input[type=text]:focus, select:focus { box-shadow: inset 0 0 0 2px var(--nova); 
 .device .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .device input { width: 100%; }
 .empty { color: var(--muted); padding: 10px 0; }
+.badge.new { background: var(--star); color: #241500; animation: blink 1s steps(2) 6; }
+.device.fresh { box-shadow: inset 0 0 0 2px var(--star); }
+.netnames { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
+#wfApClients { white-space: pre-line; }
 
 .tv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
 
@@ -341,7 +345,7 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
       </div>
       <div class="section">
         <h2>Name</h2>
-        <p class="hint">This is the name your PC and phone see in their Bluetooth lists. Saving it restarts Pocket Nova.</p>
+        <p class="hint">This is the name your PC and phone see in their Bluetooth lists, and your router sees on Wi-Fi. Saving it restarts Pocket Nova.</p>
         <div class="inline"><input type="text" id="nameInput" class="pix" maxlength="24" aria-label="Device name"><button class="btn primary pix" id="nameSave">Save name</button></div>
       </div>
       <div class="section">
@@ -397,13 +401,37 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
           <label class="toggle"><input type="checkbox" id="wifiOn"><span class="muted">Join the saved network</span></label></div>
       </div>
       <div class="section">
+        <h2>Name on your network</h2>
+        <p class="hint">Make it yours, like <b>Uno's Pocket Nova</b>. One name is used everywhere: in your router's list of connected devices, for the setup network, and in Bluetooth lists. Saving restarts Pocket Nova (about 2 seconds).</p>
+        <div class="inline"><input type="text" id="wfNameInput" class="pix" maxlength="24" aria-label="Pocket Nova's name"><button class="btn primary pix" id="wfNameSave">Save name</button></div>
+        <div class="netnames">
+          <div class="stat pix"><div class="v mono" id="wfHostPrev">-</div><div class="k">your router lists it as</div></div>
+          <div class="stat pix"><div class="v" id="wfApPrev">-</div><div class="k">setup network</div></div>
+          <div class="stat pix"><div class="v" id="wfBtPrev">-</div><div class="k">Bluetooth</div></div>
+        </div>
+        <p class="hint">Routers only allow letters, numbers and dashes in a device name (its "hostname"), so spaces become dashes and the apostrophe is dropped.</p>
+      </div>
+      <div class="section">
+        <h2>Devices on your network <span class="count" id="netCount"></span></h2>
+        <p class="hint">Pocket Nova asks every address on your Wi-Fi "who are you?" and lists everyone that answers. Devices it has never seen before get a <span class="badge new">new</span> tag, so you can spot anyone who joins. Name the ones you know. Phones with the screen off sometimes sleep through a scan: scan again to catch them.</p>
+        <div class="inline">
+          <button class="btn primary pix" id="netScanBtn">Scan now</button>
+          <label class="toggle"><input type="checkbox" id="netWatch"><span class="muted">Watch for new devices (scans every 2 minutes while this panel is open)</span></label>
+        </div>
+        <div class="progress" id="netProg" hidden><i></i></div>
+        <div class="devices" id="netList"></div>
+        <p class="hint" id="netWhen"></p>
+      </div>
+      <div class="section">
         <h2>Set up a network</h2>
         <p class="hint">Opens Pocket Nova's own setup network for 10 minutes. Join it from your phone with the password below, and a page opens by itself where you pick your home Wi-Fi. If the page doesn't open, go to <b class="mono">http://192.168.4.1</b>. On the Atom: Settings → Wi-Fi, double tap.</p>
         <div class="stats" id="wfSetup" hidden>
           <div class="stat pix"><div class="v mono" id="wfApSsid">-</div><div class="k">join this network</div></div>
           <div class="stat pix"><div class="v mono" id="wfApPass">-</div><div class="k">password</div></div>
           <div class="stat pix"><div class="v" id="wfApLeft">-</div><div class="k">closes in</div></div>
+          <div class="stat pix"><div class="v" id="wfApCount">0</div><div class="k">joined now</div></div>
         </div>
+        <p class="hint mono" id="wfApClients" hidden></p>
         <div class="inline"><button class="btn primary pix" id="wfSetupBtn">Open setup network</button>
           <button class="btn danger pix" id="wfForget" data-confirm="Click again to forget it">Forget saved network</button></div>
       </div>
@@ -692,6 +720,9 @@ const ICONS = {
   gear:   ["...ww...", ".w.ww.w.", "..wwww..", "wwwKKwww", "wwwKKwww", "..wwww..", ".w.ww.w.", "...ww..."],
   pc:     ["........", "wwwwwwww", "wBBBBBBw", "wBBBBBBw", "wBBBBBBw", "wwwwwwww", "...ww...", "..wwww.."],
   keys:   ["........", "OOOOOOOO", "OwOwOwOO", "OOOOOOOO", "OwOwOwOO", "OOOOOOOO", "OwwwwwOO", "OOOOOOOO"],
+  router: [".w....w.", ".w....w.", ".w....w.", "wwwwwwww", "wKKKKKKw", "wKGKGKBw", "wwwwwwww", "........"],
+  phone:  ["..wwww..", "..wBBw..", "..wBBw..", "..wBBw..", "..wBBw..", "..wBBw..", "..wwww..", "..wwww.."],
+  nova:   ["...Y....", "..PPPP..", ".PDDDDP.", ".PWDDWP.", ".PDDDDP.", ".PDMMDP.", "..PPPP..", "........"],
 };
 function iconSvg(name, cls) {
   const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -816,12 +847,115 @@ $("flipX").onclick = () => { cmd({ cmd: "flip", axis: "x" }); toast("Left and ri
 $("flipY").onclick = () => { cmd({ cmd: "flip", axis: "y" }); toast("Forward and back swapped"); };
 $("lastApp").onchange = (e) => cmd({ cmd: "set", cfg: { lastApp: +e.target.value } });
 $("tvBrand").onchange = (e) => cmd({ cmd: "set", cfg: { tvBrand: +e.target.value } });
-$("nameSave").onclick = () => {
-  const n = $("nameInput").value.trim();
+function saveName(input) {
+  const n = input.value.trim();
   if (!n) return toast("Type a name first", true);
+  if (S.config && n === S.config.name) return toast("That's already its name");
   cmd({ cmd: "set", cfg: { name: n } });
+  ["nameInput", "wfNameInput"].forEach((id) => delete $(id).dataset.touched);
   toast("Saved. Pocket Nova is restarting with its new name.");
+}
+$("nameSave").onclick = () => saveName($("nameInput"));
+$("wfNameSave").onclick = () => saveName($("wfNameInput"));
+$("wfNameInput").onkeydown = (e) => { if (e.key === "Enter") saveName(e.target); };
+
+// The same rule as wifiMakeHostname() in the firmware (Wifi.h).
+function hostnameFor(name) {
+  let out = "", gap = false;
+  for (const c of name) {
+    if (out.length >= 31) break;
+    if (/[A-Za-z0-9]/.test(c)) {
+      if (gap && out) { if (out.length >= 30) break; out += "-"; }
+      out += c; gap = false;
+    } else if (c !== "'") gap = true;
+  }
+  return out || "PocketNova";
+}
+function renderNamePreview() {
+  const typed = $("wfNameInput").value.trim() || (S.config && S.config.name) || "Pocket Nova";
+  $("wfHostPrev").textContent = hostnameFor(typed);
+  $("wfApPrev").textContent = typed + " Setup";
+  $("wfBtPrev").textContent = typed;
+}
+$("wfNameInput").oninput = (e) => { e.target.dataset.touched = "1"; renderNamePreview(); };
+
+// ---- devices on your network (the scan runs on Pocket Nova: netScan in Wifi.h)
+let netKey = "", netSeenAt = 0, netAsked = false;
+const isPrivateMac = (mac) => /^.[26AE]/i.test(mac);   // "locally administered" bit: a made-up address
+function netAgo(t) {
+  const s = Math.max(0, Math.round(Date.now() / 1000 - t));
+  return s < 60 ? "just now" : s < 3600 ? Math.floor(s / 60) + " min ago" : s < 86400 ? Math.floor(s / 3600) + " h ago" : new Date(t * 1000).toLocaleDateString();
+}
+function netScan() {
+  netAsked = true;
+  cmd({ cmd: "netscan" });
+}
+$("netScanBtn").onclick = netScan;
+try { $("netWatch").checked = localStorage.getItem("pn-netwatch") === "1"; } catch (e) {}
+$("netWatch").onchange = (e) => {
+  try { localStorage.setItem("pn-netwatch", e.target.checked ? "1" : "0"); } catch (x) {}
+  if (e.target.checked) netScan();
 };
+setInterval(() => {
+  const wf = (S.status && S.status.wifi) || {};
+  if ($("netWatch").checked && S.connected && wf.state === "online" && wf.scan == null) netScan();
+}, 120000);
+
+function renderNet() {
+  const wf = (S.status && S.status.wifi) || {};
+  const scanning = wf.scan != null || !!S.netscanBusy;
+  const res = S.netscan;
+  $("netScanBtn").disabled = scanning || wf.state !== "online" || !S.connected;
+  $("netScanBtn").textContent = wf.scan != null ? `Scanning… ${wf.scan}%` : S.netscanBusy ? "Looking up names…" : "Scan now";
+  $("netProg").hidden = !scanning;
+  $("netProg").firstElementChild.style.width = (S.netscanBusy ? 100 : wf.scan || 0) + "%";
+
+  if (res && res.at !== netSeenAt) {                 // a fresh result: say what's new
+    const fresh = res.list.filter((d) => d.new);
+    if (netSeenAt || netAsked) {
+      if (fresh.length) toast(`New on your network: ${fresh.map((d) => d.label || d.name || d.ip).join(", ")}`);
+      else if (netAsked) toast(`Found ${res.list.length} devices${res.firstScan ? ". They're all remembered now" : ", nothing new"}`);
+    }
+    netSeenAt = res.at; netAsked = false;
+  }
+  const key = JSON.stringify([res, wf.state, scanning && !res, S.config && S.config.name]);
+  if (key === netKey) return;
+  netKey = key;
+  const box = $("netList");
+  $("netCount").textContent = res ? res.list.length : "";
+  $("netWhen").textContent = res ? `Last scan ${netAgo(res.at)}${res.ssid ? " on " + res.ssid : ""}. A "private address" is one a phone or laptop makes up for each network, so the same device looks different on another Wi-Fi.` : "";
+  if (!res) {
+    box.innerHTML = `<div class="empty">${wf.state === "online" ? (scanning ? `<span class="orbit"></span>Asking around…` : "Press Scan now to see who's on your network.") : "Pocket Nova needs to be on your Wi-Fi first (see above)."}</div>`;
+    return;
+  }
+  box.innerHTML = "";
+  const rank = (d) => (d.router ? 0 : d.nova ? 1 : d.pc ? 2 : d.new ? 3 : 4);
+  [...res.list].sort((a, b) => rank(a) - rank(b) || a.ip.split(".").pop() - b.ip.split(".").pop()).forEach((d) => {
+    const row = document.createElement("div");
+    row.className = "device pix" + (d.new ? " fresh" : "");
+    const who = document.createElement("div"); who.className = "who";
+    const inp = document.createElement("input"); inp.type = "text"; inp.maxLength = 40; inp.className = "pix";
+    inp.placeholder = d.nova ? (S.config && S.config.name) || "Pocket Nova" : d.name ? d.name + " (name it)" : "Unknown device: name it";
+    inp.value = d.label || "";
+    inp.setAttribute("aria-label", "Name for " + d.mac);
+    inp.onchange = () => api("/api/netlabel", { mac: d.mac, label: inp.value });
+    const meta = document.createElement("div"); meta.className = "meta";
+    const tags = [];
+    if (d.new) tags.push(`<span class="badge new">new</span>`);
+    if (d.router) tags.push(`<span class="badge on">router</span>`);
+    if (d.nova) tags.push(`<span class="badge on">this Pocket Nova</span>`);
+    if (d.pc) tags.push(`<span class="badge live">this PC</span>`);
+    if (isPrivateMac(d.mac)) tags.push(`<span class="badge">private address</span>`);
+    meta.innerHTML = tags.join("") + `<span class="mono">${d.ip}</span><span class="mono muted">${d.mac}</span>`;
+    const seen = document.createElement("span"); seen.className = "muted"; seen.style.fontSize = ".8rem";
+    seen.textContent = [d.label && d.name, d.first && "first seen " + netAgo(d.first)].filter(Boolean).join(" · ");   // DNS names: text only
+    meta.appendChild(seen);
+    who.append(inp, meta);
+    const icon = d.router ? "router" : d.nova ? "nova" : d.pc ? "pc" : isPrivateMac(d.mac) ? "phone" : "device";
+    row.append(iconSvg(icon, "ico"), who, document.createElement("span"));
+    box.appendChild(row);
+  });
+}
 $("tutorialBtn").onclick = () => { cmd({ cmd: "tutorial" }); toast("Tutorial playing on the Atom"); };
 $("findTvBtn").onclick = () => { cmd({ cmd: "findtv" }); toast("Finding your TV. Tap the Atom when the TV switches off."); };
 
@@ -1226,6 +1360,7 @@ function render() {
     const picked = h && c.tvBrand < h.brands.length;
     [...$("tvGrid").children].forEach((b) => { if (+b.dataset.code !== 0) b.disabled = !picked; });
     if (document.activeElement !== $("nameInput") && !$("nameInput").dataset.touched) $("nameInput").value = c.name;
+    if (document.activeElement !== $("wfNameInput") && !$("wfNameInput").dataset.touched) $("wfNameInput").value = c.name;
     $("snakeBest").textContent = c.snakeHigh;
   }
   if (st) {
@@ -1241,6 +1376,10 @@ function render() {
     $("wfApPass").textContent = wf.apPass || "-";
     $("wfApLeft").textContent = wf.setupLeft != null ? `${Math.floor(wf.setupLeft / 60)}:${String(wf.setupLeft % 60).padStart(2, "0")}` : "-";
     $("wfSetupBtn").textContent = wf.setup ? "Close setup network" : "Open setup network";
+    const cl = wf.apClients || [];
+    $("wfApCount").textContent = cl.length;
+    $("wfApClients").hidden = !cl.length;
+    $("wfApClients").textContent = cl.map((x) => `${x.mac}${x.ip ? " · " + x.ip : " · getting an address…"}`).join("\n");
     $("swiftState").textContent = st.swiftPair ? "On now: nearby Windows PCs can see the pop-up" : st.ble ? "Off while connected" : "Show the Connect pop-up while pairing";
     const slotTxt = st.slot != null ? ` · slot ${st.slot + 1}` : "";
     chip($("bleChip"), st.ble ? "good" : "warn", st.ble ? `${st.host ? nameFor(st.host) : "Bluetooth connected"}${slotTxt}` : `Bluetooth waiting${slotTxt}`, $("bleText"));
@@ -1265,6 +1404,8 @@ function render() {
   renderKeys();
   renderDevices();
   renderBrands();
+  renderNet();
+  renderNamePreview();
 
   const up = S.update || {};
   $("updateBtn").disabled = !!up.running || !on || viaBt;

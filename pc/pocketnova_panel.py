@@ -18,11 +18,13 @@ The panel itself is panel.html, served only to this PC (127.0.0.1).
 import json
 import os
 import shutil
+import socket
 import subprocess
 import sys
 import threading
 import time
 from collections import deque
+from concurrent.futures import ThreadPoolExecutor, wait
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
@@ -55,7 +57,7 @@ KNOWN_USB = {(0x0403, 0x6001), (0x1A86, 0x55D4), (0x1A86, 0x7523), (0x10C4, 0xEA
 ALLOWED_CMDS = {
     "hello", "get", "status", "bonds", "set", "flip", "unbond", "unbond_all", "slot",
     "factory_reset", "reboot", "input", "tilt", "ir", "time", "mirror", "tutorial", "pet",
-    "tvbrands", "findtv", "wifi", "keys", "keytest",
+    "tvbrands", "findtv", "wifi", "keys", "keytest", "netscan",
 }
 
 STARTUP_LNK = os.path.join(os.environ.get("APPDATA", ""), r"Microsoft\Windows\Start Menu\Programs\Startup",
@@ -77,6 +79,7 @@ def log(msg):
 DEFAULT_SETTINGS = {
     "autoOpen": True,                                   # open the panel when plugged in
     "labels": {},                                       # Bluetooth address -> your name for it
+    "netDevices": {},                                   # Wi-Fi MAC -> {label, name, first, last, ip}
     "firmwareDir": os.path.join(os.path.expanduser("~"), "Downloads", "PocketNova", "firmware", "PocketNova"),
     "arduinoCli": r"C:\Program Files\Arduino CLI\arduino-cli.exe",
 }
@@ -102,6 +105,60 @@ def save_settings(s):
 
 settings = load_settings()
 settings_lock = threading.Lock()
+
+
+# ---------------------------------------------------------------- network devices
+
+def _dns_name(ip):
+    """Reverse DNS: ask the router "who is 192.168.1.23?". Most home routers
+    answer with the name the device gave when it got its address (DHCP)."""
+    try:
+        name = socket.gethostbyaddr(ip)[0]
+    except OSError:
+        return ""
+    return "" if name == ip else name.split(".")[0]
+
+
+def _my_ips():
+    try:
+        return {a[4][0] for a in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET)}
+    except OSError:
+        return set()
+
+
+def enrich_netscan(msg):
+    """Adds names and "new" flags to a device scan from Pocket Nova, and
+    remembers every device seen so the next scan can spot newcomers."""
+    found = [dict(d) for d in msg.get("list", [])]
+    if msg.get("myMac"):
+        found.append({"ip": msg.get("me", ""), "mac": msg["myMac"], "nova": True})
+    pool = ThreadPoolExecutor(16)
+    jobs = {pool.submit(_dns_name, d["ip"]): d for d in found if d.get("ip") and not d.get("nova")}
+    done, _ = wait(jobs, timeout=4)            # slow answers are skipped, not waited for
+    pool.shutdown(wait=False)
+    for j in done:
+        jobs[j]["name"] = j.result()
+    mine, now = _my_ips(), int(time.time())
+    with settings_lock:
+        book = settings.setdefault("netDevices", {})
+        first_scan = not book
+        for d in found:
+            mac = d["mac"].upper()
+            entry = book.get(mac)
+            d["new"] = entry is None and not first_scan
+            if entry is None:
+                entry = book[mac] = {"label": "", "first": now}
+            entry.update(last=now, ip=d["ip"])
+            if d.get("name"):
+                entry["name"] = d["name"]
+            d["name"] = entry.get("name", "")
+            d["label"] = entry.get("label", "")
+            d["first"] = entry["first"]
+            d["router"] = d["ip"] == msg.get("router")
+            d["pc"] = d["ip"] in mine
+        save_settings(settings)
+    return {"at": now, "ssid": msg.get("ssid", ""), "router": msg.get("router", ""),
+            "list": found, "firstScan": first_scan}
 
 
 # ---------------------------------------------------------------- Bluetooth link
@@ -404,6 +461,9 @@ class DeviceLink:
                     self.state[t] = msg
                 elif t == "fb":
                     self.state["fb"] = msg.get("d")
+                elif t == "netscan":            # names come from DNS, which takes a moment
+                    self.state["netscanBusy"] = True
+                    threading.Thread(target=self._netscan_done, args=(msg,), daemon=True).start()
                 elif t in ("ok", "error"):
                     self.seq += 1
                     self.replies.append((self.seq, msg))
@@ -413,6 +473,16 @@ class DeviceLink:
         if "ready (firmware" in line:      # the device restarted: say hello again
             self.send({"cmd": "hello"})
             self._after_connect()
+
+    def _netscan_done(self, msg):
+        try:
+            result = enrich_netscan(msg)
+        except Exception as e:                  # never lose the scan over a name lookup
+            log(f"netscan: {e}")
+            result = {"at": int(time.time()), "list": msg.get("list", [])}
+        with self.lock:
+            self.state["netscan"] = result
+            self.state["netscanBusy"] = False
 
     def _periodic(self):
         now = time.time()
@@ -695,6 +765,19 @@ class Handler(BaseHTTPRequestHandler):
                 else:
                     labels.pop(addr, None)
                 save_settings(settings)
+            return self._send(200, {"ok": True})
+        if path == "/api/netlabel":
+            mac, label = str(body.get("mac", ""))[:17].upper(), str(body.get("label", ""))[:40].strip()
+            with settings_lock:
+                entry = settings.setdefault("netDevices", {}).get(mac)
+                if entry is None:
+                    return self._send(404, {"error": "unknown device"})
+                entry["label"] = label
+                save_settings(settings)
+            with link.lock:                     # show it at once, without a new scan
+                for d in (link.state.get("netscan") or {}).get("list", []):
+                    if d["mac"].upper() == mac:
+                        d["label"] = label
             return self._send(200, {"ok": True})
         if path == "/api/settings":
             with settings_lock:

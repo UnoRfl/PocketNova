@@ -10,7 +10,8 @@
 //                        (SSID), hands out addresses (DHCP) and others join.
 //
 //  SETUP: Settings -> WI-FI, double tap (or the PC panel) starts an access
-//  point called "NOVA-XXXX" with a fresh 8-digit password. Join it with
+//  point named after Pocket Nova ("Pocket Nova Setup", or "Uno's Pocket
+//  Nova Setup" once you rename it) with a fresh 8-digit password. Join it with
 //  your phone and the setup page opens by itself (a "captive portal").
 //  Pick your home network, type its password, and Pocket Nova joins it.
 //
@@ -23,6 +24,12 @@
 //
 //  ONLINE: once joined it fetches the time from the internet (NTP), so
 //  Nova knows when it's night even on a phone charger.
+//
+//  NAME: your router lists Pocket Nova by its "hostname", made from the
+//  name you give it in the panel (see wifiMakeHostname).
+//
+//  WHO'S ON YOUR NETWORK: the PC panel can ask Pocket Nova to list every
+//  device on your home network (see netScanStart below).
 // =====================================================================
 
 #include <WiFi.h>
@@ -30,6 +37,12 @@
 #include <DNSServer.h>
 #include <ArduinoJson.h>
 #include <esp_random.h>
+#include <esp_wifi.h>
+#include <esp_netif.h>
+#include <esp_netif_net_stack.h>
+#include <esp_netif_sta_list.h>
+#include <lwip/etharp.h>
+#include <lwip/tcpip.h>
 
 extern int32_t tzOffsetSec;   // Pet.h
 
@@ -50,7 +63,7 @@ bool      ntpStarted = false;
 
 bool        setupOn = false;
 uint32_t    setupUntil = 0;
-char        apSsid[12] = "";       // NOVA-XXXX
+char        apSsid[33] = "";       // "<name> Setup" (Wi-Fi names max out at 32)
 char        apPass[9] = "";        // 8 random digits
 WebServer*  web = nullptr;
 DNSServer*  dns = nullptr;
@@ -74,6 +87,35 @@ void wifiSave() {
   prefs.end();
 }
 bool wifiHasNetwork() { return wifiSsid[0] != 0; }
+
+// ---------------------------------------------------------------------
+//  THE NAME YOUR ROUTER SHOWS. When Pocket Nova asks the router for an
+//  address (DHCP) it sends its "hostname" along (DHCP option 12), and
+//  routers show that in their list of connected devices. Hostnames may
+//  only use letters, digits and '-', so "Uno's Pocket Nova" becomes
+//  "Unos-Pocket-Nova". Without one, the ESP32 calls itself "esp32-A1B2C3".
+// ---------------------------------------------------------------------
+char wifiHostname[32] = "";       // the Wi-Fi library keeps at most 31 characters
+
+void wifiMakeHostname() {
+  size_t n = 0;
+  bool gap = false;
+  for (const char* p = cfg.name; *p && n < sizeof(wifiHostname) - 1; p++) {
+    char c = *p;
+    if (isalnum((unsigned char)c)) {
+      if (gap && n) {
+        if (n >= sizeof(wifiHostname) - 2) break;
+        wifiHostname[n++] = '-';
+      }
+      wifiHostname[n++] = c;
+      gap = false;
+    } else if (c != '\'') {
+      gap = true;                 // spaces and other symbols become one '-'; apostrophes vanish
+    }
+  }
+  wifiHostname[n] = 0;
+  if (!n) strcpy(wifiHostname, "PocketNova");
+}
 
 // ---------------------------------------------------------------------
 //  WHY A JOIN FAILED. Each time a router turns a device away, the Wi-Fi
@@ -289,9 +331,7 @@ void webResult() {
 
 void wifiStartSetup() {
   if (setupOn) { setupUntil = millis() + WIFI_SETUP_MS; return; }
-  uint8_t mac[6];
-  esp_read_mac(mac, ESP_MAC_WIFI_SOFTAP);
-  snprintf(apSsid, sizeof(apSsid), "NOVA-%02X%02X", mac[4], mac[5]);
+  snprintf(apSsid, sizeof(apSsid), "%s Setup", cfg.name);
   // A new password each time. esp_random() uses radio noise, so it's
   // properly unpredictable while Wi-Fi or Bluetooth is running.
   for (int i = 0; i < 8; i++) apPass[i] = '0' + esp_random() % 10;
@@ -356,6 +396,8 @@ void wifiForget() {
 
 void wifiBegin() {
   wifiLoad();
+  wifiMakeHostname();
+  WiFi.setHostname(wifiHostname);        // must come before the radio starts
   if (cfg.wifiOn && wifiHasNetwork()) {
     WiFi.persistent(false);
     WiFi.setAutoReconnect(true);
@@ -366,8 +408,94 @@ void wifiBegin() {
   }
 }
 
+// ---------------------------------------------------------------------
+//  WHO ELSE IS ON YOUR NETWORK
+//  Every device on a home network has two addresses:
+//    IP address    192.168.1.23 - handed out by the router, can change
+//    MAC address   3C:22:FB:..  - built into its Wi-Fi chip (phones make
+//                  up a "private" one per network, for privacy)
+//  Before a device can send anything to an IP on the same network, it
+//  shouts "who has 192.168.1.23?" to everyone, and the owner answers with
+//  its MAC. That's ARP (Address Resolution Protocol). So to list the
+//  devices we ask about every address in the network, a few at a time,
+//  and write down who answers. Tools like Fing and arp-scan do the same.
+//  Phones with the screen off sometimes sleep through it: scan again.
+// ---------------------------------------------------------------------
+struct NetDevice { uint32_t ip; uint8_t mac[6]; };   // ip as lwIP keeps it (network byte order)
+const int NET_MAX = 48;
+NetDevice     netFound[NET_MAX];
+volatile int  netCount = 0;
+volatile int  netNext = 0;             // next host number to ask about
+int           netLast = 0;             // last host number (254 on a normal home network)
+int           netTail = 0;             // listening rounds left after the last question
+uint32_t      netBase = 0;             // the network part of the address, e.g. 192.168.1.0
+uint32_t      netStepAt = 0;
+bool          netScanning = false;
+struct netif* netIf = nullptr;
+void sendNetScan();                    // Remote.h
+
+// lwIP, the ESP32's network stack, runs in its own task, and its ARP
+// table may only be touched from there, so tcpip_callback() runs this
+// in that task. Each round: copy the answers that came in, then ask
+// about the next 6 addresses. The table only holds 10 answers, so small
+// batches mean none get pushed out before we read them.
+void netStep(void*) {
+  ip4_addr_t* ip;
+  struct netif* nif;
+  struct eth_addr* mac;
+  for (size_t i = 0; i < ARP_TABLE_SIZE; i++) {
+    if (!etharp_get_entry(i, &ip, &nif, &mac) || nif != netIf) continue;
+    bool have = false;
+    for (int k = 0; k < netCount; k++) if (netFound[k].ip == ip->addr) { have = true; break; }
+    if (have || netCount >= NET_MAX) continue;
+    netFound[netCount].ip = ip->addr;
+    memcpy(netFound[netCount].mac, mac->addr, 6);
+    netCount++;
+  }
+  for (int k = 0; k < 6 && netNext <= netLast; k++, netNext++) {
+    ip4_addr_t t;
+    t.addr = htonl(netBase + netNext);
+    etharp_request(netIf, &t);
+  }
+}
+
+bool netScanStart() {
+  if (wifiState != WF_ONLINE) return false;
+  if (netScanning) return true;
+  netIf = (struct netif*)esp_netif_get_netif_impl(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"));
+  if (!netIf) return false;
+  uint32_t me = ntohl((uint32_t)WiFi.localIP());
+  uint32_t mask = ntohl((uint32_t)WiFi.subnetMask());
+  if (mask < 0xFFFFFF00) mask = 0xFFFFFF00;   // bigger networks: just our 254 neighbours
+  netBase = me & mask;
+  netNext = 1;                                // .0 is the network itself
+  netLast = (int)(~mask) - 1;                 // the top address is "everyone" (broadcast)
+  netTail = 5;
+  netCount = 0;
+  netStepAt = millis();
+  netScanning = true;
+  Serial.printf("[WIFI] Looking for devices on %s/%d\n",IPAddress(htonl(netBase)).toString().c_str(), 32 - __builtin_ctz(~mask + 1));
+  return true;
+}
+
+int netScanPercent() { return netLast > 0 ? constrain((netNext - 1) * 100 / netLast, 0, 100) : 0; }
+
+void netScanUpdate(uint32_t now) {
+  if (!netScanning || (int32_t)(now - netStepAt) < 0) return;
+  netStepAt = now + 200;
+  if (wifiState != WF_ONLINE) { netNext = netLast + 1; netTail = 0; }   // lost the network: report what we have
+  if (netNext > netLast && netTail-- <= 0) {
+    netScanning = false;
+    Serial.printf("[WIFI] Found %d other device(s)\n", netCount);
+    sendNetScan();
+    return;
+  }
+  tcpip_callback(netStep, nullptr);
+}
+
 void wifiUpdate() {
   uint32_t now = millis();
+  netScanUpdate(now);
   if (setupOn) {
     dns->processNextRequest();
     web->handleClient();
