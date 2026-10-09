@@ -131,8 +131,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 .seg { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 .seg button { background: var(--panel-2); border: 0; box-shadow: inset 0 0 0 2px var(--line); padding: 6px 12px; cursor: pointer; min-width: 44px; --px: 3px; }
 .seg button[aria-pressed="true"] { background: var(--nova); color: #140b24; font-weight: 700; box-shadow: inset 0 0 0 2px var(--nova-hi); }
-input[type=text], select { background: #120f1c; border: 0; box-shadow: inset 0 0 0 2px var(--line); padding: 8px 10px; min-width: 0; }
-input[type=text]:focus, select:focus { box-shadow: inset 0 0 0 2px var(--nova); }
+input[type=text], input[type=password], select { background: #120f1c; border: 0; box-shadow: inset 0 0 0 2px var(--line); padding: 8px 10px; min-width: 0; }
+input[type=text]:focus, input[type=password]:focus, select:focus { box-shadow: inset 0 0 0 2px var(--nova); }
 .inline { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .inline > input[type=text] { flex: 1 1 180px; }
 .toggle { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; }
@@ -197,6 +197,12 @@ input[type=text]:focus, select:focus { box-shadow: inset 0 0 0 2px var(--nova); 
 .empty { color: var(--muted); padding: 10px 0; }
 .badge.new { background: var(--star); color: #241500; animation: blink 1s steps(2) 6; }
 .device.fresh { box-shadow: inset 0 0 0 2px var(--star); }
+.namerow { display: flex; gap: 8px; min-width: 0; }
+.namerow input { flex: 1 1 auto; min-width: 0; }
+.namerow .btn { padding: 6px 10px; font-size: .82rem; }
+.field-note { color: var(--muted); font-size: .8rem; margin: -6px 0 4px 202px; max-width: 72ch; }   /* lines up under the inputs (.row's 190px label + 12px gap) */
+@media (max-width: 560px) { .field-note { margin-left: 0; } }
+#wfNamesMsg.bad { color: var(--bad); }
 .netnames { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
 #wfApClients { white-space: pre-line; }
 
@@ -425,15 +431,28 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
           <label class="toggle"><input type="checkbox" id="wifiOn"><span class="muted">Join the saved network</span></label></div>
       </div>
       <div class="section">
-        <h2>Name on your network</h2>
-        <p class="hint">Make it yours, like <b>Uno's Pocket Nova</b>. One name is used everywhere: in your router's list of connected devices, for the setup network, and in Bluetooth lists. Saving restarts Pocket Nova (about 2 seconds).</p>
-        <div class="inline"><input type="text" id="wfNameInput" class="pix" maxlength="24" aria-label="Pocket Nova's name"><button class="btn primary pix" id="wfNameSave">Save name</button></div>
+        <h2>Names and password</h2>
+        <p class="hint">Make it yours. Leave a box empty to let Pocket Nova pick it automatically.</p>
+        <div class="row"><label for="wfNameInput">Pocket Nova's name</label>
+          <input type="text" id="wfNameInput" class="pix" maxlength="24"></div>
+        <div class="field-note">What Bluetooth lists show. Changing it restarts Pocket Nova (about 2 seconds).</div>
+        <div class="row"><label for="wfHostInput">Name on your router</label>
+          <input type="text" id="wfHostInput" class="pix" maxlength="31" autocomplete="off"></div>
+        <div class="field-note" id="wfHostNote">Empty = made from Pocket Nova's name.</div>
+        <div class="row"><label for="wfApNameInput">Setup network name</label>
+          <input type="text" id="wfApNameInput" class="pix" maxlength="32" autocomplete="off"></div>
+        <div class="field-note">The Wi-Fi network Pocket Nova opens so your phone can set it up. Empty = Pocket Nova's name + "Setup".</div>
+        <div class="row"><label for="wfApPassInput">Setup network password</label>
+          <div class="namerow"><input type="password" id="wfApPassInput" class="pix" maxlength="63" autocomplete="new-password" placeholder="New random 8 digits each time">
+            <button class="btn pix" id="wfApPassShow" type="button" aria-pressed="false">Show</button></div></div>
+        <div class="field-note">8 to 63 characters. Anyone who knows it can join while the setup network is open (10 minutes at a time) and change which Wi-Fi Pocket Nova uses, so pick something people won't guess.</div>
+        <div class="inline"><button class="btn primary pix" id="wfNamesSave">Save</button><span class="hint" id="wfNamesMsg" role="status"></span></div>
         <div class="netnames">
           <div class="stat pix"><div class="v mono" id="wfHostPrev">-</div><div class="k">your router lists it as</div></div>
           <div class="stat pix"><div class="v" id="wfApPrev">-</div><div class="k">setup network</div></div>
           <div class="stat pix"><div class="v" id="wfBtPrev">-</div><div class="k">Bluetooth</div></div>
         </div>
-        <p class="hint">Routers only allow letters, numbers and dashes in a device name (its "hostname"), so spaces become dashes and the apostrophe is dropped.</p>
+        <p class="hint">Routers only allow letters, numbers and dashes in a device name (its "hostname"), so spaces become dashes and apostrophes are dropped.</p>
       </div>
       <div class="section">
         <h2>Devices on your network <span class="count" id="netCount"></span></h2>
@@ -905,8 +924,55 @@ function saveName(input) {
   toast("Saved. Pocket Nova is restarting with its new name.");
 }
 $("nameSave").onclick = () => saveName($("nameInput"));
-$("wfNameSave").onclick = () => saveName($("wfNameInput"));
-$("wfNameInput").onkeydown = (e) => { if (e.key === "Enter") saveName(e.target); };
+
+// ---- Wi-Fi tab: names and the setup password
+const WF_FIELDS = ["wfNameInput", "wfHostInput", "wfApNameInput", "wfApPassInput"];
+const utf8Len = (t) => new TextEncoder().encode(t).length;
+function wfNamesProblem(apName, pass, name) {
+  if (!name) return "Pocket Nova needs a name.";
+  if (utf8Len(apName) > 32) return "The setup network name is too long (32 letters at most).";
+  if (pass && pass.length < 8) return "The password needs at least 8 characters (a Wi-Fi rule).";
+  if (/[^\x20-\x7e]/.test(pass)) return "The password can only use plain letters, numbers and symbols.";
+  return "";
+}
+function saveWfNames() {
+  const c = S.config || {};
+  const name = $("wfNameInput").value.trim(), host = $("wfHostInput").value.trim();
+  const apName = $("wfApNameInput").value.trim(), pass = $("wfApPassInput").value;
+  const msg = $("wfNamesMsg");
+  const bad = wfNamesProblem(apName, pass, name);
+  msg.className = bad ? "hint bad" : "hint"; msg.textContent = bad;
+  if (bad) return;
+  const o = { cmd: "wifi", action: "names", apName, host };
+  // Only send the password if it was typed, or if we know the saved one
+  // (over Bluetooth Pocket Nova doesn't send it, so leaving it out keeps it).
+  if ($("wfApPassInput").dataset.touched || c.apPass !== undefined) o.apPass = pass;
+  cmd(o);
+  const renaming = name !== c.name;
+  if (renaming) cmd({ cmd: "set", cfg: { name } });
+  WF_FIELDS.forEach((id) => delete $(id).dataset.touched);
+  delete $("nameInput").dataset.touched;
+  toast(renaming ? "Saved. Pocket Nova is restarting with its new name." : "Saved");
+}
+$("wfNamesSave").onclick = saveWfNames;
+WF_FIELDS.forEach((id) => {
+  $(id).oninput = (e) => { e.target.dataset.touched = "1"; $("wfNamesMsg").textContent = ""; renderNamePreview(); };
+  $(id).onkeydown = (e) => { if (e.key === "Enter") saveWfNames(); };
+});
+$("wfApPassShow").onclick = (e) => {
+  const show = $("wfApPassInput").type === "password";
+  $("wfApPassInput").type = show ? "text" : "password";
+  e.target.textContent = show ? "Hide" : "Show";
+  e.target.setAttribute("aria-pressed", String(show));
+};
+function fillWfNames(c) {
+  const put = (id, v) => { if (document.activeElement !== $(id) && !$(id).dataset.touched) $(id).value = v || ""; };
+  put("wfNameInput", c.name);
+  put("wfHostInput", c.host);
+  put("wfApNameInput", c.apName);
+  if (c.apPass !== undefined) put("wfApPassInput", c.apPass);
+  $("wfApPassInput").placeholder = c.apPassCustom && c.apPass === undefined ? "Your password (hidden over Bluetooth)" : "New random 8 digits each time";
+}
 
 // The same rule as wifiMakeHostname() in the firmware (Wifi.h).
 function hostnameFor(name) {
@@ -921,12 +987,14 @@ function hostnameFor(name) {
   return out || "PocketNova";
 }
 function renderNamePreview() {
-  const typed = $("wfNameInput").value.trim() || (S.config && S.config.name) || "Pocket Nova";
-  $("wfHostPrev").textContent = hostnameFor(typed);
-  $("wfApPrev").textContent = typed + " Setup";
-  $("wfBtPrev").textContent = typed;
+  const name = $("wfNameInput").value.trim() || (S.config && S.config.name) || "Pocket Nova";
+  const host = hostnameFor($("wfHostInput").value.trim() || name);
+  $("wfHostPrev").textContent = host;
+  $("wfHostInput").placeholder = hostnameFor(name);
+  $("wfApNameInput").placeholder = name + " Setup";
+  $("wfApPrev").textContent = $("wfApNameInput").value.trim() || name + " Setup";
+  $("wfBtPrev").textContent = name;
 }
-$("wfNameInput").oninput = (e) => { e.target.dataset.touched = "1"; renderNamePreview(); };
 
 // ---- devices on your network (the scan runs on Pocket Nova: netScan in Wifi.h)
 let netKey = "", netSeenAt = 0, netAsked = false;
@@ -1473,7 +1541,7 @@ function render() {
     const picked = h && c.tvBrand < h.brands.length;
     [...$("tvGrid").children].forEach((b) => { if (+b.dataset.code !== 0) b.disabled = !picked; });
     if (document.activeElement !== $("nameInput") && !$("nameInput").dataset.touched) $("nameInput").value = c.name;
-    if (document.activeElement !== $("wfNameInput") && !$("wfNameInput").dataset.touched) $("wfNameInput").value = c.name;
+    fillWfNames(c);
     $("snakeBest").textContent = c.snakeHigh;
   }
   if (st) {

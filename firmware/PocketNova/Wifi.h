@@ -10,8 +10,9 @@
 //                        (SSID), hands out addresses (DHCP) and others join.
 //
 //  SETUP: Settings -> WI-FI, double tap (or the PC panel) starts an access
-//  point named after Pocket Nova ("Pocket Nova Setup", or "Uno's Pocket
-//  Nova Setup" once you rename it) with a fresh 8-digit password. Join it with
+//  point. Its name and password are yours to pick in the PC panel; left
+//  empty, it's "<Pocket Nova's name> Setup" with a fresh 8-digit password
+//  each time. Join it with
 //  your phone and the setup page opens by itself (a "captive portal").
 //  Pick your home network, type its password, and Pocket Nova joins it.
 //
@@ -25,8 +26,8 @@
 //  ONLINE: once joined it fetches the time from the internet (NTP), so
 //  Nova knows when it's night even on a phone charger.
 //
-//  NAME: your router lists Pocket Nova by its "hostname", made from the
-//  name you give it in the panel (see wifiMakeHostname).
+//  NAME: your router lists Pocket Nova by its "hostname": the router name
+//  you pick in the panel, or else Pocket Nova's name (see wifiMakeHostname).
 //
 //  WHO'S ON YOUR NETWORK: the PC panel can ask Pocket Nova to list every
 //  device on your home network (see netScanStart below).
@@ -63,8 +64,13 @@ bool      ntpStarted = false;
 
 bool        setupOn = false;
 uint32_t    setupUntil = 0;
-char        apSsid[33] = "";       // "<name> Setup" (Wi-Fi names max out at 32)
-char        apPass[9] = "";        // 8 random digits
+char        apSsid[33] = "";       // the setup network's name now (Wi-Fi names max out at 32)
+char        apPass[64] = "";       // and its password (WPA2: 8..63 characters)
+
+// Your choices from the PC panel. Empty = automatic.
+char        myApName[33] = "";     // setup network name   (auto: "<name> Setup")
+char        myApPass[64] = "";     // setup password       (auto: 8 random digits each time)
+char        myHost[32] = "";       // name on your router  (auto: made from Pocket Nova's name)
 WebServer*  web = nullptr;
 DNSServer*  dns = nullptr;
 bool        setupJoining = false;  // the page asked us to try a network
@@ -78,12 +84,18 @@ void wifiLoad() {
   prefs.begin("wifi", true);
   prefs.getString("ssid", wifiSsid, sizeof(wifiSsid));
   prefs.getString("pass", wifiPass, sizeof(wifiPass));
+  if (prefs.isKey("apName")) prefs.getString("apName", myApName, sizeof(myApName));
+  if (prefs.isKey("apPass")) prefs.getString("apPass", myApPass, sizeof(myApPass));
+  if (prefs.isKey("host")) prefs.getString("host", myHost, sizeof(myHost));
   prefs.end();
 }
 void wifiSave() {
   prefs.begin("wifi", false);
   prefs.putString("ssid", wifiSsid);
   prefs.putString("pass", wifiPass);
+  prefs.putString("apName", myApName);
+  prefs.putString("apPass", myApPass);
+  prefs.putString("host", myHost);
   prefs.end();
 }
 bool wifiHasNetwork() { return wifiSsid[0] != 0; }
@@ -100,7 +112,7 @@ char wifiHostname[32] = "";       // the Wi-Fi library keeps at most 31 characte
 void wifiMakeHostname() {
   size_t n = 0;
   bool gap = false;
-  for (const char* p = cfg.name; *p && n < sizeof(wifiHostname) - 1; p++) {
+  for (const char* p = myHost[0] ? myHost : cfg.name; *p && n < sizeof(wifiHostname) - 1; p++) {
     char c = *p;
     if (isalnum((unsigned char)c)) {
       if (gap && n) {
@@ -331,11 +343,16 @@ void webResult() {
 
 void wifiStartSetup() {
   if (setupOn) { setupUntil = millis() + WIFI_SETUP_MS; return; }
-  snprintf(apSsid, sizeof(apSsid), "%s Setup", cfg.name);
-  // A new password each time. esp_random() uses radio noise, so it's
-  // properly unpredictable while Wi-Fi or Bluetooth is running.
-  for (int i = 0; i < 8; i++) apPass[i] = '0' + esp_random() % 10;
-  apPass[8] = 0;
+  if (myApName[0]) strcpy(apSsid, myApName);
+  else snprintf(apSsid, sizeof(apSsid), "%s Setup", cfg.name);
+  if (myApPass[0]) {
+    strcpy(apPass, myApPass);
+  } else {
+    // A new password each time. esp_random() uses radio noise, so it's
+    // properly unpredictable while Wi-Fi or Bluetooth is running.
+    for (int i = 0; i < 8; i++) apPass[i] = '0' + esp_random() % 10;
+    apPass[8] = 0;
+  }
 
   WiFi.persistent(false);                // we save the network ourselves (above)
   wifiRadioFor(wifiHasNetwork() && cfg.wifiOn, true);
@@ -383,6 +400,33 @@ void wifiSetOn(bool on) {
   if (setupOn) { if (on) wifiJoin(); return; }   // AP stays up; wifiStopSetup() fixes the mode
   if (on && wifiHasNetwork()) { WiFi.persistent(false); wifiRadioFor(true, false); wifiJoin(); }
   else { WiFi.disconnect(true); wifiRadioFor(false, false); wifiState = WF_OFF; }
+}
+
+// New names/password from the PC panel. Wi-Fi rules: a network name is
+// 1..32 bytes, a WPA2 password 8..63 characters. Empty = automatic.
+// Returns an error message, or nullptr when saved.
+const char* wifiSetNames(const char* apName, const char* apPass_, const char* host) {
+  if (strlen(apName) > 32) return "network name: 32 characters at most";
+  size_t pl = strlen(apPass_);
+  if (pl && (pl < 8 || pl > 63)) return "password: 8 to 63 characters";
+  for (const char* p = apPass_; *p; p++) if (*p < 32 || *p > 126) return "password: plain letters, numbers and symbols only";
+  if (strlen(host) > 31) return "router name: 31 characters at most";
+  bool hostChanged = strcmp(host, myHost) != 0;
+  strcpy(myApName, apName);
+  strcpy(myApPass, apPass_);
+  strcpy(myHost, host);
+  wifiSave();
+  wifiMakeHostname();
+  Serial.printf("[WIFI] Setup network \"%s\", password %s, router name %s\n", myApName[0] ? myApName : "(auto)",
+                myApPass[0] ? "(yours)" : "(random)", wifiHostname);
+  if (setupOn) { wifiStopSetup(); wifiStartSetup(); }   // reopen it with the new name and password
+  // The router learns the name when Pocket Nova asks for an address, so
+  // rejoin to tell it. (Some routers keep showing the old name for a while.)
+  if (hostChanged) {
+    WiFi.setHostname(wifiHostname);
+    if (cfg.wifiOn && wifiHasNetwork() && !setupOn) { WiFi.disconnect(); wifiRadioFor(false, false); wifiRadioFor(true, false); wifiJoin(); }
+  }
+  return nullptr;
 }
 
 void wifiForget() {

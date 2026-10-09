@@ -933,7 +933,7 @@ bool settingsFrame(Event e) {
     }
   }
   if (e == EV_TAP) {
-    char buf[64];
+    char buf[112];
     switch (setMenu.index) {
       case ST_AUTOROT:
         cfg.autoRotate = !cfg.autoRotate;

@@ -28,6 +28,8 @@
 //    findtv                       open TV and start FIND TV
 //    time  {"epoch":n,"tz":seconds}  set the clock (for night mode)
 //    wifi  {"action":"setup"|"stop"|"on"|"off"|"join"|"forget"}
+//    wifi  {"action":"names","apName":"..","apPass":"..","host":".."}
+//                                 setup network name/password and router name ("" = automatic)
 //    netscan                      list the devices on your Wi-Fi network
 //                                 (answers @{"t":"netscan",...} when done)
 //    keys  {"list":[ids], "custom":[{"n":0,"name":"..","mods":n,"key":n}]}
@@ -103,6 +105,11 @@ void sendConfig() {
   d["slot"] = cfg.btSlot;
   d["swiftPair"] = cfg.swiftPair;
   d["wifiOn"] = cfg.wifiOn;
+  d["apName"] = myApName;
+  d["host"] = myHost;
+  d["hostname"] = wifiHostname;
+  d["apPassCustom"] = myApPass[0] != 0;
+  if (!replyBle) d["apPass"] = myApPass;          // the PC (USB) only, never the phone page
   d["lastApp"] = cfg.lastApp;
   d["tutorialDone"] = cfg.tutorialDone;
   d["snakeHigh"] = cfg.snakeHigh;
@@ -184,7 +191,7 @@ void sendStatus() {
   w["setup"] = setupOn;
   if (setupOn) {
     w["apSsid"] = apSsid;
-    w["apPass"] = apPass;
+    if (!replyBle) w["apPass"] = apPass;        // not to the phone page
     w["setupLeft"] = (int32_t)(setupUntil - millis()) / 1000;
     // Phones and laptops joined to the setup network right now.
     wifi_sta_list_t sl;
@@ -394,6 +401,14 @@ void handleRemoteLine(const char* line) {
     }
     else if (!strcmp(a, "off")) wifiSetOn(false);
     else if (!strcmp(a, "forget")) wifiForget();
+    else if (!strcmp(a, "names")) {
+      char keep[64];                          // no "apPass" sent = keep the current one
+      strcpy(keep, myApPass);
+      const char* pw = in["apPass"].is<const char*>() ? in["apPass"].as<const char*>() : keep;
+      const char* err = wifiSetNames(in["apName"] | "", pw, in["host"] | "");
+      if (err) { replyError(err); return; }
+      sendConfig();
+    }
     else { replyError("unknown wifi action"); return; }
     replyOk(cmd, a);
     sendStatus();

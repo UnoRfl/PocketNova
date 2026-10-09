@@ -148,7 +148,7 @@ void drawText(const char* t, int ox, CRGB col) {
 
 // Scrolls a word across the screen, right to left, without blocking.
 struct Scroller {
-  char     text[40] = "";
+  char     text[112] = "";       // room for "JOIN <32-char network> PASS <63-char password>"
   CRGB     color;
   int      offset = 0;
   uint32_t last = 0;
