@@ -13,7 +13,10 @@
 // =====================================================================
 
 #include <esp_gap_ble_api.h>
+#include <esp_gatts_api.h>
 #include <esp_system.h>
+
+extern esp_gatt_if_t gattsIf;   // NovaRemote.h: our GATT server's handle
 
 // Must run BEFORE bleKeyboard.begin(): picks this slot's radio address.
 void bleApplySlot() {
@@ -115,6 +118,19 @@ void bleSlotMapUpdate() {
     if (count == 1) match = mine;
   }
   if (match < 0) { hostBondKnown = false; return; }
+  // SERVICE CHANGED: a paired computer saves our list of services and
+  // never looks again, so after a firmware update it can miss new ones
+  // (like the remote service). This standard message tells it to re-read
+  // the list. Sent once per start to each paired host.
+  static uint8_t told[4][6];
+  static int toldCount = 0;
+  bool already = false;
+  for (int i = 0; i < toldCount; i++) if (!memcmp(told[i], host, 6)) already = true;
+  if (!already && gattsIf != ESP_GATT_IF_NONE) {
+    esp_err_t r = esp_ble_gatts_send_service_change_indication(gattsIf, host);
+    Serial.printf("[BT] Told %s our services changed (%s)\n", macToString(host).c_str(), r == ESP_OK ? "ok" : "failed");
+    if (toldCount < 4) memcpy(told[toldCount++], host, 6);
+  }
   memcpy(hostBond, list[match].bd_addr, 6);
   hostBondKnown = true;
   if (bondSlot(hostBond) != cfg.btSlot) bondSlotSet(hostBond, cfg.btSlot);

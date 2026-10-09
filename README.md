@@ -12,7 +12,7 @@ A pocket remote, presentation clicker and virtual pet for the **M5Stack Atom Mat
 - **Bluetooth keyboard.** 3 device slots. On Windows, a "Connect" pop-up appears while it's ready to pair (Swift Pair).
 - **Wi-Fi.** Its own setup network with a sign-in page that opens by itself. Gets the time from the internet.
 - **Phone remote.** A web page that controls it over Bluetooth, protected by a code shown on the LEDs.
-- **PC panel (Windows).** Opens by itself when Pocket Nova is plugged in. Every setting, a live copy of the screen and firmware updates.
+- **PC panel (Windows).** Opens by itself when Pocket Nova is plugged in. Every setting, a live copy of the screen and firmware updates. With no cable it falls back to Bluetooth (everything except firmware updates).
 
 ## Download
 

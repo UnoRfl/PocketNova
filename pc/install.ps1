@@ -22,6 +22,12 @@ Write-Host 'Checking pyserial...'
 & python -c "import serial" 2>$null
 if ($LASTEXITCODE -ne 0) { & python -m pip install --user --disable-pip-version-check pyserial==3.5 }
 
+# Optional: lets the panel reach Pocket Nova over Bluetooth when no cable is plugged in.
+Write-Host 'Checking bleak (Bluetooth)...'
+& python -c "import bleak" 2>$null
+if ($LASTEXITCODE -ne 0) { & python -m pip install --user --disable-pip-version-check bleak==3.0.2 }
+if ($LASTEXITCODE -ne 0) { Write-Host 'Bluetooth library not installed: the panel will work over USB only.' }
+
 # Stop a running copy so its files can be replaced.
 Get-CimInstance Win32_Process -Filter "Name='pythonw.exe' OR Name='python.exe'" -ErrorAction SilentlyContinue |
   Where-Object { $_.CommandLine -like '*pocketnova_panel.py*' } |

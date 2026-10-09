@@ -599,6 +599,12 @@ bool NovaKeyboard::hostAddress(uint8_t* out) {
   return false;
 }
 
+bool NovaKeyboard::peerAddress(uint16_t connId, uint8_t* out) {
+  if (connId >= 16 || !(peerMask & (1u << connId))) return false;
+  memcpy(out, peerAddr[connId], 6);
+  return true;
+}
+
 int NovaKeyboard::hostLinks() {
   int remotes = __builtin_popcount(remoteMask);
   return links > remotes ? links - remotes : 0;

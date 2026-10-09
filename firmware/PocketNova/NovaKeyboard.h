@@ -159,6 +159,7 @@ public:
   int  hostLinks(void);
   uint16_t remotes(void) { return remoteMask; }
   bool hostAddress(uint8_t* out);         // address of the keyboard host, if one is connected
+  bool peerAddress(uint16_t connId, uint8_t* out);   // address on a connection
   BLEServer* getServer(void) { return server; }
 protected:
   virtual void onStarted(BLEServer *pServer) { };

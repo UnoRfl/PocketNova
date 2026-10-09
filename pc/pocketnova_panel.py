@@ -5,6 +5,10 @@ Runs quietly in the background (started with Windows). It watches the USB
 ports, and the moment Pocket Nova is plugged in it opens the control panel
 in its own window. The panel talks to the device through this program.
 
+With no cable, it falls back to Bluetooth: if this PC is paired with
+Pocket Nova, it talks to the device's remote service instead (everything
+except firmware updates, which need the cable). USB always wins.
+
     pythonw pocketnova_panel.py          background watcher (no window until plugged in)
     pythonw pocketnova_panel.py --open   ...and open the panel right away
 
@@ -24,6 +28,18 @@ from urllib.parse import urlparse, parse_qs
 
 import serial
 from serial.tools import list_ports
+
+try:                                  # Bluetooth fallback (optional: pip install bleak)
+    import asyncio
+    from bleak import BleakClient, BleakScanner
+    HAVE_BLEAK = True
+except ImportError:
+    HAVE_BLEAK = False
+
+# Pocket Nova's remote service (NovaRemote.h on the device).
+REMOTE_SVC = "8f3c0001-5b2a-4c8e-9a71-2f6d1e0b9a10"
+REMOTE_CMD = "8f3c0002-5b2a-4c8e-9a71-2f6d1e0b9a10"
+REMOTE_OUT = "8f3c0003-5b2a-4c8e-9a71-2f6d1e0b9a10"
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = APP_DIR   # settings + log live next to the app (Store Python virtualises AppData)
@@ -88,10 +104,111 @@ settings = load_settings()
 settings_lock = threading.Lock()
 
 
+# ---------------------------------------------------------------- Bluetooth link
+
+class BleLink:
+    """Talks to Pocket Nova's remote service over Bluetooth, in its own thread.
+
+    Replies arrive as notifications in packet-sized pieces; a newline ends
+    each line. Lines are handed to on_line(), the same as USB lines."""
+
+    def __init__(self, on_line, on_up, on_down):
+        self.on_line, self.on_up, self.on_down = on_line, on_up, on_down
+        self.connected = False
+        self.name = ""
+        self.address = ""
+        self.last_error = ""
+        self._loop = None
+        self._client = None
+        self._buf = ""
+        self._busy = False
+
+    def start(self):
+        if not HAVE_BLEAK:
+            return
+        threading.Thread(target=self._thread, daemon=True).start()
+
+    def _thread(self):
+        self._loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self._loop)
+        self._loop.run_forever()
+
+    def try_connect(self):
+        """Look for Pocket Nova and connect (runs in the background)."""
+        if self._loop and not self.connected and not self._busy:
+            self._busy = True
+            asyncio.run_coroutine_threadsafe(self._connect(), self._loop)
+
+    async def _connect(self):
+        try:
+            dev = await BleakScanner.find_device_by_filter(
+                lambda d, a: REMOTE_SVC in [u.lower() for u in a.service_uuids], timeout=6)
+            if not dev:
+                self.last_error = "not found nearby"
+                return
+            # Ask for just the remote service, read fresh from the device.
+            # Windows keeps an old copy of a paired device's services, and a
+            # fresh read of ALL of them fails while the keyboard driver holds
+            # it ("catastrophic failure"); a fresh read of one service works.
+            client = BleakClient(dev, services=[REMOTE_SVC], winrt={"use_cached_services": False},
+                                 disconnected_callback=lambda c: self._gone())
+            await client.connect(timeout=12)
+            if not any(sv.uuid.lower() == REMOTE_SVC for sv in client.services):
+                self.last_error = "its remote service didn't answer (update the firmware over USB)"
+                await client.disconnect()
+                return
+            await client.start_notify(REMOTE_OUT, self._notify)
+            self._client, self.connected = client, True
+            self.name, self.address = dev.name or "Pocket Nova", dev.address
+            self.last_error = ""
+            log(f"Connected over Bluetooth to {self.name} ({self.address})")
+            # on_up() sends commands, and sending waits on this event loop,
+            # so it must run on another thread or it would wait for itself.
+            threading.Thread(target=self.on_up, daemon=True).start()
+        except Exception as e:
+            self.last_error = f"{type(e).__name__}: {e}"
+        finally:
+            self._busy = False
+
+    def _notify(self, _char, data):
+        self._buf += bytes(data).decode("utf-8", "replace")
+        while "\n" in self._buf:
+            line, self._buf = self._buf.split("\n", 1)
+            line = line.strip()
+            if line:
+                self.on_line(line if line.startswith("@") else "@" + line)
+
+    def _gone(self):
+        if self.connected:
+            self.connected = False
+            self._client = None
+            log("Bluetooth link closed")
+            self.on_down()
+
+    def send(self, obj):
+        if not (self.connected and self._client):
+            return False
+        data = json.dumps(obj, separators=(",", ":")).encode()
+        if len(data) > 190:                    # the device reads up to ~200 bytes per command
+            return False
+        fut = asyncio.run_coroutine_threadsafe(
+            self._client.write_gatt_char(REMOTE_CMD, data, response=True), self._loop)
+        try:
+            fut.result(timeout=4)
+            return True
+        except Exception:
+            return False
+
+    def close(self):
+        if self._client and self._loop:
+            asyncio.run_coroutine_threadsafe(self._client.disconnect(), self._loop)
+
+
 # ---------------------------------------------------------------- device link
 
 class DeviceLink:
-    """Finds Pocket Nova on a USB serial port and keeps talking to it."""
+    """Finds Pocket Nova on a USB serial port (or, failing that, over
+    Bluetooth) and keeps talking to it."""
 
     def __init__(self):
         self.ser = None
@@ -110,6 +227,9 @@ class DeviceLink:
         self._next_bonds = 0.0
         self._next_time = 0.0
         self._failed = {}                     # port -> time of last failed probe
+        self.ble = BleLink(self._ble_line, self._ble_up, self._ble_down)
+        self._next_ble = 0.0
+        self.ble.start()
 
     # ---- helpers
     def _add_log(self, text):
@@ -117,14 +237,36 @@ class DeviceLink:
         self.logs.append((self.seq, text))
 
     def connected(self):
-        return self.ser is not None
+        return self.ser is not None or self.ble.connected
+
+    def transport(self):
+        return "usb" if self.ser is not None else "bluetooth" if self.ble.connected else ""
+
+    # ---- Bluetooth callbacks (from the Bluetooth thread)
+    def _ble_line(self, line):
+        if self.ser is None:                  # USB wins if both are up
+            self._handle_line(line)
+
+    def _ble_up(self):
+        with self.lock:
+            self.state = {}
+            self._add_log(f"-- Connected to {self.ble.name} over Bluetooth (no cable)")
+        self.send({"cmd": "hello"})
+        self._after_connect()
+
+    def _ble_down(self):
+        self.mirror_on = False
+        if self.ser is None:
+            with self.lock:
+                self.state = {}
+                self._add_log("-- Bluetooth link closed")
 
     def ui_active(self):
         return time.time() - self.ui_seen < 5
 
     def send(self, obj):
         if not self.ser:
-            return False
+            return self.ble.send(obj)
         try:
             with self.lock:
                 self.ser.write((json.dumps(obj, separators=(",", ":")) + "\n").encode())
@@ -215,6 +357,8 @@ class DeviceLink:
                 self.state = {"hello": hello}
                 self._add_log(f"-- Connected to {hello.get('name')} on {dev} (firmware {hello.get('fw')})")
             log(f"Connected on {dev}: {hello}")
+            if self.ble.connected:           # the cable is back: it takes over
+                self.ble.close()
             self._after_connect()
             return True
         return False
@@ -267,8 +411,16 @@ class DeviceLink:
                 time.sleep(0.3)
                 continue
             if not self.ser:
-                if not self.scan():
-                    time.sleep(1.5)
+                if self.scan():
+                    continue
+                if self.ble.connected:
+                    self._periodic()
+                    time.sleep(0.05)
+                    continue
+                if time.time() >= self._next_ble:   # no cable: look for it over Bluetooth
+                    self._next_ble = time.time() + 15
+                    self.ble.try_connect()
+                time.sleep(1.5)
                 continue
             try:
                 data = self.ser.read(4096)
@@ -324,7 +476,8 @@ class Updater:
         port = link.port
         try:
             if not port:
-                raise RuntimeError("Pocket Nova isn't connected.")
+                raise RuntimeError("Firmware updates need the USB cable. Plug Pocket Nova in." if link.ble.connected
+                                   else "Pocket Nova isn't connected.")
             if not os.path.isdir(sketch):
                 raise RuntimeError(f"Firmware folder not found: {sketch}")
             self.lines.append("Building firmware... (about a minute)")
@@ -466,6 +619,9 @@ class Handler(BaseHTTPRequestHandler):
                 auto_open = settings.get("autoOpen", True)
             return self._send(200, {
                 "connected": link.connected(),
+                "transport": link.transport(),
+                "bleError": link.ble.last_error,
+                "bleAvailable": HAVE_BLEAK,
                 "port": link.port,
                 "paused": link.paused,
                 **st,

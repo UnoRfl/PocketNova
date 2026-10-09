@@ -222,6 +222,21 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
 .toast[hidden] { display: none; }
 @keyframes fly { from { transform: translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
 
+/* Bluetooth mode pop-up */
+.modal { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: rgba(7, 6, 13, .7); backdrop-filter: blur(3px); }
+.modal[hidden] { display: none; }
+.modal .box { width: min(520px, 100%); background: var(--panel-2); box-shadow: inset 0 0 0 2px var(--nova-hi), 0 0 40px rgba(164, 107, 255, .3);
+              padding: 22px; display: grid; gap: 14px; animation: fly .35s cubic-bezier(.2, 1.4, .5, 1); --px: 8px; max-height: calc(100vh - 32px); overflow: auto; }
+.modal .head { display: flex; align-items: center; gap: 12px; }
+.modal .head svg { width: 40px; height: 40px; image-rendering: pixelated; flex: none; animation: bob 2.4s ease-in-out infinite; }
+.modal h3 { font-size: 1.35rem; }
+.modal h4 { margin: 0; font-family: var(--font-tiny); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; }
+.modal h4.no { color: var(--warn); } .modal h4.yes { color: var(--good); }
+.modal ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.modal li::marker { color: var(--nova-hi); }
+.modal .foot { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+#usbChip.clickable { cursor: pointer; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
@@ -474,11 +489,35 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
 <div class="offline" id="offline">
   <div class="box">
     <svg class="mascot" id="offMascot" viewBox="0 0 16 15" role="img" aria-label="Nova, asleep"></svg>
-    <h2 id="offTitle">Plug in Pocket Nova</h2>
+    <h2 id="offTitle">Looking for Pocket Nova</h2>
     <p class="muted" id="offText">Use a USB-C cable that carries data. The panel connects by itself as soon as it's plugged in.</p>
   </div>
 </div>
 <div class="toast pix" id="toast" hidden></div>
+
+<div class="modal" id="btModal" hidden role="dialog" aria-modal="true" aria-labelledby="btModalTitle">
+  <div class="box pix">
+    <div class="head"><span id="btModalIcon"></span><h3 id="btModalTitle">Bluetooth Mode Connection</h3></div>
+    <p class="muted">There's no USB cable, so this panel is talking to Pocket Nova over Bluetooth. Plug the cable in any time and it switches back to USB by itself.</p>
+    <h4 class="no">Not available in Bluetooth mode</h4>
+    <ul>
+      <li><b>Firmware updates</b> need the USB cable.</li>
+      <li><b>The detailed activity log</b> only comes over USB. Here you see replies and connection events only.</li>
+      <li><b>The live screen</b> updates about 5 times a second instead of 10, so animations look choppier.</li>
+      <li><b>Switching slot</b> from the panel drops this link if this PC isn't paired on the new slot.</li>
+    </ul>
+    <h4 class="yes">Everything else still works</h4>
+    <ul>
+      <li>All settings, the remote buttons, the TV remote, Nova, Wi-Fi and pairings.</li>
+      <li>Keys and media shortcuts on this PC, as usual.</li>
+      <li>Range is about 10 m. Pocket Nova still needs power from a charger or power bank (it has no battery).</li>
+    </ul>
+    <div class="foot">
+      <label class="toggle"><input type="checkbox" id="btModalHide"><span class="muted">Don't show this again</span></label>
+      <button class="btn primary pix" id="btModalOk">Got it</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const $ = (id) => document.getElementById(id);
@@ -667,6 +706,32 @@ const sky = { stars: [], shooters: [], warp: 0, warpTarget: 0 };
   }
   requestAnimationFrame(frame);
 })();
+
+// ---- Bluetooth mode pop-up: shown each time the link becomes Bluetooth,
+// unless "Don't show this again" was ticked. The USB chip reopens it.
+$("btModalIcon").appendChild(iconSvg("bt"));
+let lastTransport = "";
+function showBtModal() { $("btModal").hidden = false; $("btModalOk").focus(); }
+$("btModalOk").onclick = () => {
+  $("btModal").hidden = true;
+  try { localStorage.setItem("pn-bt-modal-hide", $("btModalHide").checked ? "1" : ""); } catch (e) {}
+};
+$("btModal").onclick = (e) => { if (e.target === $("btModal")) $("btModalOk").click(); };
+addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("btModal").hidden) $("btModalOk").click(); });
+$("usbChip").onclick = () => { if (S.transport === "bluetooth") showBtModal(); };
+function checkTransport() {
+  const t = S.transport || "";
+  $("usbChip").classList.toggle("clickable", t === "bluetooth");
+  $("usbChip").title = t === "bluetooth" ? "What works over Bluetooth" : "";
+  if (t === "bluetooth" && lastTransport !== "bluetooth") {
+    let hide = false;
+    try { hide = localStorage.getItem("pn-bt-modal-hide") === "1"; } catch (e) {}
+    $("btModalHide").checked = hide;
+    if (!hide) showBtModal();
+  }
+  if (t === "usb" && lastTransport === "bluetooth") { $("btModal").hidden = true; toast("Cable plugged in: back to USB"); }
+  lastTransport = t;
+}
 
 // ---- LED grid
 function buildGrid(el) { for (let i = 0; i < 25; i++) { const d = document.createElement("i"); d.className = "led"; el.appendChild(d); } }
@@ -962,7 +1027,9 @@ function chip(el, cls, text, textEl) {
 function render() {
   const on = S.connected;
   $("offline").hidden = !!on || !!switching;   // a slot switch restarts it: no "plug in" flash
-  chip($("usbChip"), on ? "good" : "bad", on ? "Connected" : switching ? "Restarting…" : "Not plugged in", $("usbText"));
+  const viaBt = S.transport === "bluetooth";
+  checkTransport();
+  chip($("usbChip"), on ? "good" : "bad", on ? (viaBt ? "Linked by Bluetooth" : "Linked by USB") : switching ? "Restarting…" : "Not linked", $("usbText"));
   if (S.paused) chip($("usbChip"), "warn", "Updating firmware", $("usbText"));
 
   const h = S.hello, c = S.config, st = S.status;
@@ -1013,7 +1080,7 @@ function render() {
   }
   if (!on) novaFace = switching ? "blink" : "asleep";
   paintMascot();
-  $("portName").textContent = S.port || "-";
+  $("portName").textContent = viaBt ? "Bluetooth" : S.port || "-";
   $("fwDir").textContent = S.firmwareDir || "";
   if (document.activeElement !== $("autoOpen")) $("autoOpen").checked = !!S.autoOpen;
   if (document.activeElement !== $("autostart")) $("autostart").checked = !!S.autostart;
@@ -1023,7 +1090,8 @@ function render() {
   renderBrands();
 
   const up = S.update || {};
-  $("updateBtn").disabled = !!up.running || !on;
+  $("updateBtn").disabled = !!up.running || !on || viaBt;
+  $("updateBtn").title = viaBt ? "Firmware updates need the USB cable" : "";
   if (up.lines && up.lines.length) {
     const box = $("updateLog");
     box.hidden = false;
@@ -1060,8 +1128,11 @@ async function poll() {
     const s = await (await fetch(`/api/state?since=${logSince}&rsince=${replySince}`)).json();
     if (!s.connected) { s.hello = S.hello; }
     S = s;
-    $("offTitle").textContent = "Plug in Pocket Nova";
-    $("offText").textContent = "Use a USB-C cable that carries data. The panel connects by itself as soon as it's plugged in.";
+    $("offTitle").textContent = "Looking for Pocket Nova";
+    $("offText").textContent = !s.bleAvailable
+      ? "Plug it in with a USB-C cable that carries data. The panel connects by itself."
+      : "Plug it in with a USB-C cable, or keep it nearby and powered: this PC also looks for it over Bluetooth every 15 seconds."
+        + (s.bleError ? ` (Bluetooth: ${s.bleError}.)` : "");
     appendLogs(s.logs);
     handleReplies(s.replies);
     render();
