@@ -567,6 +567,8 @@ void NovaKeyboard::onConnect(BLEServer* pServer) {
 //  host, so the media/keys apps still know whether the PC is there.
 // ---------------------------------------------------------------------
 void NovaKeyboard::onConnect(BLEServer* pServer, esp_ble_gatts_cb_param_t* param) {
+  uint16_t id = param->connect.conn_id;
+  if (id < 16) { memcpy(peerAddr[id], param->connect.remote_bda, 6); peerMask |= 1u << id; }
   links++;
   this->connected = hostLinks() > 0;
 #if !defined(USE_NIMBLE)
@@ -577,7 +579,7 @@ void NovaKeyboard::onConnect(BLEServer* pServer, esp_ble_gatts_cb_param_t* param
 void NovaKeyboard::onDisconnect(BLEServer* pServer, esp_ble_gatts_cb_param_t* param) {
   uint16_t id = param->disconnect.conn_id;
   if (links) links--;
-  if (id < 16 && (remoteMask & (1u << id))) remoteMask &= ~(1u << id);
+  if (id < 16) { remoteMask &= ~(1u << id); peerMask &= ~(1u << id); }
   this->connected = hostLinks() > 0;
 #if !defined(USE_NIMBLE)
   advertising->start();
@@ -588,6 +590,13 @@ void NovaKeyboard::markRemote(uint16_t connId) {
   if (connId >= 16 || (remoteMask & (1u << connId))) return;
   remoteMask |= 1u << connId;
   this->connected = hostLinks() > 0;
+}
+
+bool NovaKeyboard::hostAddress(uint8_t* out) {
+  uint16_t hosts = peerMask & ~remoteMask;
+  for (int id = 0; id < 16; id++)
+    if (hosts & (1u << id)) { memcpy(out, peerAddr[id], 6); return true; }
+  return false;
 }
 
 int NovaKeyboard::hostLinks() {

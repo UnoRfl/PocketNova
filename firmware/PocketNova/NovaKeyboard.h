@@ -126,6 +126,8 @@ private:
   bool               swiftPair = false;
   uint8_t            links = 0;          // open connections (host + remotes)
   uint16_t           remoteMask = 0;     // bit n set = conn_id n is a remote page
+  uint16_t           peerMask = 0;       // bit n set = conn_id n is open (address in peerAddr)
+  uint8_t            peerAddr[16][6];    // who is on each connection
   std::string        scanServiceUuid;    // extra service ID for the scan response
   BLEServer*         server = nullptr;
   uint32_t           _delay_ms = 7;
@@ -156,6 +158,7 @@ public:
   void markRemote(uint16_t connId);       // this connection is a remote, not the keyboard host
   int  hostLinks(void);
   uint16_t remotes(void) { return remoteMask; }
+  bool hostAddress(uint8_t* out);         // address of the keyboard host, if one is connected
   BLEServer* getServer(void) { return server; }
 protected:
   virtual void onStarted(BLEServer *pServer) { };

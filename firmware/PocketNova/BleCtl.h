@@ -52,9 +52,78 @@ bool parseMac(const char* s, uint8_t* m) {
   return true;
 }
 
+// ---------------------------------------------------------------------
+//  WHICH SLOT EACH PAIRING BELONGS TO
+//  The ESP32 keeps all pairings in one list, whatever slot made them, so
+//  we note the slot ourselves: whenever a paired host is connected, its
+//  address is saved with the current slot (NVS area "bondslot", key = the
+//  address as 12 hex digits). Phones may connect with a changing "private"
+//  address that doesn't match the saved one; then a pairing with no slot
+//  yet is assumed to be the one connected.
+// ---------------------------------------------------------------------
+void bondKey(const uint8_t* m, char* key) {   // 13 bytes
+  snprintf(key, 13, "%02X%02X%02X%02X%02X%02X", m[0], m[1], m[2], m[3], m[4], m[5]);
+}
+
+int bondSlot(const uint8_t* m) {
+  char k[13];
+  bondKey(m, k);
+  prefs.begin("bondslot", true);
+  int s = prefs.isKey(k) ? prefs.getUChar(k, 0) : -1;
+  prefs.end();
+  return s;
+}
+
+void bondSlotSet(const uint8_t* m, uint8_t slot) {
+  char k[13];
+  bondKey(m, k);
+  prefs.begin("bondslot", false);
+  prefs.putUChar(k, slot);
+  prefs.end();
+}
+
+void bondSlotForget(const uint8_t* m) {
+  char k[13];
+  bondKey(m, k);
+  prefs.begin("bondslot", false);
+  prefs.remove(k);
+  prefs.end();
+}
+
+uint8_t hostBond[6];
+bool    hostBondKnown = false;     // hostBond = the pairing that's connected now
+
+// Every 2 s: work out which pairing is connected, and remember its slot.
+void bleSlotMapUpdate() {
+  static uint32_t last = 0;
+  if (millis() - last < 2000) return;
+  last = millis();
+  uint8_t host[6];
+  if (!bleKeyboard.hostAddress(host)) { hostBondKnown = false; return; }
+  esp_ble_bond_dev_t list[15];
+  int n = bleBondList(list, 15);
+  int match = -1;
+  for (int i = 0; i < n; i++) if (!memcmp(list[i].bd_addr, host, 6)) match = i;
+  if (match < 0) {                 // private address: take the one pairing with no slot yet
+    int unknown = -1, count = 0;
+    for (int i = 0; i < n; i++) if (bondSlot(list[i].bd_addr) < 0) { unknown = i; count++; }
+    if (count == 1) match = unknown;
+  }
+  if (match < 0) {                 // or the only pairing already on this slot
+    int mine = -1, count = 0;
+    for (int i = 0; i < n; i++) if (bondSlot(list[i].bd_addr) == cfg.btSlot) { mine = i; count++; }
+    if (count == 1) match = mine;
+  }
+  if (match < 0) { hostBondKnown = false; return; }
+  memcpy(hostBond, list[match].bd_addr, 6);
+  hostBondKnown = true;
+  if (bondSlot(hostBond) != cfg.btSlot) bondSlotSet(hostBond, cfg.btSlot);
+}
+
 bool bleRemoveBond(const char* addr) {
   uint8_t m[6];
   if (!parseMac(addr, m)) return false;
+  bondSlotForget(m);
   return esp_ble_remove_bond_device(m) == ESP_OK;
 }
 
@@ -62,6 +131,9 @@ int bleRemoveAllBonds() {
   esp_ble_bond_dev_t list[15];
   int n = bleBondList(list, 15);
   for (int i = 0; i < n; i++) esp_ble_remove_bond_device(list[i].bd_addr);
+  prefs.begin("bondslot", false);
+  prefs.clear();
+  prefs.end();
   return n;
 }
 
@@ -69,7 +141,7 @@ int bleRemoveAllBonds() {
 void restartSoon(const char* why) {
   Serial.printf("[SYS] Restarting: %s\n", why);
   Serial.flush();
-  delay(300);
+  delay(150);
   ESP.restart();
 }
 

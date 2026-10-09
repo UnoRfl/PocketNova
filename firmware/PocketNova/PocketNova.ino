@@ -44,7 +44,7 @@
 #include "Input.h"
 #include "Ir.h"
 
-const char* const FW_VERSION = "2.3.0";
+const char* const FW_VERSION = "2.3.1";
 
 // The phone remote's Bluetooth service and its two characteristics
 // (NovaRemote.h). Made-up IDs; the web page uses the same ones.
@@ -342,7 +342,9 @@ void setup() {
   wifiBegin();
   irsend.begin();
 
-  bootAnimation();
+  // A restart Pocket Nova asked for itself (slot switch, new name...) skips
+  // the boot animation, so it's back about a second sooner.
+  if (esp_reset_reason() != ESP_RST_SW) bootAnimation();
   for (int i = 0; i < 15; i++) { readTilt(); delay(10); }   // let the filter settle
   setTiltBase();
   evHead = evTail;   // drop any events from settling
@@ -376,6 +378,7 @@ void loop() {
     Serial.println(ble ? "[BLE] Connected" : "[BLE] Disconnected");
   }
   swiftPairUpdate();
+  bleSlotMapUpdate();
   wifiUpdate();
   remoteUpdate();
 

@@ -5,186 +5,284 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pocket Nova Panel</title>
 <link rel="icon" href="/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Silkscreen&display=swap">
 <style>
-/* Layout: device on the left (live screen + remote pad), settings on the right in tabs.
-   One deliberate dark look: it sits next to a glowing LED device. */
+/* Pocket Nova Panel: a little pixel spaceship console.
+   Starfield behind (canvas), Nova the mascot in the header, the device's
+   live screen as a porthole, settings in pixel-cornered cards. */
 :root {
-  --bg: #0d0b12;
-  --panel: #16131e;
-  --panel-2: #1d1928;
-  --line: #2c2639;
-  --fg: #ece9f5;
-  --muted: #9a93ad;
+  --space: #07060d;
+  --panel: rgba(22, 18, 34, .86);
+  --panel-2: #1e1930;
+  --line: #342b4d;
+  --line-hi: #4b3f6e;
+  --fg: #efeafc;
+  --muted: #a59cc0;
   --nova: #a46bff;
-  --nova-soft: #2a1f42;
+  --nova-hi: #c9a6ff;
+  --nova-soft: #2b2047;
+  --star: #ffd34d;
+  --cyan: #2affd2;
+  --pink: #ff6fb5;
   --good: #3ddc84;
   --warn: #ffb547;
   --bad: #ff5d6c;
-  --led-off: #1a1622;
+  --led-off: #1a1624;
   --font-ui: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
-  --font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --font-pixel: "Pixelify Sans", "Segoe UI", system-ui, sans-serif;
+  --font-tiny: "Silkscreen", "Cascadia Mono", Consolas, monospace;
   --font-mono: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --px: 6px;   /* size of the pixel notch on corners */
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
-body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 var(--font-ui); }
+body { margin: 0; background: var(--space); color: var(--fg); font: 14px/1.5 var(--font-ui); overflow-x: hidden; }
 button, input, select { font: inherit; color: inherit; }
-h1, h2, h3 { font-family: var(--font-display); margin: 0; font-weight: 600; text-wrap: balance; }
-h2 { font-size: 1.05rem; }
+h1, h2, h3 { font-family: var(--font-pixel); margin: 0; font-weight: 600; letter-spacing: .02em; text-wrap: balance; }
+h2 { font-size: 1.15rem; display: flex; align-items: center; gap: 8px; }
+h2::before { content: ""; width: 8px; height: 8px; background: var(--star); box-shadow: 0 0 8px var(--star); flex: none; }
 .muted { color: var(--muted); }
 .mono { font-family: var(--font-mono); font-size: .85em; }
+.tiny { font-family: var(--font-tiny); font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; }
 
-.app { display: grid; grid-template-columns: 340px 1fr; gap: 16px; padding: 16px; min-height: 100%; }
-@media (max-width: 860px) { .app { grid-template-columns: 1fr; } }
+#stars { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; display: block; }
+.planet { position: fixed; z-index: 0; right: -60px; top: 52%; width: 180px; height: 180px; pointer-events: none; opacity: .55;
+          animation: drift 60s ease-in-out infinite alternate; image-rendering: pixelated; }
+@keyframes drift { from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(-40px, -30px) rotate(8deg); } }
 
-/* header */
-.brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.brand h1 { font-size: 1.35rem; letter-spacing: .01em; }
-.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px;
-        background: var(--panel-2); border: 1px solid var(--line); font-size: .8rem; white-space: nowrap; }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
-.chip.good .dot { background: var(--good); box-shadow: 0 0 8px var(--good); }
-.chip.warn .dot { background: var(--warn); }
-.chip.bad .dot { background: var(--bad); }
+.app { position: relative; z-index: 1; display: grid; grid-template-columns: 350px 1fr; gap: 16px; padding: 16px; min-height: 100%; max-width: 1280px; margin: 0 auto; }
+@media (max-width: 880px) { .app { grid-template-columns: 1fr; } }
 
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 14px; align-content: start; }
+/* pixel-cornered surfaces */
+.pix { clip-path: polygon(0 var(--px), var(--px) var(--px), var(--px) 0, calc(100% - var(--px)) 0, calc(100% - var(--px)) var(--px), 100% var(--px),
+       100% calc(100% - var(--px)), calc(100% - var(--px)) calc(100% - var(--px)), calc(100% - var(--px)) 100%, var(--px) 100%,
+       var(--px) calc(100% - var(--px)), 0 calc(100% - var(--px))); }
+.card { background: var(--panel); box-shadow: inset 0 0 0 2px var(--line); padding: 18px; display: grid; gap: 14px; align-content: start;
+        backdrop-filter: blur(3px); }
 .left { display: grid; gap: 16px; align-content: start; }
 
-/* live screen */
-.screen-wrap { display: grid; justify-items: center; gap: 10px; }
-.matrix { display: grid; grid-template-columns: repeat(5, 1fr); gap: 9px; width: 230px; max-width: 100%; aspect-ratio: 1;
-          padding: 18px; background: #08070b; border-radius: 20px; border: 1px solid var(--line); }
-.led { border-radius: 50%; background: var(--led-off); transition: background .08s; }
-.mood { font-size: .9rem; }
+/* header with Nova */
+.brand { display: flex; align-items: center; gap: 12px; padding: 4px 2px; }
+.mascot { width: 64px; height: 60px; flex: none; animation: bob 3.2s ease-in-out infinite; cursor: pointer; image-rendering: pixelated; }
+.mascot.bounce { animation: hop .45s cubic-bezier(.3, 1.6, .6, 1); }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes hop { 0% { transform: translateY(0) scale(1, 1); } 30% { transform: translateY(-12px) scale(.94, 1.06); } 70% { transform: translateY(0) scale(1.08, .92); } 100% { transform: none; } }
+.brand-text { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.brand h1 { font-size: 1.6rem; line-height: 1.05; }
+.brand .sub { font-family: var(--font-tiny); font-size: .68rem; color: var(--nova-hi); letter-spacing: .1em; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--line);
+        font-size: .78rem; white-space: nowrap; --px: 3px; }
+.dot { width: 8px; height: 8px; background: var(--muted); flex: none; }
+.chip.good .dot { background: var(--good); box-shadow: 0 0 8px var(--good); animation: pulse 2s ease-in-out infinite; }
+.chip.warn .dot { background: var(--warn); animation: blink 1s steps(2) infinite; }
+.chip.bad .dot { background: var(--bad); }
+@keyframes pulse { 50% { box-shadow: 0 0 2px var(--good); } }
+@keyframes blink { 50% { opacity: .3; } }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
 
-/* remote pad */
-.pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.pad button, .btn { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; cursor: pointer; }
-.pad button:hover, .btn:hover { border-color: var(--nova); }
-.pad button:active, .btn:active { transform: translateY(1px); }
-button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--nova); outline-offset: 2px; }
-.btn.primary { background: var(--nova); border-color: var(--nova); color: #120a1f; font-weight: 600; }
-.btn.danger { border-color: #5a2630; color: #ffb3bb; }
-.btn.danger.armed { background: var(--bad); color: #1a0508; border-color: var(--bad); font-weight: 600; }
-.btn[disabled] { opacity: .45; cursor: not-allowed; }
+/* live screen as a porthole */
+.screen-wrap { display: grid; justify-items: center; gap: 12px; }
+.porthole { position: relative; padding: 14px; background: linear-gradient(160deg, #2c2347, #120e1d); --px: 10px; }
+.porthole::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+                   background: repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 2px, transparent 2px 4px); }
+.matrix { display: grid; grid-template-columns: repeat(5, 1fr); gap: 9px; width: 230px; max-width: 100%; aspect-ratio: 1;
+          padding: 18px; background: #06050a; --px: 8px; }
+.led { background: var(--led-off); border-radius: 30%; transition: background .08s, box-shadow .08s; }
+.mood { font-family: var(--font-pixel); font-size: 1.05rem; }
+.mood b { color: var(--nova-hi); }
+
+/* buttons */
+.btn, .pad button { background: var(--panel-2); border: 0; box-shadow: inset 0 0 0 2px var(--line), 0 3px 0 #0c0a14; padding: 9px 12px; cursor: pointer;
+       transition: transform .06s, box-shadow .12s, background .12s; --px: 4px; }
+.btn:hover, .pad button:hover { box-shadow: inset 0 0 0 2px var(--nova), 0 3px 0 #0c0a14, 0 0 14px rgba(164, 107, 255, .25); }
+.btn:active, .pad button:active { transform: translateY(3px); box-shadow: inset 0 0 0 2px var(--nova), 0 0 0 #0c0a14; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--star); outline-offset: 2px; }
+.btn.primary { background: var(--nova); color: #140b24; font-weight: 700; box-shadow: inset 0 0 0 2px var(--nova-hi), 0 3px 0 #4b2b8a; }
+.btn.primary:hover { background: var(--nova-hi); }
+.btn.danger { color: #ffb3bb; box-shadow: inset 0 0 0 2px #5a2630, 0 3px 0 #0c0a14; }
+.btn.danger.armed { background: var(--bad); color: #1a0508; font-weight: 700; animation: shake .3s; }
+@keyframes shake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+.btn[disabled] { opacity: .4; cursor: not-allowed; transform: none; }
+
+/* game-pad remote */
+.pad { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-areas: ". f ." "l t r" ". k ."; gap: 8px; }
+.pad .f { grid-area: f; } .pad .l { grid-area: l; } .pad .t { grid-area: t; } .pad .r { grid-area: r; } .pad .k { grid-area: k; }
+.pad .t { background: var(--nova); color: #140b24; font-weight: 700; }
+.actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.actions button { padding: 8px 6px; font-size: .85rem; }
 
 /* tabs */
-.tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
-.tab { background: none; border: 0; padding: 7px 12px; border-radius: 8px; cursor: pointer; color: var(--muted); }
-.tab[aria-selected="true"] { background: var(--nova-soft); color: var(--fg); }
-.pane { display: grid; gap: 18px; align-content: start; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 2px dashed var(--line); }
+.tab { display: inline-flex; align-items: center; gap: 7px; background: transparent; border: 0; padding: 7px 12px; cursor: pointer; color: var(--muted);
+       font-family: var(--font-pixel); font-size: .98rem; --px: 4px; transition: color .15s, background .15s; }
+.tab svg { width: 16px; height: 16px; image-rendering: pixelated; flex: none; }
+.tab:hover { color: var(--fg); background: rgba(255,255,255,.04); }
+.tab[aria-selected="true"] { background: var(--nova-soft); color: var(--fg); box-shadow: inset 0 0 0 2px var(--nova); }
+.pane { display: grid; gap: 22px; align-content: start; animation: rise .25s ease-out; }
 .pane[hidden] { display: none !important; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 .row { display: grid; grid-template-columns: 190px 1fr; gap: 12px; align-items: center; }
 @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
 .row > label, .row > .label { color: var(--muted); }
-.seg { display: inline-flex; flex-wrap: wrap; gap: 4px; }
-.seg button { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; min-width: 44px; }
-.seg button[aria-pressed="true"] { background: var(--nova); color: #120a1f; border-color: var(--nova); font-weight: 600; }
-input[type=text], select { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; min-width: 0; }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.seg button { background: var(--panel-2); border: 0; box-shadow: inset 0 0 0 2px var(--line); padding: 6px 12px; cursor: pointer; min-width: 44px; --px: 3px; }
+.seg button[aria-pressed="true"] { background: var(--nova); color: #140b24; font-weight: 700; box-shadow: inset 0 0 0 2px var(--nova-hi); }
+input[type=text], select { background: #120f1c; border: 0; box-shadow: inset 0 0 0 2px var(--line); padding: 8px 10px; min-width: 0; }
+input[type=text]:focus, select:focus { box-shadow: inset 0 0 0 2px var(--nova); }
 .inline { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .inline > input[type=text] { flex: 1 1 180px; }
-.toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
-.toggle input { width: 38px; height: 22px; appearance: none; background: var(--line); border-radius: 999px; position: relative; cursor: pointer; transition: background .15s; }
-.toggle input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--fg); transition: left .15s; }
+.toggle { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; }
+.toggle input { width: 40px; height: 22px; appearance: none; background: var(--line); position: relative; cursor: pointer; transition: background .15s; flex: none;
+                clip-path: polygon(0 4px, 4px 4px, 4px 0, calc(100% - 4px) 0, calc(100% - 4px) 4px, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 4px calc(100% - 4px), 0 calc(100% - 4px)); }
+.toggle input::after { content: ""; position: absolute; top: 4px; left: 4px; width: 14px; height: 14px; background: var(--fg); transition: left .15s; }
 .toggle input:checked { background: var(--nova); }
-.toggle input:checked::after { left: 19px; }
+.toggle input:checked::after { left: 22px; background: #140b24; }
 
 .section { display: grid; gap: 10px; }
-.section + .section { border-top: 1px solid var(--line); padding-top: 18px; }
-.hint { color: var(--muted); font-size: .88rem; max-width: 70ch; margin: 0; }
+.hint { color: var(--muted); font-size: .88rem; max-width: 72ch; margin: 0; }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+.stat { background: var(--panel-2); box-shadow: inset 0 0 0 2px var(--line); padding: 10px 12px; --px: 4px; }
+.stat .v { font-family: var(--font-pixel); font-size: 1.3rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stat .k { color: var(--muted); font-family: var(--font-tiny); font-size: .66rem; letter-spacing: .06em; text-transform: uppercase; }
+
+/* bluetooth */
+.bt-now { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: var(--nova-soft); box-shadow: inset 0 0 0 2px var(--nova); }
+.bt-now .sig { display: flex; align-items: flex-end; gap: 3px; height: 22px; flex: none; }
+.bt-now .sig i { width: 5px; background: var(--muted); }
+.bt-now .sig i:nth-child(1) { height: 30%; } .bt-now .sig i:nth-child(2) { height: 55%; } .bt-now .sig i:nth-child(3) { height: 80%; } .bt-now .sig i:nth-child(4) { height: 100%; }
+.bt-now.live .sig i { background: var(--good); animation: sig 1.4s ease-in-out infinite; }
+.bt-now.live .sig i:nth-child(2) { animation-delay: .15s; } .bt-now.live .sig i:nth-child(3) { animation-delay: .3s; } .bt-now.live .sig i:nth-child(4) { animation-delay: .45s; }
+.bt-now.wait .sig i { background: var(--warn); animation: blink 1s steps(2) infinite; }
+@keyframes sig { 50% { opacity: .35; } }
+.bt-now .txt { display: grid; gap: 2px; }
+.bt-now b { font-family: var(--font-pixel); font-size: 1.15rem; font-weight: 600; }
+
+.slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.slot { position: relative; background: var(--panel-2); border: 0; box-shadow: inset 0 0 0 2px var(--line); padding: 14px; text-align: left; cursor: pointer;
+        display: grid; gap: 8px; align-content: start; min-height: 150px; transition: box-shadow .15s, transform .15s; --px: 6px; }
+.slot:hover { box-shadow: inset 0 0 0 2px var(--nova); transform: translateY(-2px); }
+.slot.active { background: linear-gradient(170deg, #3a2a63, #22193a); box-shadow: inset 0 0 0 2px var(--nova-hi), 0 0 24px rgba(164, 107, 255, .25); cursor: default; transform: none; }
+.slot .top { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
+.slot .num { font-family: var(--font-pixel); font-size: 1.5rem; line-height: 1; white-space: nowrap; }
+.badge { font-family: var(--font-tiny); font-size: .62rem; letter-spacing: .06em; text-transform: uppercase; padding: 3px 7px; background: #120f1c; color: var(--muted); --px: 2px; white-space: nowrap; }
+.badge.on { background: var(--nova); color: #140b24; }
+.badge.live { background: var(--good); color: #062012; }
+.badge.wait { background: var(--warn); color: #241500; }
+.slot ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.slot li { display: flex; align-items: center; gap: 6px; font-size: .88rem; min-width: 0; }
+.slot li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slot li::before { content: ""; width: 6px; height: 6px; background: var(--muted); flex: none; }
+.slot li.connected::before { background: var(--good); box-shadow: 0 0 6px var(--good); }
+.slot .state { font-size: .82rem; color: var(--muted); margin-top: auto; }
+.slot .state.go { color: var(--nova-hi); }
+.orbit { position: relative; width: 18px; height: 18px; display: inline-block; vertical-align: -4px; margin-right: 6px; }
+.orbit::before { content: ""; position: absolute; inset: 6px; background: var(--star); }
+.orbit::after { content: ""; position: absolute; width: 4px; height: 4px; background: var(--cyan); top: 0; left: 7px; transform-origin: 2px 9px; animation: spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.progress { height: 6px; background: #120f1c; overflow: hidden; }
+.progress i { display: block; height: 100%; width: 0; background: repeating-linear-gradient(90deg, var(--nova) 0 6px, var(--nova-hi) 6px 12px); transition: width .3s; }
 
 .devices { display: grid; gap: 8px; }
-.device { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.device { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; background: var(--panel-2); box-shadow: inset 0 0 0 2px var(--line); padding: 10px 12px; --px: 5px; }
+.device.connected { box-shadow: inset 0 0 0 2px var(--good); }
+.device .ico { width: 28px; height: 28px; image-rendering: pixelated; }
 .device .who { display: grid; gap: 4px; min-width: 0; }
+.device .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .device input { width: 100%; }
 .empty { color: var(--muted); padding: 10px 0; }
 
-.slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.slot { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px; text-align: left; cursor: pointer; display: grid; gap: 2px; }
-.slot[aria-pressed="true"] { border-color: var(--nova); background: var(--nova-soft); }
-.slot b { font-family: var(--font-display); }
-
-.tv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
-
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
-.stat { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
-.stat .v { font-family: var(--font-display); font-size: 1.3rem; font-variant-numeric: tabular-nums; }
-.stat .k { color: var(--muted); font-size: .8rem; }
+.tv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
 
 table.cheat { border-collapse: collapse; width: 100%; font-size: .9rem; }
-table.cheat td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.cheat td { padding: 6px 8px; border-bottom: 1px dashed var(--line); vertical-align: top; }
 table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
 .table-wrap { overflow-x: auto; }
 
-.console { background: #08070b; border: 1px solid var(--line); border-radius: 10px; padding: 10px; height: 260px; overflow: auto;
-           font-family: var(--font-mono); font-size: .78rem; white-space: pre-wrap; word-break: break-word; }
-.console .sys { color: var(--nova); }
+.console { background: #06050a; box-shadow: inset 0 0 0 2px var(--line); padding: 10px; height: 260px; overflow: auto;
+           font-family: var(--font-mono); font-size: .78rem; white-space: pre-wrap; word-break: break-word; --px: 5px; }
+.console .sys { color: var(--nova-hi); }
 
 /* disconnected overlay */
-.offline { position: fixed; inset: 0; background: rgba(13, 11, 18, .92); display: grid; place-items: center; z-index: 10; padding: 16px; }
+.offline { position: fixed; inset: 0; background: rgba(7, 6, 13, .78); display: grid; place-items: center; z-index: 10; padding: 16px; backdrop-filter: blur(2px); }
 .offline[hidden] { display: none; }
-.offline .box { text-align: center; display: grid; gap: 12px; justify-items: center; max-width: 420px; }
-.offline .matrix { width: 140px; padding: 12px; gap: 6px; }
+.offline .box { text-align: center; display: grid; gap: 14px; justify-items: center; max-width: 440px; }
+.offline .mascot { width: 120px; height: 112px; animation: bob 4.5s ease-in-out infinite; }
+.offline h2 { justify-content: center; font-size: 1.4rem; }
 
-.toast { position: fixed; right: 16px; bottom: 16px; background: var(--panel-2); border: 1px solid var(--line); border-left: 3px solid var(--nova);
-         padding: 10px 14px; border-radius: 10px; max-width: 360px; z-index: 20; }
-.toast.bad { border-left-color: var(--bad); }
+.toast { position: fixed; right: 16px; bottom: 16px; display: flex; gap: 10px; align-items: center; background: var(--panel-2);
+         box-shadow: inset 0 0 0 2px var(--nova); padding: 10px 14px; max-width: 380px; z-index: 20; animation: fly .35s cubic-bezier(.2, 1.4, .5, 1); --px: 5px; }
+.toast::before { content: ""; width: 10px; height: 10px; background: var(--star); box-shadow: 0 0 10px var(--star); flex: none; }
+.toast.bad { box-shadow: inset 0 0 0 2px var(--bad); }
+.toast.bad::before { background: var(--bad); box-shadow: 0 0 10px var(--bad); }
 .toast[hidden] { display: none; }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@keyframes fly { from { transform: translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
 </style>
 </head>
 <body>
+<canvas id="stars" aria-hidden="true"></canvas>
+<svg class="planet" id="planet" viewBox="0 0 30 30" aria-hidden="true"></svg>
 
 <div class="app">
   <!-- Device column -->
   <div class="left">
     <div class="brand">
-      <h1 id="devName">Pocket Nova</h1>
-      <span class="chip" id="usbChip"><span class="dot"></span><span id="usbText">Looking…</span></span>
+      <svg class="mascot" id="mascot" viewBox="0 0 16 15" role="img" aria-label="Nova"></svg>
+      <div class="brand-text">
+        <span class="sub">POCKET NOVA · CONTROL DECK</span>
+        <h1 id="devName">Pocket Nova</h1>
+      </div>
+      <span class="chip pix" id="usbChip"><span class="dot"></span><span id="usbText">Looking…</span></span>
     </div>
 
-    <div class="card">
+    <div class="card pix">
       <div class="screen-wrap">
-        <div class="matrix" id="mirror" aria-label="Live copy of Pocket Nova's screen" role="img"></div>
+        <div class="porthole pix"><div class="matrix pix" id="mirror" aria-label="Live copy of Pocket Nova's screen" role="img"></div></div>
         <div class="mood" id="moodLine">Nova is <b id="moodText">…</b></div>
-        <div class="inline">
-          <span class="chip" id="bleChip"><span class="dot"></span><span id="bleText">Bluetooth</span></span>
-          <span class="chip" id="screenChip"><span class="dot"></span><span id="screenText">-</span></span>
+        <div class="chips">
+          <span class="chip pix" id="bleChip"><span class="dot"></span><span id="bleText">Bluetooth</span></span>
+          <span class="chip pix" id="screenChip"><span class="dot"></span><span id="screenText">-</span></span>
         </div>
       </div>
     </div>
 
-    <div class="card">
+    <div class="card pix">
       <h2>Remote control</h2>
       <p class="hint">Press the Atom's controls from here. Tilt buttons act like holding the tilt for a moment.</p>
       <div class="pad">
-        <span></span>
-        <button data-tilt="F" title="Top edge down">Tilt ▲</button>
-        <span></span>
-        <button data-input="left">◀ Left</button>
-        <button data-input="tap">Tap</button>
-        <button data-input="right">Right ▶</button>
-        <button data-input="double">Double</button>
-        <button data-tilt="K" title="Top edge up">Tilt ▼</button>
-        <button data-input="hold">Hold</button>
-        <button data-input="triple">Triple</button>
-        <button data-input="shake">Shake</button>
-        <button data-input="rock">Rock</button>
+        <button class="f pix" data-tilt="F" title="Top edge down">Tilt ▲</button>
+        <button class="l pix" data-input="left">◀ Left</button>
+        <button class="t pix" data-input="tap">Tap</button>
+        <button class="r pix" data-input="right">Right ▶</button>
+        <button class="k pix" data-tilt="K" title="Top edge up">Tilt ▼</button>
+      </div>
+      <div class="actions">
+        <button class="btn pix" data-input="double">Double</button>
+        <button class="btn pix" data-input="triple">Triple</button>
+        <button class="btn pix" data-input="hold">Hold</button>
+        <button class="btn pix" data-input="shake">Shake</button>
+        <button class="btn pix" data-input="rock">Rock</button>
       </div>
     </div>
   </div>
 
   <!-- Settings column -->
-  <div class="card">
+  <div class="card pix">
     <div class="tabs" role="tablist">
-      <button class="tab" role="tab" aria-selected="true" data-tab="device">Device</button>
-      <button class="tab" role="tab" aria-selected="false" data-tab="bt">Bluetooth</button>
-      <button class="tab" role="tab" aria-selected="false" data-tab="wifi">Wi-Fi</button>
-      <button class="tab" role="tab" aria-selected="false" data-tab="tv">TV remote</button>
-      <button class="tab" role="tab" aria-selected="false" data-tab="pet">Nova</button>
-      <button class="tab" role="tab" aria-selected="false" data-tab="system">System</button>
+      <button class="tab pix" role="tab" aria-selected="true" data-tab="device" data-icon="device">Device</button>
+      <button class="tab pix" role="tab" aria-selected="false" data-tab="bt" data-icon="bt">Bluetooth</button>
+      <button class="tab pix" role="tab" aria-selected="false" data-tab="wifi" data-icon="wifi">Wi-Fi</button>
+      <button class="tab pix" role="tab" aria-selected="false" data-tab="tv" data-icon="tv">TV remote</button>
+      <button class="tab pix" role="tab" aria-selected="false" data-tab="pet" data-icon="pet">Nova</button>
+      <button class="tab pix" role="tab" aria-selected="false" data-tab="system" data-icon="gear">System</button>
     </div>
 
     <!-- DEVICE -->
@@ -196,34 +294,39 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
         <div class="row"><span class="label">Auto-rotate</span>
           <label class="toggle"><input type="checkbox" id="autoRot"><span class="muted">Turn upright when held like a phone</span></label></div>
         <div class="row"><span class="label">Tilt direction</span>
-          <div class="inline"><button class="btn" id="flipX">Swap left / right</button><button class="btn" id="flipY">Swap forward / back</button></div></div>
-        <div class="row"><label for="lastApp">Double tap on Nova opens</label><select id="lastApp"></select></div>
+          <div class="inline"><button class="btn pix" id="flipX">Swap left / right</button><button class="btn pix" id="flipY">Swap forward / back</button></div></div>
+        <div class="row"><label for="lastApp">Double tap on Nova opens</label><select id="lastApp" class="pix"></select></div>
       </div>
       <div class="section">
         <h2>Name</h2>
         <p class="hint">This is the name your PC and phone see in their Bluetooth lists. Saving it restarts Pocket Nova.</p>
-        <div class="inline"><input type="text" id="nameInput" maxlength="24" aria-label="Device name"><button class="btn primary" id="nameSave">Save name</button></div>
+        <div class="inline"><input type="text" id="nameInput" class="pix" maxlength="24" aria-label="Device name"><button class="btn primary pix" id="nameSave">Save name</button></div>
       </div>
       <div class="section">
         <h2>Tutorial</h2>
         <p class="hint">Plays the tilt, tap and hold lesson on the Atom.</p>
-        <div><button class="btn" id="tutorialBtn">Play tutorial</button></div>
+        <div><button class="btn pix" id="tutorialBtn">Play tutorial</button></div>
       </div>
     </section>
 
     <!-- BLUETOOTH -->
     <section class="pane" id="pane-bt" hidden>
+      <div class="bt-now pix" id="btNow">
+        <span class="sig" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span class="txt"><b id="btNowTitle">-</b><span class="muted" id="btNowSub"></span></span>
+      </div>
       <div class="section">
-        <h2>Bluetooth slot</h2>
-        <p class="hint">Each slot is a separate Bluetooth identity. Pair your PC on one slot and your phone on another, then switch here to change which one Pocket Nova controls. Switching restarts it.</p>
+        <h2>Slots</h2>
+        <p class="hint">Each slot is a separate Bluetooth identity with its own devices. Pair your PC on one slot and your phone on another, then click a slot to switch. Pocket Nova restarts (about 2 seconds), then the slot's device reconnects by itself.</p>
         <div class="slots" id="slots"></div>
         <div class="muted">This slot's address: <span class="mono" id="ownAddr">-</span></div>
       </div>
       <div class="section">
-        <h2>Paired devices</h2>
-        <p class="hint">Devices that have paired with Pocket Nova (all slots). Give them names so you know which is which. Removing one makes that device forget Pocket Nova, so it has to pair again.</p>
+        <h2 id="devicesTitle">Paired devices</h2>
+        <p class="hint">The devices saved on this slot. Name them so you know which is which. Removing one makes that device forget Pocket Nova, so it has to pair again.</p>
         <div class="devices" id="devices"></div>
-        <div class="inline"><button class="btn danger" id="forgetAll" data-confirm="Click again to forget every device">Forget all and pair new</button></div>
+        <p class="hint" id="devicesOther"></p>
+        <div class="inline"><button class="btn danger pix" id="forgetAll" data-confirm="Click again to forget every device on every slot">Forget every device (all slots)</button></div>
       </div>
       <div class="section">
         <h2>Connect pop-up on Windows</h2>
@@ -233,7 +336,7 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
       </div>
       <div class="section">
         <h2>How to pair a new device</h2>
-        <p class="hint">On Windows: Settings → Bluetooth &amp; devices → Add device → Bluetooth → choose <b id="pairName">Pocket Nova</b>. On a phone, open Bluetooth settings and tap it. If it doesn't show up, the slot is still connected to another device: switch slot or forget that device first.</p>
+        <p class="hint">Switch to the slot you want it on first. On Windows: Settings → Bluetooth &amp; devices → Add device → Bluetooth → choose <b id="pairName">Pocket Nova</b>. On a phone, open Bluetooth settings and tap it. If it doesn't show up, the slot is still connected to another device: switch slot or remove that device first.</p>
       </div>
     </section>
 
@@ -242,10 +345,10 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
       <div class="section">
         <h2>Wi-Fi</h2>
         <div class="stats">
-          <div class="stat"><div class="v" id="wfState">-</div><div class="k">status</div></div>
-          <div class="stat"><div class="v" id="wfSsid">-</div><div class="k">network</div></div>
-          <div class="stat"><div class="v mono" id="wfIp">-</div><div class="k">address</div></div>
-          <div class="stat"><div class="v" id="wfRssi">-</div><div class="k">signal</div></div>
+          <div class="stat pix"><div class="v" id="wfState">-</div><div class="k">status</div></div>
+          <div class="stat pix"><div class="v" id="wfSsid">-</div><div class="k">network</div></div>
+          <div class="stat pix"><div class="v mono" id="wfIp">-</div><div class="k">address</div></div>
+          <div class="stat pix"><div class="v" id="wfRssi">-</div><div class="k">signal</div></div>
         </div>
         <p class="hint">Pocket Nova uses Wi-Fi to get the time from the internet, so Nova's night mode works on a phone charger too.</p>
         <div class="row"><span class="label">Use Wi-Fi</span>
@@ -255,12 +358,12 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
         <h2>Set up a network</h2>
         <p class="hint">Opens Pocket Nova's own setup network for 10 minutes. Join it from your phone with the password below, and a page opens by itself where you pick your home Wi-Fi. If the page doesn't open, go to <b class="mono">http://192.168.4.1</b>. On the Atom: Settings → Wi-Fi, double tap.</p>
         <div class="stats" id="wfSetup" hidden>
-          <div class="stat"><div class="v mono" id="wfApSsid">-</div><div class="k">join this network</div></div>
-          <div class="stat"><div class="v mono" id="wfApPass">-</div><div class="k">password</div></div>
-          <div class="stat"><div class="v" id="wfApLeft">-</div><div class="k">closes in</div></div>
+          <div class="stat pix"><div class="v mono" id="wfApSsid">-</div><div class="k">join this network</div></div>
+          <div class="stat pix"><div class="v mono" id="wfApPass">-</div><div class="k">password</div></div>
+          <div class="stat pix"><div class="v" id="wfApLeft">-</div><div class="k">closes in</div></div>
         </div>
-        <div class="inline"><button class="btn primary" id="wfSetupBtn">Open setup network</button>
-          <button class="btn danger" id="wfForget" data-confirm="Click again to forget it">Forget saved network</button></div>
+        <div class="inline"><button class="btn primary pix" id="wfSetupBtn">Open setup network</button>
+          <button class="btn danger pix" id="wfForget" data-confirm="Click again to forget it">Forget saved network</button></div>
       </div>
     </section>
 
@@ -268,14 +371,14 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
     <section class="pane" id="pane-tv" hidden>
       <div class="section">
         <h2>Your TV</h2>
-        <div class="row"><label for="tvBrand">Brand</label><select id="tvBrand"></select></div>
+        <div class="row"><label for="tvBrand">Brand</label><select id="tvBrand" class="pix"></select></div>
         <p class="hint" id="tvFound" hidden></p>
         <p class="hint"><b>Power works on any TV</b> without picking anything. It sends every TV's power code (your TV's first) over about 15 seconds. Tap the Atom once your TV switches off to stop it. <b>Volume, mute, channels and input</b> need your TV's brand: pick it here, or let Pocket Nova find it.</p>
       </div>
       <div class="section">
         <h2>Find my TV</h2>
         <p class="hint">Point Pocket Nova at the TV and press start. It tries <span id="sweepCount">many</span> power codes, one every 1.3 seconds, with the lights filling up as it goes. <b>Tap the Atom the moment your TV switches off.</b> It then switches the TV back on to double-check: tap again to save. Hold the Atom to cancel.</p>
-        <div><button class="btn primary" id="findTvBtn">Start finding</button></div>
+        <div><button class="btn primary pix" id="findTvBtn">Start finding</button></div>
       </div>
       <div class="section">
         <h2>Test buttons</h2>
@@ -294,20 +397,20 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
       <div class="section">
         <h2>Nova</h2>
         <div class="stats">
-          <div class="stat"><div class="v" id="petMood">-</div><div class="k">mood</div></div>
-          <div class="stat"><div class="v" id="petLove">0</div><div class="k">affection</div></div>
-          <div class="stat"><div class="v" id="petTime">-</div><div class="k">time of day</div></div>
-          <div class="stat"><div class="v" id="snakeBest">0</div><div class="k">Snake best</div></div>
+          <div class="stat pix"><div class="v" id="petMood">-</div><div class="k">mood</div></div>
+          <div class="stat pix"><div class="v" id="petLove">0</div><div class="k">affection</div></div>
+          <div class="stat pix"><div class="v" id="petTime">-</div><div class="k">time of day</div></div>
+          <div class="stat pix"><div class="v" id="snakeBest">0</div><div class="k">Snake best</div></div>
         </div>
       </div>
       <div class="section">
         <h2>Play with Nova</h2>
         <div class="inline">
-          <button class="btn" data-mood="happy">Make happy</button>
-          <button class="btn" data-mood="love">Send love</button>
-          <button class="btn" data-mood="dizzy">Spin</button>
-          <button class="btn" data-mood="sleep">Lullaby</button>
-          <button class="btn" data-mood="wake">Wake up</button>
+          <button class="btn pix" data-mood="happy">Make happy</button>
+          <button class="btn pix" data-mood="love">Send love</button>
+          <button class="btn pix" data-mood="dizzy">Spin</button>
+          <button class="btn pix" data-mood="sleep">Lullaby</button>
+          <button class="btn pix" data-mood="wake">Wake up</button>
         </div>
       </div>
       <div class="section">
@@ -335,10 +438,10 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
       <div class="section">
         <h2>About</h2>
         <div class="stats">
-          <div class="stat"><div class="v" id="fwVer">-</div><div class="k">firmware</div></div>
-          <div class="stat"><div class="v" id="uptime">-</div><div class="k">running for</div></div>
-          <div class="stat"><div class="v mono" id="portName">-</div><div class="k">USB port</div></div>
-          <div class="stat"><div class="v" id="heap">-</div><div class="k">free memory</div></div>
+          <div class="stat pix"><div class="v" id="fwVer">-</div><div class="k">firmware</div></div>
+          <div class="stat pix"><div class="v" id="uptime">-</div><div class="k">running for</div></div>
+          <div class="stat pix"><div class="v mono" id="portName">-</div><div class="k">USB port</div></div>
+          <div class="stat pix"><div class="v" id="heap">-</div><div class="k">free memory</div></div>
         </div>
       </div>
       <div class="section">
@@ -349,20 +452,20 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
       <div class="section">
         <h2>Firmware</h2>
         <p class="hint">Rebuilds and installs the firmware from <span class="mono" id="fwDir"></span>. Takes about 3 minutes. Keep Pocket Nova plugged in until it says Done.</p>
-        <div class="inline"><button class="btn" id="updateBtn">Update firmware</button><button class="btn" id="rebootBtn">Restart Pocket Nova</button></div>
-        <div class="console" id="updateLog" hidden></div>
+        <div class="inline"><button class="btn pix" id="updateBtn">Update firmware</button><button class="btn pix" id="rebootBtn">Restart Pocket Nova</button></div>
+        <div class="console pix" id="updateLog" hidden></div>
       </div>
       <div class="section">
         <h2>Factory reset</h2>
         <p class="hint">Erases every setting, forgets every paired device, resets Nova's affection and plays the tutorial again. This can't be undone.</p>
         <div class="inline">
-          <input type="text" id="resetConfirm" placeholder="Type RESET" aria-label="Type RESET to confirm" style="max-width:160px">
-          <button class="btn danger" id="resetBtn" disabled>Factory reset</button>
+          <input type="text" id="resetConfirm" class="pix" placeholder="Type RESET" aria-label="Type RESET to confirm" style="max-width:160px">
+          <button class="btn danger pix" id="resetBtn" disabled>Factory reset</button>
         </div>
       </div>
       <div class="section">
         <h2>Activity</h2>
-        <div class="console" id="console" aria-live="off"></div>
+        <div class="console pix" id="console" aria-live="off"></div>
       </div>
     </section>
   </div>
@@ -370,12 +473,12 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
 
 <div class="offline" id="offline">
   <div class="box">
-    <div class="matrix" id="offMatrix"></div>
+    <svg class="mascot" id="offMascot" viewBox="0 0 16 15" role="img" aria-label="Nova, asleep"></svg>
     <h2 id="offTitle">Plug in Pocket Nova</h2>
     <p class="muted" id="offText">Use a USB-C cable that carries data. The panel connects by itself as soon as it's plugged in.</p>
   </div>
 </div>
-<div class="toast" id="toast" hidden></div>
+<div class="toast pix" id="toast" hidden></div>
 
 <script>
 const $ = (id) => document.getElementById(id);
@@ -383,6 +486,7 @@ let S = {};                 // latest state from the server
 let logSince = 0, replySince = 0;
 const MOOD_WORDS = { idle: "relaxing", happy: "happy", love: "in love", dizzy: "dizzy", sad: "sad", sleepy: "getting sleepy",
   asleep: "asleep", waking: "waking up", hiding: "hiding (face down)", peekaboo: "saying peekaboo", bored: "bored" };
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 async function api(path, body) {
   const r = await fetch(path, body === undefined ? {} : {
@@ -396,14 +500,177 @@ function toast(text, bad) {
   const t = $("toast");
   t.textContent = text;
   t.classList.toggle("bad", !!bad);
-  t.hidden = false;
+  t.hidden = true; void t.offsetWidth; t.hidden = false;   // restart the fly-in
   clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => (t.hidden = true), 3500);
+  toast.timer = setTimeout(() => (t.hidden = true), 3800);
 }
 
-// ---- LED grids
+// ======================================================================
+//  Pixel art: each picture is rows of letters, one letter per pixel.
+// ======================================================================
+const PAL = {
+  P: "#8f5cff", L: "#c9a6ff", D: "#120f1a", d: "#241d36", Y: "#ffd34d", y: "#7d6aa6", W: "#f4f1ff", C: "#2affd2",
+  M: "#ff6fb5", H: "#ff4d8d", B: "#4da3ff", G: "#3ddc84", O: "#ff9f43", w: "#8e86a8", K: "#0c0a14", R: "#ff5d6c",
+};
+function pixelSvg(svg, rows, pal = PAL) {
+  let out = "";
+  rows.forEach((r, y) => [...r].forEach((ch, x) => {
+    if (ch !== "." && pal[ch]) out += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${pal[ch]}"/>`;
+  }));
+  svg.innerHTML = out;
+}
+
+// Nova, the mascot. Body is a little Atom with a screen face; the face changes with the pet's mood.
+const BODY = [
+  ".......Y........",
+  "......YyY.......",
+  ".......y........",
+  "...PPPPPPPPPP...",
+  "..PLLLLLLLLLLP..",
+  "..PLDDDDDDDDLP..",
+  "..PLDDDDDDDDLP..",
+  "..PLDDDDDDDDLP..",
+  "..PLDDDDDDDDLP..",
+  "..PLDDDDDDDDLP..",
+  "..PPDDDDDDDDPP..",
+  "...PPPPPPPPPP...",
+  "....PP....PP....",
+  "....dd....dd....",
+  "................",
+];
+// Faces fill the 8x5 screen (columns 4-11, rows 5-9).
+const FACES = {
+  idle:    ["........", ".WW..WW.", ".WC..WC.", "........", "........"],
+  blink:   ["........", "........", ".WW..WW.", "........", "........"],
+  happy:   ["........", ".W.W.W.W", "W...W...", "........", "..MMMM.."],
+  love:    ["........", "HH.HH...", "HHHHH...", ".HHH....", "..H....."],
+  asleep:  ["......Ww", "........", "........", ".BB..BB.", "........"],
+  sad:     ["........", ".WW..WW.", ".CW..CW.", ".B......", "...MM..."],
+  dizzy:   ["........", ".CW..WC.", ".WC..CW.", "........", "...MM..."],
+  bored:   ["........", "........", ".WW..WW.", ".CW..CW.", "........"],
+  hiding:  ["........", "........", "........", "........", "........"],
+  peekaboo:["........", "WW..WW..", "CW..CW..", "........", "..MMM..."],
+};
+const MOOD_FACE = { idle: "idle", happy: "happy", love: "love", dizzy: "dizzy", sad: "sad", sleepy: "bored", asleep: "asleep",
+  waking: "blink", hiding: "hiding", peekaboo: "peekaboo", bored: "bored" };
+function drawNova(svg, face) {
+  const rows = BODY.map((r) => r);
+  const f = FACES[face] || FACES.idle;
+  for (let y = 0; y < 5; y++) {
+    const r = [...rows[5 + y]];
+    for (let x = 0; x < 8; x++) if (f[y][x] !== ".") r[4 + x] = f[y][x];
+    rows[5 + y] = r.join("");
+  }
+  pixelSvg(svg, rows);
+}
+let novaFace = "idle", blinkUntil = 0;
+function paintMascot() {
+  const now = Date.now();
+  const face = novaFace === "idle" && now < blinkUntil ? "blink" : novaFace;
+  if (paintMascot.last !== face) { drawNova($("mascot"), face); paintMascot.last = face; }
+}
+if (!REDUCED) setInterval(() => { if (novaFace === "idle") { blinkUntil = Date.now() + 160; paintMascot(); setTimeout(paintMascot, 170); } }, 3600);
+drawNova($("offMascot"), "asleep");
+paintMascot();
+function hop() {
+  const m = $("mascot");
+  m.classList.remove("bounce"); void m.offsetWidth; m.classList.add("bounce");
+  setTimeout(() => m.classList.remove("bounce"), 460);
+}
+$("mascot").onclick = () => { hop(); cmd({ cmd: "pet", mood: "happy" }); };
+
+// Pixel planet with a ring, drifting in the background.
+pixelSvg($("planet"), [
+  "..............................",
+  "...........MMMMMM.............",
+  ".........MMMMMMMMMM...........",
+  "........MMMMHHMMMMMM..........",
+  ".......MMMMHHHHMMMMMM.........",
+  "......MMMMMMHHMMMMMMMM........",
+  "YYY...MMMMMMMMMMMMMMMM........",
+  "..YYYYMMMMMMMMMMMMPPMM........",
+  ".....YYYYYMMMMMMMPPPPM........",
+  "......MMMMYYYYYYMMPPMM........",
+  "......MMMMMMMMMMYYYYYYYY......",
+  ".......MMMMMMMMMMMMMMM..YYYY..",
+  "........MMMMMMMMMMMMM......YY.",
+  ".........MMMMMMMMMMM..........",
+  "...........MMMMMM.............",
+], { M: "#3a2a63", H: "#4b3a7d", P: "#2a1f47", Y: "#7d6aa6" });
+
+// Little pixel icons for the tabs and devices.
+const ICONS = {
+  device: ["........", ".wwwwww.", ".wKKKKw.", ".wKCKCw.", ".wKKKKw.", ".wKKKKw.", ".wwwwww.", "........"],
+  bt:     ["...BB...", "...B.B..", ".B.B..B.", "..BBBB..", "..BBBB..", ".B.B..B.", "...B.B..", "...BB..."],
+  wifi:   ["........", ".CCCCCC.", "C......C", "..CCCC..", ".C....C.", "...CC...", "...CC...", "........"],
+  tv:     ["..w..w..", "...ww...", "BBBBBBBB", "BCCCCCCB", "BCCCCCCB", "BCCCCCCB", "BBBBBBBB", "..w..w.."],
+  pet:    ["...Y....", "..PPPP..", ".PDDDDP.", ".PWDDWP.", ".PDDDDP.", ".PDMMDP.", "..PPPP..", "..P..P.."],
+  gear:   ["...ww...", ".w.ww.w.", "..wwww..", "wwwKKwww", "wwwKKwww", "..wwww..", ".w.ww.w.", "...ww..."],
+  pc:     ["........", "wwwwwwww", "wBBBBBBw", "wBBBBBBw", "wBBBBBBw", "wwwwwwww", "...ww...", "..wwww.."],
+};
+function iconSvg(name, cls) {
+  const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  s.setAttribute("viewBox", "0 0 8 8"); s.setAttribute("aria-hidden", "true");
+  if (cls) s.setAttribute("class", cls);
+  pixelSvg(s, ICONS[name] || ICONS.device);
+  return s;
+}
+document.querySelectorAll(".tab[data-icon]").forEach((t) => t.prepend(iconSvg(t.dataset.icon)));
+
+// ======================================================================
+//  Starfield: three layers drifting at different speeds, twinkles, an
+//  occasional shooting star, and "warp" while Pocket Nova restarts.
+// ======================================================================
+const sky = { stars: [], shooters: [], warp: 0, warpTarget: 0 };
+(function starfield() {
+  const c = $("stars"), g = c.getContext("2d");
+  const COLORS = ["#ffffff", "#c9a6ff", "#2affd2", "#ffd34d", "#ff6fb5"];
+  function resize() {
+    c.width = innerWidth; c.height = innerHeight;
+    const n = Math.round((c.width * c.height) / 5200);
+    sky.stars = Array.from({ length: n }, () => ({
+      x: Math.random() * c.width, y: Math.random() * c.height, z: 1 + Math.floor(Math.random() * 3),
+      c: Math.random() < .8 ? COLORS[0] : COLORS[1 + Math.floor(Math.random() * 4)], t: Math.random() * 6.28,
+    }));
+  }
+  resize();
+  addEventListener("resize", resize);
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(50, now - last) / 16.7; last = now;
+    sky.warp += (sky.warpTarget - sky.warp) * 0.06 * dt;
+    g.fillStyle = "#07060d"; g.fillRect(0, 0, c.width, c.height);
+    for (const s of sky.stars) {
+      const v = (0.08 * s.z) * (1 + sky.warp * 30);
+      s.x -= v * dt;
+      if (s.x < -20) { s.x = c.width + 10; s.y = Math.random() * c.height; }
+      s.t += 0.03 * dt;
+      const size = s.z === 3 ? 2 : 1, a = s.z === 3 ? .55 + .45 * Math.sin(s.t) : .35 + .2 * s.z;
+      g.globalAlpha = Math.max(0, a);
+      g.fillStyle = s.c;
+      if (sky.warp > 0.05) g.fillRect(Math.round(s.x), Math.round(s.y), Math.max(size, v * 4), size);   // streaks
+      else g.fillRect(Math.round(s.x), Math.round(s.y), size, size);
+    }
+    if (!REDUCED && Math.random() < 0.004 * dt && sky.shooters.length < 2)
+      sky.shooters.push({ x: Math.random() * c.width, y: Math.random() * c.height * .5, life: 1 });
+    for (const sh of sky.shooters) {
+      sh.x += 9 * dt; sh.y += 4 * dt; sh.life -= 0.022 * dt;
+      for (let k = 0; k < 10; k++) {
+        g.globalAlpha = Math.max(0, sh.life * (1 - k / 10));
+        g.fillStyle = k < 2 ? "#ffd34d" : "#ffffff";
+        g.fillRect(Math.round(sh.x - k * 4), Math.round(sh.y - k * 1.8), 2, 2);
+      }
+    }
+    sky.shooters = sky.shooters.filter((s) => s.life > 0);
+    g.globalAlpha = 1;
+    if (!REDUCED) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+
+// ---- LED grid
 function buildGrid(el) { for (let i = 0; i < 25; i++) { const d = document.createElement("i"); d.className = "led"; el.appendChild(d); } }
-buildGrid($("mirror")); buildGrid($("offMatrix"));
+buildGrid($("mirror"));
 // LEDs look much brighter to the eye than their raw values on a monitor,
 // so dim pixels get a square-root lift to stay visible.
 const lift = (v) => Math.round(255 * Math.sqrt(v / 255)).toString(16).padStart(2, "0");
@@ -414,18 +681,16 @@ function paintHex(el, hex) {
     const lit = h !== "000000";
     const c = lit ? "#" + [0, 2, 4].map((k) => lift(parseInt(h.substr(k, 2), 16))).join("") : "";
     leds[i].style.background = c;
-    leds[i].style.boxShadow = lit ? `0 0 10px ${c}88` : "";
+    leds[i].style.boxShadow = lit ? `0 0 12px ${c}99` : "";
   }
 }
-// The offline grid shows sleeping eyes.
-paintHex($("offMatrix"), "000000".repeat(15) + "2d2d3c2d2d3c0000002d2d3c2d2d3c" + "000000".repeat(5));
 
 // ---- static controls
 function seg(el, labels, onPick) {
   el.innerHTML = "";
   labels.forEach((l, i) => {
     const b = document.createElement("button");
-    b.textContent = l; b.dataset.i = i; b.setAttribute("aria-pressed", "false");
+    b.className = "pix"; b.textContent = l; b.dataset.i = i; b.setAttribute("aria-pressed", "false");
     b.onclick = () => onPick(i);
     el.appendChild(b);
   });
@@ -466,12 +731,13 @@ function renderBrands() {
   });
   $("brandTable").innerHTML = rows.join("");
 }
-document.querySelectorAll("[data-input]").forEach((b) => (b.onclick = () => cmd({ cmd: "input", ev: b.dataset.input })));
+document.querySelectorAll("[data-input]").forEach((b) => (b.onclick = () => { hop(); cmd({ cmd: "input", ev: b.dataset.input }); }));
 document.querySelectorAll("[data-tilt]").forEach((b) => (b.onclick = async () => {
+  hop();
   await cmd({ cmd: "tilt", dir: b.dataset.tilt });
   setTimeout(() => cmd({ cmd: "tilt", dir: "0" }), 900);
 }));
-document.querySelectorAll("[data-mood]").forEach((b) => (b.onclick = () => cmd({ cmd: "pet", mood: b.dataset.mood })));
+document.querySelectorAll("[data-mood]").forEach((b) => (b.onclick = () => { hop(); cmd({ cmd: "pet", mood: b.dataset.mood }); }));
 
 // Danger buttons: first click arms, second click (within 4 s) does it.
 function armed(btn, action) {
@@ -527,7 +793,7 @@ function buildLists(h) {
   $("tvGrid").innerHTML = "";
   h.tvCmds.forEach((c, i) => {
     const b = document.createElement("button");
-    b.className = "btn"; b.dataset.code = i;
+    b.className = "btn pix"; b.dataset.code = i;
     b.textContent = i === 0 ? "Power (any TV)" : c;
     b.onclick = () => {
       if (i !== 0 && +$("tvBrand").value >= h.brands.length) return toast("Pick your TV's brand first", true);
@@ -539,40 +805,143 @@ function buildLists(h) {
   $("slots").innerHTML = "";
   for (let i = 0; i < h.slots; i++) {
     const b = document.createElement("button");
-    b.className = "slot"; b.dataset.i = i;
-    b.innerHTML = `<b>Slot ${i + 1}</b><span class="muted">${["e.g. your PC", "e.g. your phone", "e.g. a laptop"][i] || ""}</span>`;
-    b.onclick = () => {
-      if (S.config && S.config.slot === i) return;
-      cmd({ cmd: "slot", n: i });
-      toast(`Switching to slot ${i + 1}. Pocket Nova is restarting.`);
-    };
+    b.className = "slot pix"; b.dataset.i = i;
+    b.onclick = () => switchSlot(i);
     $("slots").appendChild(b);
   }
 }
 
+// ======================================================================
+//  Bluetooth: which slot, what's paired where, what's connected now.
+// ======================================================================
+const short = (a) => a ? "…" + a.slice(-5) : "";
+const nameFor = (a) => ((S.labels || {})[a] || "").trim() || `Unnamed device ${short(a)}`;
+// switching = { to, at, helloAt } while a slot change is in progress
+let switching = null;
+function switchSlot(i) {
+  const cur = S.hello && S.hello.slot;
+  if (switching || cur === i) return;
+  switching = { to: i, at: Date.now(), helloAt: 0 };
+  sky.warpTarget = 1;
+  cmd({ cmd: "slot", n: i });
+  renderBt();
+}
+function bondsBySlot() {
+  const b = S.bonds || {}, list = b.list || [], slots = b.slots || [];
+  const by = { unknown: [] };
+  list.forEach((a, k) => { const s = slots[k]; (s >= 0 ? (by[s] = by[s] || []) : by.unknown).push(a); });
+  return by;
+}
+let btKey = "";
+function renderBt() {
+  const h = S.hello, st = S.status || {};
+  if (!h) return;
+  const cur = h.slot, host = st.host || "", live = !!st.ble;
+  const by = bondsBySlot();
+
+  // progress of a switch
+  let phase = null, pct = 0;
+  if (switching) {
+    const now = Date.now();
+    const arrived = S.connected && cur === switching.to && st.uptime != null && st.slot === switching.to;
+    if (!arrived) { phase = "restart"; pct = Math.min(60, (now - switching.at) / 40); }
+    else {
+      if (!switching.helloAt) { switching.helloAt = now; sky.warpTarget = 0; }
+      const expect = (by[cur] || []).length > 0;
+      if (live) { phase = null; toast(`Slot ${cur + 1}: connected to ${host ? nameFor(host) : "your device"}`); switching = null; hop(); }
+      else if (!expect || now - switching.helloAt > 15000) { phase = null; switching = null; }
+      else { phase = "reconnect"; pct = 60 + Math.min(39, (now - switching.helloAt) / 150); }
+    }
+    if (switching && now - switching.at > 30000) { switching = null; sky.warpTarget = 0; phase = null; }
+  }
+
+  // headline
+  const nowBox = $("btNow");
+  nowBox.classList.toggle("live", live && !phase);
+  nowBox.classList.toggle("wait", !live || !!phase);
+  if (phase === "restart") {
+    $("btNowTitle").textContent = `Switching to slot ${switching.to + 1}…`;
+    $("btNowSub").textContent = "Pocket Nova is restarting with that slot's Bluetooth identity.";
+  } else if (phase === "reconnect") {
+    const who = (by[cur] || []).map(nameFor).join(" or ");
+    $("btNowTitle").textContent = `On slot ${cur + 1}, waiting for ${who}…`;
+    $("btNowSub").textContent = "It usually reconnects within a few seconds. Make sure its Bluetooth is on.";
+  } else if (live) {
+    $("btNowTitle").textContent = `Slot ${cur + 1} · connected to ${host ? nameFor(host) : "a device"}`;
+    $("btNowSub").textContent = "Media, Slides and Keys send to this device.";
+  } else if ((by[cur] || []).length) {
+    $("btNowTitle").textContent = `Slot ${cur + 1} · not connected`;
+    $("btNowSub").textContent = `Waiting for ${(by[cur] || []).map(nameFor).join(" or ")}. Turn its Bluetooth on, or switch slot.`;
+  } else {
+    $("btNowTitle").textContent = `Slot ${cur + 1} · ready to pair`;
+    $("btNowSub").textContent = "Nothing is paired on this slot yet. Pair a PC or phone with it now.";
+  }
+
+  // slot cards (only rebuilt when something visible changes)
+  const key = JSON.stringify([cur, host, live, phase, switching && switching.to, Math.round(pct / 5), S.bonds, S.labels]);
+  if (key === btKey) return;
+  btKey = key;
+  [...$("slots").children].forEach((b) => {
+    const i = +b.dataset.i, mine = by[i] || [], active = i === cur && !phase;
+    const target = switching && switching.to === i;
+    b.classList.toggle("active", active || (target && phase === "reconnect"));
+    b.setAttribute("aria-pressed", String(i === cur));
+    let badge = `<span class="badge">standby</span>`;
+    if (target) badge = `<span class="badge wait">${phase === "reconnect" ? "reconnecting" : "switching"}</span>`;
+    else if (active && live) badge = `<span class="badge live">connected</span>`;
+    else if (active) badge = `<span class="badge on">active</span>`;
+    const items = mine.length
+      ? mine.map((a) => `<li class="${active && live && a === host ? "connected" : ""}"><span>${esc(nameFor(a))}</span></li>`).join("")
+      : `<li><span class="muted">${i === cur ? "Nothing paired yet" : "Empty"}</span></li>`;
+    let state;
+    if (target) state = `<span class="state go"><span class="orbit"></span>${phase === "reconnect" ? "Waiting for it to reconnect" : "Restarting"}</span><div class="progress"><i style="width:${pct}%"></i></div>`;
+    else if (active) state = `<span class="state">${live ? "In use now" : mine.length ? "Waiting for its device" : "Ready to pair"}</span>`;
+    else state = `<span class="state">${switching ? "" : "Click to switch here"}</span>`;
+    b.innerHTML = `<div class="top"><span class="num">Slot ${i + 1}</span>${badge}</div><ul>${items}</ul>${state}`;
+    b.disabled = !!switching && !target;
+    b.setAttribute("aria-label", `Slot ${i + 1}: ${mine.length ? mine.map(nameFor).join(", ") : "nothing paired"}${i === cur ? ", current slot" : ""}`);
+  });
+  renderDevices();
+}
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
 let devicesKey = "";
 function renderDevices() {
-  const list = (S.bonds && S.bonds.list) || [];
-  const key = JSON.stringify([list, S.labels]);
+  const b = S.bonds || {}, list = b.list || [], slots = b.slots || [];
+  const st = S.status || {}, host = st.ble ? st.host : "";
+  const cur = S.hello ? S.hello.slot : -1;
+  // Only this slot's devices, plus any whose slot isn't known yet (paired
+  // before slots were tracked; they get a slot the next time they connect).
+  const shown = list.map((a, k) => k).filter((k) => slots[k] === cur || !(slots[k] >= 0));
+  const key = JSON.stringify([list, slots, host, S.labels, cur, !!switching]);
   if (key === devicesKey) return;
   devicesKey = key;
+  $("devicesTitle").textContent = cur >= 0 ? `Paired on slot ${cur + 1}` : "Paired devices";
+  const others = list.length - shown.length;
+  $("devicesOther").textContent = others ? `${others} more paired on other slots. They show up here when you switch to their slot.` : "";
   const box = $("devices");
-  if (!list.length) { box.innerHTML = `<div class="empty">No devices paired yet.</div>`; return; }
+  if (switching) { box.innerHTML = `<div class="empty"><span class="orbit"></span>Switching slot…</div>`; return; }
+  if (!shown.length) { box.innerHTML = `<div class="empty">Nothing paired on slot ${cur + 1} yet. Pair a device now and it's saved to this slot.</div>`; return; }
   box.innerHTML = "";
-  list.forEach((addr) => {
+  shown.forEach((k) => {
+    const addr = list[k];
     const row = document.createElement("div");
-    row.className = "device";
+    row.className = "device pix" + (addr === host ? " connected" : "");
     const who = document.createElement("div"); who.className = "who";
-    const inp = document.createElement("input"); inp.type = "text"; inp.maxLength = 40;
+    const inp = document.createElement("input"); inp.type = "text"; inp.maxLength = 40; inp.className = "pix";
     inp.placeholder = "Name this device (e.g. Gaming PC)"; inp.value = (S.labels || {})[addr] || "";
     inp.setAttribute("aria-label", "Name for " + addr);
     inp.onchange = () => api("/api/label", { addr, label: inp.value });
-    const a = document.createElement("span"); a.className = "mono muted"; a.textContent = addr;
-    who.append(inp, a);
-    const rm = document.createElement("button"); rm.className = "btn danger"; rm.textContent = "Remove";
+    const meta = document.createElement("div"); meta.className = "meta";
+    const s = slots[k];
+    meta.innerHTML = `<span class="badge ${s >= 0 ? "on" : ""}">${s >= 0 ? "slot " + (s + 1) : "slot not known yet"}</span>`
+      + (addr === host ? `<span class="badge live">connected now</span>` : "")
+      + `<span class="mono muted">${addr}</span>`;
+    who.append(inp, meta);
+    const rm = document.createElement("button"); rm.className = "btn danger pix"; rm.textContent = "Remove";
     rm.dataset.confirm = "Click to confirm";
     armed(rm, () => { cmd({ cmd: "unbond", addr }); toast("Removed. Pocket Nova is restarting."); });
-    row.append(who, rm);
+    row.append(iconSvg("pc", "ico"), who, rm);
     box.appendChild(row);
   });
 }
@@ -592,8 +961,8 @@ function chip(el, cls, text, textEl) {
 
 function render() {
   const on = S.connected;
-  $("offline").hidden = !!on;
-  chip($("usbChip"), on ? "good" : "bad", on ? "Connected" : "Not plugged in", $("usbText"));
+  $("offline").hidden = !!on || !!switching;   // a slot switch restarts it: no "plug in" flash
+  chip($("usbChip"), on ? "good" : "bad", on ? "Connected" : switching ? "Restarting…" : "Not plugged in", $("usbText"));
   if (S.paused) chip($("usbChip"), "warn", "Updating firmware", $("usbText"));
 
   const h = S.hello, c = S.config, st = S.status;
@@ -614,7 +983,6 @@ function render() {
     const picked = h && c.tvBrand < h.brands.length;
     [...$("tvGrid").children].forEach((b) => { if (+b.dataset.code !== 0) b.disabled = !picked; });
     if (document.activeElement !== $("nameInput") && !$("nameInput").dataset.touched) $("nameInput").value = c.name;
-    [...$("slots").children].forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.i === c.slot)));
     $("snakeBest").textContent = c.snakeHigh;
   }
   if (st) {
@@ -631,7 +999,8 @@ function render() {
     $("wfApLeft").textContent = wf.setupLeft != null ? `${Math.floor(wf.setupLeft / 60)}:${String(wf.setupLeft % 60).padStart(2, "0")}` : "-";
     $("wfSetupBtn").textContent = wf.setup ? "Close setup network" : "Open setup network";
     $("swiftState").textContent = st.swiftPair ? "On now: nearby Windows PCs can see the pop-up" : st.ble ? "Off while connected" : "Show the Connect pop-up while pairing";
-    chip($("bleChip"), st.ble ? "good" : "warn", st.ble ? "Bluetooth connected" : "Bluetooth waiting", $("bleText"));
+    const slotTxt = st.slot != null ? ` · slot ${st.slot + 1}` : "";
+    chip($("bleChip"), st.ble ? "good" : "warn", st.ble ? `${st.host ? nameFor(st.host) : "Bluetooth connected"}${slotTxt}` : `Bluetooth waiting${slotTxt}`, $("bleText"));
     const where = st.screen === "APP" ? st.app[0] + st.app.slice(1).toLowerCase() : { PET: "Home", MENU: "Menu", TUTORIAL: "Tutorial" }[st.screen];
     chip($("screenChip"), null, where, $("screenText"));
     $("moodText").textContent = MOOD_WORDS[st.pet] || st.pet;
@@ -640,12 +1009,16 @@ function render() {
     $("petTime").textContent = st.clock ? (st.night ? "night" : "day") : "unknown";
     $("uptime").textContent = fmtUptime(st.uptime);
     $("heap").textContent = Math.round(st.heap / 1024) + " KB";
+    novaFace = MOOD_FACE[st.pet] || "idle";
   }
+  if (!on) novaFace = switching ? "blink" : "asleep";
+  paintMascot();
   $("portName").textContent = S.port || "-";
   $("fwDir").textContent = S.firmwareDir || "";
   if (document.activeElement !== $("autoOpen")) $("autoOpen").checked = !!S.autoOpen;
   if (document.activeElement !== $("autostart")) $("autostart").checked = !!S.autostart;
   paintHex($("mirror"), S.fb);
+  renderBt();
   renderDevices();
   renderBrands();
 

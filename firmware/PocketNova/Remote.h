@@ -135,6 +135,8 @@ void sendStatus() {
   d["menuIndex"] = menu.index;
   d["ble"] = bleOK();
   d["bonds"] = bleBondCount();
+  d["slot"] = cfg.btSlot;
+  d["host"] = hostBondKnown && bleOK() ? macToString(hostBond) : String("");
   d["swiftPair"] = bleKeyboard.swiftPairOn();   // true = broadcasting the pop-up right now
   JsonObject w = d["wifi"].to<JsonObject>();
   w["on"] = cfg.wifiOn;
@@ -166,10 +168,12 @@ void sendBonds() {
   d["t"] = "bonds";
   d["slot"] = cfg.btSlot;
   d["connected"] = bleOK();
+  d["host"] = hostBondKnown && bleOK() ? macToString(hostBond) : String("");   // connected now
   JsonArray a = d["list"].to<JsonArray>();
+  JsonArray s = d["slots"].to<JsonArray>();      // slot of each pairing, -1 = not known yet
   esp_ble_bond_dev_t list[15];
   int n = bleBondList(list, 15);
-  for (int i = 0; i < n; i++) a.add(macToString(list[i].bd_addr));
+  for (int i = 0; i < n; i++) { a.add(macToString(list[i].bd_addr)); s.add(bondSlot(list[i].bd_addr)); }
   sendJson(d);
 }
 
