@@ -1,0 +1,2828 @@
+{
+ "brands": [
+  {
+   "name": "LG",
+   "letter": "L",
+   "color": [
+    255,
+    0,
+    80
+   ],
+   "codes": {
+    "POWER": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "20DF10EF",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/LG/TV/4,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1042.json",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1043.json",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1040.json"
+     ]
+    },
+    "VOL+": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "20DF40BF",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/LG/TV/4,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1042.json",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1043.json",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1040.json"
+     ]
+    },
+    "VOL-": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "20DFC03F",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/LG/TV/4,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1042.json",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1043.json",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1040.json"
+     ]
+    },
+    "MUTE": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "20DF906F",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/LG/TV/4,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1042.json",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1043.json",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1040.json"
+     ]
+    },
+    "CH+": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "20DF00FF",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/LG/TV/4,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1042.json",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1043.json",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1040.json"
+     ]
+    },
+    "CH-": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "20DF807F",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/LG/TV/4,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1042.json",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1043.json",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1040.json"
+     ]
+    },
+    "INPUT": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "20DFD02F",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/LG/TV/4,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1042.json",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1043.json",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1040.json"
+     ]
+    }
+   }
+  },
+  {
+   "name": "VIZIO",
+   "letter": "V",
+   "color": [
+    255,
+    120,
+    0
+   ],
+   "codes": {
+    "POWER": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "20DF10EF",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Vizio/Unknown_Vizio/4,-1.csv",
+      "https://lirc.sourceforge.net/remotes/vizio/LCD_TV"
+     ]
+    },
+    "VOL+": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "20DF40BF",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Vizio/Unknown_Vizio/4,-1.csv",
+      "https://lirc.sourceforge.net/remotes/vizio/LCD_TV",
+      "https://lirc.sourceforge.net/remotes/vizio/VUR8"
+     ]
+    },
+    "VOL-": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "20DFC03F",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Vizio/Unknown_Vizio/4,-1.csv",
+      "https://lirc.sourceforge.net/remotes/vizio/LCD_TV",
+      "https://lirc.sourceforge.net/remotes/vizio/VUR8"
+     ]
+    },
+    "MUTE": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "20DF906F",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Vizio/Unknown_Vizio/4,-1.csv",
+      "https://lirc.sourceforge.net/remotes/vizio/LCD_TV",
+      "https://lirc.sourceforge.net/remotes/vizio/VUR8"
+     ]
+    },
+    "CH+": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "20DF00FF",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Vizio/Unknown_Vizio/4,-1.csv",
+      "https://lirc.sourceforge.net/remotes/vizio/LCD_TV"
+     ]
+    },
+    "CH-": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "20DF807F",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://lirc.sourceforge.net/remotes/vizio/LCD_TV"
+     ]
+    },
+    "INPUT": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "20DFF40B",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Vizio/Unknown_Vizio/4,-1.csv",
+      "https://lirc.sourceforge.net/remotes/vizio/LCD_TV"
+     ]
+    }
+   }
+  },
+  {
+   "name": "SAMSUNG",
+   "letter": "S",
+   "color": [
+    0,
+    80,
+    255
+   ],
+   "codes": {
+    "POWER": {
+     "proto": "SAMSUNG",
+     "bits": 32,
+     "data": "E0E040BF",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Samsung/TV/7,7.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1061.json",
+      "https://lirc.sourceforge.net/remotes/samsung/00025G",
+      "https://lirc.sourceforge.net/remotes/samsung/00077A"
+     ],
+     "alt": {
+      "proto": "SAMSUNG",
+      "bits": 32,
+      "data": "E0E06798",
+      "sources": [
+       "Flipper-IRDB (Lucaslhm)"
+      ]
+     }
+    },
+    "VOL+": {
+     "proto": "SAMSUNG",
+     "bits": 32,
+     "data": "E0E0E01F",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Samsung/TV/7,7.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1061.json",
+      "https://lirc.sourceforge.net/remotes/samsung/00025G",
+      "https://lirc.sourceforge.net/remotes/samsung/00077A"
+     ]
+    },
+    "VOL-": {
+     "proto": "SAMSUNG",
+     "bits": 32,
+     "data": "E0E0D02F",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Samsung/TV/7,7.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1061.json",
+      "https://lirc.sourceforge.net/remotes/samsung/00025G",
+      "https://lirc.sourceforge.net/remotes/samsung/00077A"
+     ]
+    },
+    "MUTE": {
+     "proto": "SAMSUNG",
+     "bits": 32,
+     "data": "E0E0F00F",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Samsung/TV/7,7.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1061.json",
+      "https://lirc.sourceforge.net/remotes/samsung/00077A",
+      "https://lirc.sourceforge.net/remotes/samsung/00104J"
+     ]
+    },
+    "CH+": {
+     "proto": "SAMSUNG",
+     "bits": 32,
+     "data": "E0E048B7",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Samsung/TV/7,7.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1061.json",
+      "https://lirc.sourceforge.net/remotes/samsung/00025G",
+      "https://lirc.sourceforge.net/remotes/samsung/00077A"
+     ]
+    },
+    "CH-": {
+     "proto": "SAMSUNG",
+     "bits": 32,
+     "data": "E0E008F7",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Samsung/TV/7,7.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1061.json",
+      "https://lirc.sourceforge.net/remotes/samsung/00025G",
+      "https://lirc.sourceforge.net/remotes/samsung/00077A"
+     ]
+    },
+    "INPUT": {
+     "proto": "SAMSUNG",
+     "bits": 32,
+     "data": "E0E0807F",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Samsung/TV/7,7.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1061.json",
+      "https://lirc.sourceforge.net/remotes/samsung/00025G",
+      "https://lirc.sourceforge.net/remotes/samsung/00077A"
+     ]
+    }
+   }
+  },
+  {
+   "name": "SONY",
+   "letter": "Y",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "codes": {
+    "POWER": {
+     "proto": "SONY",
+     "bits": 12,
+     "data": "A90",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sony/TV/1,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1020.json",
+      "https://lirc.sourceforge.net/remotes/sony/839",
+      "https://lirc.sourceforge.net/remotes/sony/KV_32LS35E"
+     ]
+    },
+    "VOL+": {
+     "proto": "SONY",
+     "bits": 12,
+     "data": "490",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sony/TV/1,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1020.json",
+      "https://lirc.sourceforge.net/remotes/sony/839",
+      "https://lirc.sourceforge.net/remotes/sony/CONRAD_CD000"
+     ]
+    },
+    "VOL-": {
+     "proto": "SONY",
+     "bits": 12,
+     "data": "C90",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sony/TV/1,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1020.json",
+      "https://lirc.sourceforge.net/remotes/sony/839",
+      "https://lirc.sourceforge.net/remotes/sony/CONRAD_CD000"
+     ]
+    },
+    "MUTE": {
+     "proto": "SONY",
+     "bits": 12,
+     "data": "290",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sony/TV/1,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1020.json",
+      "https://lirc.sourceforge.net/remotes/sony/839",
+      "https://lirc.sourceforge.net/remotes/sony/KV_32LS35E"
+     ]
+    },
+    "CH+": {
+     "proto": "SONY",
+     "bits": 12,
+     "data": "090",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sony/TV/1,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1020.json",
+      "https://lirc.sourceforge.net/remotes/sony/839",
+      "https://lirc.sourceforge.net/remotes/sony/KV_32LS35E"
+     ]
+    },
+    "CH-": {
+     "proto": "SONY",
+     "bits": 12,
+     "data": "890",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sony/TV/1,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1020.json",
+      "https://lirc.sourceforge.net/remotes/sony/839",
+      "https://lirc.sourceforge.net/remotes/sony/KV_32LS35E"
+     ]
+    },
+    "INPUT": {
+     "proto": "SONY",
+     "bits": 12,
+     "data": "A50",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sony/TV/1,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1020.json",
+      "https://lirc.sourceforge.net/remotes/sony/RM-687C",
+      "https://lirc.sourceforge.net/remotes/sony/RM-689"
+     ]
+    }
+   }
+  },
+  {
+   "name": "PANASONIC",
+   "letter": "P",
+   "color": [
+    0,
+    200,
+    255
+   ],
+   "codes": {
+    "POWER": {
+     "proto": "PANASONIC",
+     "addr": "4004",
+     "data": "100BCBD",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Panasonic/TV/128,0.csv",
+      "https://lirc.sourceforge.net/remotes/panasonic/EUR511211",
+      "https://lirc.sourceforge.net/remotes/panasonic/EUR511224",
+      "https://lirc.sourceforge.net/remotes/panasonic/EUR511300"
+     ]
+    },
+    "VOL+": {
+     "proto": "PANASONIC",
+     "addr": "4004",
+     "data": "1000405",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Panasonic/TV/128,0.csv",
+      "https://lirc.sourceforge.net/remotes/panasonic/EUR511224",
+      "https://lirc.sourceforge.net/remotes/panasonic/EUR511300",
+      "https://lirc.sourceforge.net/remotes/panasonic/EUR51920"
+     ]
+    },
+    "VOL-": {
+     "proto": "PANASONIC",
+     "addr": "4004",
+     "data": "1008485",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Panasonic/TV/128,0.csv",
+      "https://lirc.sourceforge.net/remotes/panasonic/EUR511224",
+      "https://lirc.sourceforge.net/remotes/panasonic/EUR511300",
+      "https://lirc.sourceforge.net/remotes/panasonic/EUR51920"
+     ]
+    },
+    "MUTE": {
+     "proto": "PANASONIC",
+     "addr": "4004",
+     "data": "1004C4D",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Panasonic/TV/128,0.csv",
+      "https://lirc.sourceforge.net/remotes/panasonic/EUR511211",
+      "https://lirc.sourceforge.net/remotes/panasonic/EUR511224",
+      "https://lirc.sourceforge.net/remotes/panasonic/EUR511300"
+     ]
+    },
+    "CH+": {
+     "proto": "PANASONIC",
+     "addr": "4004",
+     "data": "1002C2D",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Panasonic/TV/128,0.csv",
+      "https://lirc.sourceforge.net/remotes/panasonic/EUR511300",
+      "https://lirc.sourceforge.net/remotes/panasonic/EUR511515A",
+      "https://lirc.sourceforge.net/remotes/panasonic/EUR51920"
+     ]
+    },
+    "CH-": {
+     "proto": "PANASONIC",
+     "addr": "4004",
+     "data": "100ACAD",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Panasonic/TV/128,0.csv",
+      "https://lirc.sourceforge.net/remotes/panasonic/EUR511300",
+      "https://lirc.sourceforge.net/remotes/panasonic/EUR511515A",
+      "https://lirc.sourceforge.net/remotes/panasonic/EUR51920"
+     ]
+    },
+    "INPUT": {
+     "proto": "PANASONIC",
+     "addr": "4004",
+     "data": "100A0A1",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Panasonic/TV/128,0.csv",
+      "https://lirc.sourceforge.net/remotes/panasonic/EUR511211",
+      "https://lirc.sourceforge.net/remotes/panasonic/EUR511224",
+      "https://lirc.sourceforge.net/remotes/panasonic/EUR511300"
+     ]
+    }
+   }
+  },
+  {
+   "name": "PHILIPS RC6",
+   "letter": "6",
+   "color": [
+    0,
+    120,
+    255
+   ],
+   "codes": {
+    "POWER": {
+     "proto": "RC6",
+     "addr": 0,
+     "data": "0C",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1002.json",
+      "https://lirc.sourceforge.net/remotes/philips/26PFL5604H",
+      "https://lirc.sourceforge.net/remotes/philips/32PFL5403D-12",
+      "https://lirc.sourceforge.net/remotes/philips/RC19042002"
+     ]
+    },
+    "VOL+": {
+     "proto": "RC6",
+     "addr": 0,
+     "data": "10",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://lirc.sourceforge.net/remotes/philips/26PFL5604H",
+      "https://lirc.sourceforge.net/remotes/philips/32PFL5403D-12",
+      "https://lirc.sourceforge.net/remotes/philips/BDP3000",
+      "https://lirc.sourceforge.net/remotes/philips/RC19002"
+     ]
+    },
+    "VOL-": {
+     "proto": "RC6",
+     "addr": 0,
+     "data": "11",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1002.json",
+      "https://lirc.sourceforge.net/remotes/philips/26PFL5604H",
+      "https://lirc.sourceforge.net/remotes/philips/32PFL5403D-12",
+      "https://lirc.sourceforge.net/remotes/philips/BDP3000"
+     ]
+    },
+    "MUTE": {
+     "proto": "RC6",
+     "addr": 0,
+     "data": "0D",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1002.json",
+      "https://lirc.sourceforge.net/remotes/philips/26PFL5604H",
+      "https://lirc.sourceforge.net/remotes/philips/32PFL5403D-12",
+      "https://lirc.sourceforge.net/remotes/philips/BDP3000"
+     ]
+    },
+    "CH+": {
+     "proto": "RC6",
+     "addr": 0,
+     "data": "20",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1002.json",
+      "https://lirc.sourceforge.net/remotes/philips/26PFL5604H",
+      "https://lirc.sourceforge.net/remotes/philips/32PFL5403D-12",
+      "https://lirc.sourceforge.net/remotes/philips/BDP3000"
+     ]
+    },
+    "CH-": {
+     "proto": "RC6",
+     "addr": 0,
+     "data": "21",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1002.json",
+      "https://lirc.sourceforge.net/remotes/philips/26PFL5604H",
+      "https://lirc.sourceforge.net/remotes/philips/32PFL5403D-12",
+      "https://lirc.sourceforge.net/remotes/philips/BDP3000"
+     ]
+    },
+    "INPUT": {
+     "proto": "RC6",
+     "addr": 0,
+     "data": "38",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1002.json",
+      "https://lirc.sourceforge.net/remotes/philips/RC19002"
+     ]
+    }
+   }
+  },
+  {
+   "name": "PHILIPS RC5",
+   "letter": "5",
+   "color": [
+    0,
+    60,
+    200
+   ],
+   "codes": {
+    "POWER": {
+     "proto": "RC5",
+     "addr": 0,
+     "data": "0C",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Philips/TV/0,-1.csv",
+      "https://lirc.sourceforge.net/remotes/philips/15PF4121",
+      "https://lirc.sourceforge.net/remotes/philips/17PT1563_43",
+      "https://lirc.sourceforge.net/remotes/philips/29PT5507"
+     ]
+    },
+    "VOL+": {
+     "proto": "RC5",
+     "addr": 0,
+     "data": "10",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Philips/TV/0,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1000.json",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1001.json",
+      "https://lirc.sourceforge.net/remotes/philips/15PF4121"
+     ]
+    },
+    "VOL-": {
+     "proto": "RC5",
+     "addr": 0,
+     "data": "11",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Philips/TV/0,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1000.json",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1001.json",
+      "https://lirc.sourceforge.net/remotes/philips/15PF4121"
+     ]
+    },
+    "MUTE": {
+     "proto": "RC5",
+     "addr": 0,
+     "data": "0D",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Philips/TV/0,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1000.json",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1001.json",
+      "https://lirc.sourceforge.net/remotes/philips/15PF4121"
+     ]
+    },
+    "CH+": {
+     "proto": "RC5",
+     "addr": 0,
+     "data": "20",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Philips/TV/0,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1000.json",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1001.json",
+      "https://lirc.sourceforge.net/remotes/philips/15PF4121"
+     ]
+    },
+    "CH-": {
+     "proto": "RC5",
+     "addr": 0,
+     "data": "21",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Philips/TV/0,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1000.json",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1001.json",
+      "https://lirc.sourceforge.net/remotes/philips/15PF4121"
+     ]
+    },
+    "INPUT": {
+     "proto": "RC5",
+     "addr": 0,
+     "data": "38",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Philips/TV/0,-1.csv",
+      "https://lirc.sourceforge.net/remotes/philips/15PF4121",
+      "https://lirc.sourceforge.net/remotes/philips/17PT1563_43",
+      "https://lirc.sourceforge.net/remotes/philips/RC-7843"
+     ]
+    }
+   }
+  },
+  {
+   "name": "TOSHIBA",
+   "letter": "T",
+   "color": [
+    255,
+    40,
+    0
+   ],
+   "codes": {
+    "POWER": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "02FD48B7",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Toshiba/TV/64,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1100.json",
+      "https://lirc.sourceforge.net/remotes/toshiba/CT-816",
+      "https://lirc.sourceforge.net/remotes/toshiba/CT-826"
+     ]
+    },
+    "VOL+": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "02FD58A7",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Toshiba/TV/64,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1100.json",
+      "https://lirc.sourceforge.net/remotes/toshiba/CT-816",
+      "https://lirc.sourceforge.net/remotes/toshiba/CT-826"
+     ]
+    },
+    "VOL-": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "02FD7887",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Toshiba/TV/64,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1100.json",
+      "https://lirc.sourceforge.net/remotes/toshiba/CT-816",
+      "https://lirc.sourceforge.net/remotes/toshiba/CT-826"
+     ]
+    },
+    "MUTE": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "02FD08F7",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Toshiba/TV/64,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1100.json",
+      "https://lirc.sourceforge.net/remotes/toshiba/CT-816",
+      "https://lirc.sourceforge.net/remotes/toshiba/CT-826"
+     ]
+    },
+    "CH+": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "02FDD827",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Toshiba/TV/64,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1100.json",
+      "https://lirc.sourceforge.net/remotes/toshiba/CT-816",
+      "https://lirc.sourceforge.net/remotes/toshiba/CT-826"
+     ]
+    },
+    "CH-": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "02FDF807",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Toshiba/TV/64,-1.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1100.json",
+      "https://lirc.sourceforge.net/remotes/toshiba/CT-816",
+      "https://lirc.sourceforge.net/remotes/toshiba/CT-826"
+     ]
+    },
+    "INPUT": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "02FDF00F",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/probonopd/irdb/blob/master/codes/Toshiba/TV/64,-1.csv",
+      "https://lirc.sourceforge.net/remotes/toshiba/CT-826",
+      "https://lirc.sourceforge.net/remotes/toshiba/CT-847",
+      "https://lirc.sourceforge.net/remotes/toshiba/CT-859"
+     ],
+     "alt": {
+      "proto": "NEC",
+      "bits": 32,
+      "data": "02FD28D7",
+      "sources": [
+       "Flipper-IRDB (Lucaslhm)"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "HISENSE",
+   "letter": "I",
+   "color": [
+    0,
+    255,
+    160
+   ],
+   "codes": {
+    "POWER": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "00FDB04F",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://gist.github.com/ant-thomas/122b12c9570058c0f2ca43da96e59a76",
+      "https://hawkins.id.au/posts/discrete_ir_for_hisense_tv/"
+     ]
+    },
+    "VOL+": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "00FD22DD",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://gist.github.com/ant-thomas/122b12c9570058c0f2ca43da96e59a76",
+      "https://hawkins.id.au/posts/discrete_ir_for_hisense_tv/"
+     ]
+    },
+    "VOL-": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "00FDC23D",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://gist.github.com/ant-thomas/122b12c9570058c0f2ca43da96e59a76",
+      "https://hawkins.id.au/posts/discrete_ir_for_hisense_tv/"
+     ]
+    },
+    "MUTE": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "00FD708F",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://gist.github.com/ant-thomas/122b12c9570058c0f2ca43da96e59a76",
+      "https://hawkins.id.au/posts/discrete_ir_for_hisense_tv/"
+     ]
+    },
+    "CH+": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "00FD52AD",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://gist.github.com/ant-thomas/122b12c9570058c0f2ca43da96e59a76",
+      "https://hawkins.id.au/posts/discrete_ir_for_hisense_tv/"
+     ]
+    },
+    "CH-": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "00FDD22D",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://gist.github.com/ant-thomas/122b12c9570058c0f2ca43da96e59a76",
+      "https://hawkins.id.au/posts/discrete_ir_for_hisense_tv/"
+     ]
+    },
+    "INPUT": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "00FD48B7",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://gist.github.com/ant-thomas/122b12c9570058c0f2ca43da96e59a76",
+      "https://hawkins.id.au/posts/discrete_ir_for_hisense_tv/"
+     ]
+    }
+   }
+  },
+  {
+   "name": "TCL ROKU TV",
+   "letter": "R",
+   "color": [
+    140,
+    0,
+    255
+   ],
+   "codes": {
+    "POWER": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "57E3E817",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/warlock31415/Roku-Remote"
+     ]
+    },
+    "VOL+": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "57E3F00F",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/warlock31415/Roku-Remote"
+     ]
+    },
+    "VOL-": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "57E308F7",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/warlock31415/Roku-Remote"
+     ]
+    },
+    "MUTE": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "57E304FB",
+     "sources": [
+      "Flipper-IRDB (Lucaslhm)",
+      "https://github.com/warlock31415/Roku-Remote"
+     ]
+    }
+   }
+  },
+  {
+   "name": "SHARP",
+   "letter": "Q",
+   "color": [
+    255,
+    0,
+    0
+   ],
+   "codes": {
+    "POWER": {
+     "proto": "SHARP",
+     "bits": 15,
+     "data": "41A2",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Sharp/Sharp_13VT-L100.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sharp/Monitor/1%2C-1.csv",
+      "https://sourceforge.net/p/lirc-remotes/code/ci/master/tree/remotes/sharp/G0641CESA.lircd.conf",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1620.json"
+     ],
+     "alt": {
+      "proto": "NEC",
+      "bits": 32,
+      "data": "00FE50AF",
+      "sources": [
+       "Flipper-IRDB (Lucaslhm)"
+      ]
+     }
+    },
+    "VOL+": {
+     "proto": "SHARP",
+     "bits": 15,
+     "data": "40A2",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Sharp/Sharp_13VT-L100.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sharp/Monitor/1%2C-1.csv",
+      "https://sourceforge.net/p/lirc-remotes/code/ci/master/tree/remotes/sharp/G0641CESA.lircd.conf",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1620.json"
+     ],
+     "alt": {
+      "proto": "NEC",
+      "bits": 32,
+      "data": "00FE7887",
+      "sources": [
+       "Flipper-IRDB (Lucaslhm)"
+      ]
+     }
+    },
+    "VOL-": {
+     "proto": "SHARP",
+     "bits": 15,
+     "data": "42A2",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Sharp/Sharp_13VT-L100.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sharp/Monitor/1%2C-1.csv",
+      "https://sourceforge.net/p/lirc-remotes/code/ci/master/tree/remotes/sharp/G0641CESA.lircd.conf",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1620.json"
+     ],
+     "alt": {
+      "proto": "NEC",
+      "bits": 32,
+      "data": "00FEFA05",
+      "sources": [
+       "Flipper-IRDB (Lucaslhm)"
+      ]
+     }
+    },
+    "MUTE": {
+     "proto": "SHARP",
+     "bits": 15,
+     "data": "43A2",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Sharp/Sharp_13VT-L100.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sharp/Monitor/1%2C-1.csv",
+      "https://sourceforge.net/p/lirc-remotes/code/ci/master/tree/remotes/sharp/G0641CESA.lircd.conf",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1620.json"
+     ],
+     "alt": {
+      "proto": "NEC",
+      "bits": 32,
+      "data": "00FE0AF5",
+      "sources": [
+       "Flipper-IRDB (Lucaslhm)"
+      ]
+     }
+    },
+    "CH+": {
+     "proto": "SHARP",
+     "bits": 15,
+     "data": "4222",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Sharp/Sharp_13VT-L100.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sharp/TV/1%2C-1.csv",
+      "https://sourceforge.net/p/lirc-remotes/code/ci/master/tree/remotes/sharp/G0641CESA.lircd.conf",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1620.json"
+     ],
+     "alt": {
+      "proto": "NEC",
+      "bits": 32,
+      "data": "00FEF807",
+      "sources": [
+       "Flipper-IRDB (Lucaslhm)"
+      ]
+     }
+    },
+    "CH-": {
+     "proto": "SHARP",
+     "bits": 15,
+     "data": "4122",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Sharp/Sharp_13VT-L100.ir",
+      "https://sourceforge.net/p/lirc-remotes/code/ci/master/tree/remotes/sharp/G0641CESA.lircd.conf",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1620.json"
+     ],
+     "alt": {
+      "proto": "NEC",
+      "bits": 32,
+      "data": "00FE3AC5",
+      "sources": [
+       "Flipper-IRDB (Lucaslhm)"
+      ]
+     }
+    },
+    "INPUT": {
+     "proto": "SHARP",
+     "bits": 15,
+     "data": "4322",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Sharp/Sharp_13VT-L100.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sharp/TV/1%2C-1.csv",
+      "https://sourceforge.net/p/lirc-remotes/code/ci/master/tree/remotes/sharp/G1023BMSA.lircd.conf",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1620.json"
+     ],
+     "alt": {
+      "proto": "NEC",
+      "bits": 32,
+      "data": "00FECA35",
+      "sources": [
+       "Flipper-IRDB (Lucaslhm)"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "JVC",
+   "letter": "J",
+   "color": [
+    255,
+    60,
+    60
+   ],
+   "codes": {
+    "POWER": {
+     "proto": "JVC",
+     "bits": 16,
+     "data": "C0E8",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/JVC/JVC_RMT-JR01.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/JVC/HD-ILA%20Projection/3%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/JVC/Unknown_JVC-RM-C475W/3%2C-1.csv"
+     ]
+    },
+    "VOL+": {
+     "proto": "JVC",
+     "bits": 16,
+     "data": "C078",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/JVC/JVC_RMT-JR01.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/JVC/HD-ILA%20Projection/3%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/JVC/Unknown_JVC-RM-C475W/3%2C-1.csv"
+     ]
+    },
+    "VOL-": {
+     "proto": "JVC",
+     "bits": 16,
+     "data": "C0F8",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/JVC/JVC_RMT-JR01.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/JVC/HD-ILA%20Projection/3%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/JVC/Unknown_JVC-RM-C475W/3%2C-1.csv"
+     ]
+    },
+    "MUTE": {
+     "proto": "JVC",
+     "bits": 16,
+     "data": "C038",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/JVC/JVC_RMT-JR01.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/JVC/HD-ILA%20Projection/3%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/JVC/Unknown_JVC-RM-C475W/3%2C-1.csv"
+     ]
+    },
+    "CH+": {
+     "proto": "JVC",
+     "bits": 16,
+     "data": "C098",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/JVC/JVC_RMT-JR01.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/JVC/HD-ILA%20Projection/3%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/JVC/Unknown_JVC-RM-C475W/3%2C-1.csv"
+     ]
+    },
+    "CH-": {
+     "proto": "JVC",
+     "bits": 16,
+     "data": "C018",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/JVC/JVC_RMT-JR01.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/JVC/Unknown_JVC-RM-C475W/3%2C-1.csv"
+     ]
+    },
+    "INPUT": {
+     "proto": "JVC",
+     "bits": 16,
+     "data": "C0C8",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/JVC/JVC_RMT-JR01.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/JVC/Monitor/3%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/JVC/Unknown_RM-C1251G/3%2C-1.csv"
+     ]
+    }
+   }
+  },
+  {
+   "name": "HITACHI",
+   "letter": "H",
+   "color": [
+    255,
+    150,
+    0
+   ],
+   "codes": {
+    "POWER": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "AF5E817",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Hitachi/Hitachi_LE46H508.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Hitachi/Display/80%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/Hitachi/Unknown_CLE-941/80%2C-1.csv"
+     ]
+    },
+    "VOL+": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "AF548B7",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Hitachi/Hitachi_LE46H508.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Hitachi/Display/80%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/Hitachi/Unknown_CLE-941/80%2C-1.csv"
+     ]
+    },
+    "VOL-": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "AF5A857",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Hitachi/Hitachi_LE46H508.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Hitachi/Monitor/80%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/Hitachi/Unknown_CLE-941/80%2C-1.csv"
+     ]
+    },
+    "MUTE": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "AF5D02F",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Hitachi/Hitachi_LE46H508.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Hitachi/Display/80%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/Hitachi/Unknown_CLE-941/80%2C-1.csv"
+     ]
+    },
+    "CH+": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "AF59867",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Hitachi/Hitachi_LE46H508.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Hitachi/Display/80%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/Hitachi/Unknown_CLE-941/80%2C-1.csv"
+     ]
+    },
+    "CH-": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "AF518E7",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Hitachi/Hitachi_LE46H508.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Hitachi/Monitor/80%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/Hitachi/Unknown_CLE-941/80%2C-1.csv"
+     ]
+    },
+    "INPUT": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "AF5906F",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Hitachi/Hitachi_LE46H508.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Hitachi/Display/80%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/Hitachi/Unknown_CLE-941/80%2C-1.csv"
+     ]
+    }
+   }
+  },
+  {
+   "name": "MITSUBISHI",
+   "letter": "M",
+   "color": [
+    255,
+    0,
+    0
+   ],
+   "codes": {
+    "POWER": {
+     "proto": "MITSUBISHI",
+     "bits": 16,
+     "data": "E240",
+     "sources": [
+      "https://github.com/probonopd/irdb/blob/master/codes/Mitsubishi/Monitor/71%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/Mitsubishi/Unknown/71%2C-1.csv"
+     ]
+    },
+    "VOL+": {
+     "proto": "MITSUBISHI",
+     "bits": 16,
+     "data": "E244",
+     "sources": [
+      "https://github.com/probonopd/irdb/blob/master/codes/Mitsubishi/TV/71%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/Mitsubishi/Unknown_mitsubishi/71%2C-1.csv"
+     ]
+    },
+    "VOL-": {
+     "proto": "MITSUBISHI",
+     "bits": 16,
+     "data": "E254",
+     "sources": [
+      "https://github.com/probonopd/irdb/blob/master/codes/Mitsubishi/TV/71%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/Mitsubishi/Unknown_mitsubishi/71%2C-1.csv"
+     ]
+    },
+    "MUTE": {
+     "proto": "MITSUBISHI",
+     "bits": 16,
+     "data": "E24C",
+     "sources": [
+      "https://github.com/probonopd/irdb/blob/master/codes/Mitsubishi/Monitor/71%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/Mitsubishi/Unknown/71%2C-1.csv"
+     ]
+    },
+    "CH+": {
+     "proto": "MITSUBISHI",
+     "bits": 16,
+     "data": "E250",
+     "sources": [
+      "https://github.com/probonopd/irdb/blob/master/codes/Mitsubishi/TV/71%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/Mitsubishi/Unknown_mitsubishi/71%2C-1.csv"
+     ]
+    },
+    "CH-": {
+     "proto": "MITSUBISHI",
+     "bits": 16,
+     "data": "E248",
+     "sources": [
+      "https://github.com/probonopd/irdb/blob/master/codes/Mitsubishi/TV/71%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/Mitsubishi/Unknown_mitsubishi/71%2C-1.csv"
+     ]
+    },
+    "INPUT": {
+     "proto": "MITSUBISHI",
+     "bits": 16,
+     "data": "E25C",
+     "sources": [
+      "https://github.com/probonopd/irdb/blob/master/codes/Mitsubishi/Monitor/71%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/Mitsubishi/Unknown/71%2C-1.csv"
+     ]
+    }
+   }
+  },
+  {
+   "name": "INSIGNIA",
+   "letter": "N",
+   "color": [
+    0,
+    160,
+    255
+   ],
+   "codes": {
+    "POWER": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "61A0F00F",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Dynex/Dynex_DX-RC01A-12.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Insignia/TV/134%2C5.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1080.json"
+     ]
+    },
+    "VOL+": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "61A030CF",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Dynex/Dynex_DX-RC01A-12.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Insignia/TV/134%2C5.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1080.json"
+     ]
+    },
+    "VOL-": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "61A0B04F",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Dynex/Dynex_DX-RC01A-12.ir",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1080.json"
+     ]
+    },
+    "MUTE": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "61A0708F",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Dynex/Dynex_DX-RC01A-12.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Insignia/TV/134%2C5.csv",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1080.json"
+     ]
+    },
+    "CH+": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "61A050AF",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Dynex/Dynex_DX-RC01A-12.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Insignia/TV/134%2C5.csv"
+     ]
+    },
+    "CH-": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "61A0D02F",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Dynex/Dynex_DX-RC01A-12.ir"
+     ]
+    },
+    "INPUT": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "61A0B847",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Dynex/Dynex_DX-RC01A-12.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Insignia/TV/134%2C5.csv"
+     ]
+    }
+   }
+  },
+  {
+   "name": "FIRE TV",
+   "letter": "F",
+   "color": [
+    255,
+    120,
+    0
+   ],
+   "codes": {
+    "POWER": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "40BE629D",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Amazon/FireTV_Omni_Series_4K.ir"
+     ]
+    },
+    "VOL+": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "40BE30CF",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Amazon/FireTV_Omni_Series_4K.ir"
+     ]
+    },
+    "VOL-": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "40BE9867",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Amazon/FireTV_Omni_Series_4K.ir"
+     ]
+    },
+    "MUTE": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "40BE32CD",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Amazon/FireTV_Omni_Series_4K.ir"
+     ]
+    },
+    "CH+": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "40BEF00F",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Amazon/FireTV_Omni_Series_4K.ir"
+     ]
+    },
+    "CH-": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "40BE5AA5",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Amazon/FireTV_Omni_Series_4K.ir"
+     ]
+    },
+    "INPUT": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "40BED22D",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Element/Element_100-Series_TV.ir"
+     ]
+    }
+   }
+  },
+  {
+   "name": "FUNAI/EMERSON",
+   "letter": "E",
+   "color": [
+    120,
+    255,
+    0
+   ],
+   "codes": {
+    "POWER": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "E14407F8",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Emerson/Emerson_EWC13D4.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Emerson/TV/135%2C34.csv"
+     ],
+     "alt": {
+      "proto": "NEC",
+      "bits": 32,
+      "data": "210704FB",
+      "sources": [
+       "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Emerson/Emerson_32FNT004.ir"
+      ]
+     }
+    },
+    "VOL+": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "E1440FF0",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Emerson/Emerson_EWC13D4.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Emerson/TV/135%2C34.csv"
+     ],
+     "alt": {
+      "proto": "NEC",
+      "bits": 32,
+      "data": "210706F9",
+      "sources": [
+       "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Emerson/Emerson_32FNT004.ir",
+       "https://github.com/probonopd/irdb/blob/master/codes/FUNAI/Unknown_NF021RD/132%2C224.csv"
+      ]
+     }
+    },
+    "VOL-": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "E1448F70",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Emerson/Emerson_EWC13D4.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Emerson/TV/135%2C34.csv"
+     ],
+     "alt": {
+      "proto": "NEC",
+      "bits": 32,
+      "data": "21078679",
+      "sources": [
+       "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Emerson/Emerson_32FNT004.ir",
+       "https://github.com/probonopd/irdb/blob/master/codes/FUNAI/Unknown_NF021RD/132%2C224.csv"
+      ]
+     }
+    },
+    "MUTE": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "E144CF30",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Emerson/Emerson_EWC13D4.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Emerson/TV/135%2C34.csv"
+     ],
+     "alt": {
+      "proto": "NEC",
+      "bits": 32,
+      "data": "210726D9",
+      "sources": [
+       "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Emerson/Emerson_32FNT004.ir",
+       "https://github.com/probonopd/irdb/blob/master/codes/FUNAI/Unknown_NF021RD/132%2C224.csv"
+      ]
+     }
+    },
+    "CH+": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "E1440BF4",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Emerson/Emerson_EWC13D4.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Emerson/TV/135%2C34.csv"
+     ],
+     "alt": {
+      "proto": "NEC",
+      "bits": 32,
+      "data": "21070AF5",
+      "sources": [
+       "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Emerson/Emerson_32FNT004.ir",
+       "https://github.com/probonopd/irdb/blob/master/codes/FUNAI/Unknown_NF021RD/132%2C224.csv"
+      ]
+     }
+    },
+    "CH-": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "E14413EC",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Emerson/Emerson_EWC13D4.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Emerson/TV/135%2C34.csv"
+     ],
+     "alt": {
+      "proto": "NEC",
+      "bits": 32,
+      "data": "21078A75",
+      "sources": [
+       "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Emerson/Emerson_32FNT004.ir",
+       "https://github.com/probonopd/irdb/blob/master/codes/FUNAI/Unknown_NF021RD/132%2C224.csv"
+      ]
+     }
+    },
+    "INPUT": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "210702FD",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Emerson/Emerson_32FNT004.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/FUNAI/Unknown_NF021RD/132%2C224.csv"
+     ]
+    }
+   }
+  },
+  {
+   "name": "SANYO",
+   "letter": "A",
+   "color": [
+    0,
+    255,
+    255
+   ],
+   "codes": {
+    "POWER": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "1CE348B7",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Sanyo/Sanyo%20UR77EC2703-3.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sanyo/TV/56%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sanyo/Unknown_Sanyo/56%2C-1.csv"
+     ]
+    },
+    "VOL+": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "1CE3708F",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Sanyo/Sanyo%20UR77EC2703-3.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sanyo/TV/56%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sanyo/Unknown_Sanyo/56%2C-1.csv"
+     ]
+    },
+    "VOL-": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "1CE3F00F",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Sanyo/Sanyo%20UR77EC2703-3.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sanyo/Unknown_Sanyo/56%2C-1.csv"
+     ]
+    },
+    "MUTE": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "1CE318E7",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Sanyo/Sanyo%20UR77EC2703-3.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sanyo/TV/56%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sanyo/Unknown_Sanyo/56%2C-1.csv"
+     ]
+    },
+    "CH+": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "1CE350AF",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Sanyo/Sanyo%20UR77EC2703-3.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sanyo/TV/56%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sanyo/Unknown_Sanyo/56%2C-1.csv"
+     ]
+    },
+    "CH-": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "1CE3D02F",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Sanyo/Sanyo%20UR77EC2703-3.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sanyo/Unknown_Sanyo/56%2C-1.csv"
+     ]
+    },
+    "INPUT": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "1CE3C837",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Sanyo/Sanyo%20UR77EC2703-3.ir",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sanyo/TV/56%2C-1.csv",
+      "https://github.com/probonopd/irdb/blob/master/codes/Sanyo/Unknown_TV/56%2C-1.csv"
+     ]
+    }
+   }
+  },
+  {
+   "name": "BUSH/TELEFUNKEN/OKI",
+   "letter": "B",
+   "color": [
+    200,
+    0,
+    255
+   ],
+   "codes": {
+    "POWER": {
+     "proto": "RC5",
+     "bits": 12,
+     "addr": 1,
+     "data": "C",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Bush/Bush43QT24SB.ir",
+      "https://sourceforge.net/p/lirc-remotes/code/ci/master/tree/remotes/telefunken/lcd-tv-unknown.lircd.conf",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1240.json"
+     ]
+    },
+    "VOL+": {
+     "proto": "RC5",
+     "bits": 12,
+     "addr": 1,
+     "data": "10",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Bush/Bush43QT24SB.ir",
+      "https://sourceforge.net/p/lirc-remotes/code/ci/master/tree/remotes/telefunken/lcd-tv-unknown.lircd.conf",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1240.json"
+     ]
+    },
+    "VOL-": {
+     "proto": "RC5",
+     "bits": 12,
+     "addr": 1,
+     "data": "11",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Bush/Bush43QT24SB.ir",
+      "https://sourceforge.net/p/lirc-remotes/code/ci/master/tree/remotes/telefunken/lcd-tv-unknown.lircd.conf",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1240.json"
+     ]
+    },
+    "MUTE": {
+     "proto": "RC5",
+     "bits": 12,
+     "addr": 1,
+     "data": "D",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Bush/Bush43QT24SB.ir",
+      "https://sourceforge.net/p/lirc-remotes/code/ci/master/tree/remotes/telefunken/lcd-tv-unknown.lircd.conf",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1240.json"
+     ]
+    },
+    "CH+": {
+     "proto": "RC5",
+     "bits": 12,
+     "addr": 1,
+     "data": "20",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Bush/BUSH_TV_DLED32287HDCNTDFVP.ir",
+      "https://sourceforge.net/p/lirc-remotes/code/ci/master/tree/remotes/telefunken/lcd-tv-unknown.lircd.conf",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1240.json"
+     ]
+    },
+    "CH-": {
+     "proto": "RC5",
+     "bits": 12,
+     "addr": 1,
+     "data": "21",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Bush/BUSH_TV_DLED32287HDCNTDFVP.ir",
+      "https://sourceforge.net/p/lirc-remotes/code/ci/master/tree/remotes/telefunken/lcd-tv-unknown.lircd.conf",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1240.json"
+     ]
+    },
+    "INPUT": {
+     "proto": "RC5",
+     "bits": 12,
+     "addr": 1,
+     "data": "38",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Bush/Bush43QT24SB.ir",
+      "https://github.com/smartHomeHub/SmartIR/blob/master/codes/media_player/1240.json"
+     ]
+    }
+   }
+  },
+  {
+   "name": "DAEWOO",
+   "letter": "D",
+   "color": [
+    0,
+    90,
+    255
+   ],
+   "codes": {
+    "POWER": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "1FE48B7",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Grandin/Grandin.ir",
+      "https://sourceforge.net/p/lirc-remotes/code/ci/master/tree/remotes/freecom/unknown-1.lircd.conf"
+     ]
+    },
+    "VOL+": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "1FE58A7",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Grandin/Grandin.ir",
+      "https://sourceforge.net/p/lirc-remotes/code/ci/master/tree/remotes/freecom/unknown-1.lircd.conf"
+     ]
+    },
+    "VOL-": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "1FEA25D",
+     "sources": [
+      "https://github.com/probonopd/irdb/blob/master/codes/Grundig/Unknown_84D/128%2C-1.csv"
+     ]
+    },
+    "MUTE": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "1FE0BF4",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Daewoo/Daewood_Parsed.ir"
+     ]
+    },
+    "CH+": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "1FED926",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Daewoo/Daewood_Parsed.ir"
+     ]
+    },
+    "CH-": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "1FEF10E",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Daewoo/Daewood_Parsed.ir"
+     ]
+    },
+    "INPUT": {
+     "proto": "NEC",
+     "bits": 32,
+     "data": "1FE28D7",
+     "sources": [
+      "https://github.com/Lucaslhm/Flipper-IRDB/blob/main/TVs/Grandin/Grandin.ir"
+     ]
+    }
+   }
+  }
+ ],
+ "sweep": [
+  {
+   "proto": "SAMSUNG",
+   "bits": 32,
+   "data": "E0E040BF",
+   "sources": [
+    "5 sources"
+   ],
+   "label": "Samsung/Viore"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "20DF10EF",
+   "sources": [
+    "5 sources"
+   ],
+   "label": "LG/Vizio/Hisense"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "57E3E817",
+   "sources": [
+    "1 sources"
+   ],
+   "label": "TCL/RCA/Onn"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "FDB04F",
+   "sources": [
+    "1 sources"
+   ],
+   "label": "Hisense/Devant"
+  },
+  {
+   "proto": "SONY",
+   "bits": 12,
+   "data": "A90",
+   "sources": [
+    "5 sources"
+   ],
+   "label": "Sony/Sceptre/Philips"
+  },
+  {
+   "proto": "PANASONIC",
+   "bits": 48,
+   "addr": 16388,
+   "data": "100BCBD",
+   "sources": [
+    "4 sources"
+   ],
+   "label": "Panasonic/Quasar/Dream M"
+  },
+  {
+   "proto": "RC5",
+   "bits": 12,
+   "addr": 0,
+   "data": "C",
+   "sources": [
+    "5 sources"
+   ],
+   "label": "Philips/LG/Grundig"
+  },
+  {
+   "proto": "SHARP",
+   "bits": 15,
+   "data": "41A2",
+   "sources": [
+    "5 sources"
+   ],
+   "label": "Sharp/Mitsubishi/Gpx"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "2FD48B7",
+   "sources": [
+    "5 sources"
+   ],
+   "label": "Toshiba/Apex/Brandt"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "61A0F00F",
+   "sources": [
+    "5 sources"
+   ],
+   "label": "Insignia/Dynex/Emerson"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "4FB4AB5",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Crown/Element/Erisson"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "807F807F",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "Westinghouse/St/Teleka"
+  },
+  {
+   "proto": "JVC",
+   "bits": 16,
+   "data": "C0E8",
+   "sources": [
+    "4 sources"
+   ],
+   "label": "JVC/Onida"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "AF5E817",
+   "sources": [
+    "4 sources"
+   ],
+   "label": "Hitachi/Marantz/Philco"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "1CE348B7",
+   "sources": [
+    "4 sources"
+   ],
+   "label": "Sanyo/Fisher"
+  },
+  {
+   "proto": "MITSUBISHI",
+   "bits": 16,
+   "data": "E240",
+   "sources": [
+    "4 sources"
+   ],
+   "label": "Mitsubishi/Hitachi"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "5FAFA05",
+   "sources": [
+    "1 sources"
+   ],
+   "label": "RCA/Manta"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "8F7F708",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "Zenith"
+  },
+  {
+   "proto": "RC5",
+   "bits": 12,
+   "addr": 0,
+   "data": "20",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "Akai/Beko/Bush"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "1DEC837",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Orion/Medion/Aiwa"
+  },
+  {
+   "proto": "RC5",
+   "bits": 12,
+   "addr": 1,
+   "data": "C",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "Telefunken/Bush/Medion"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "10EFEB14",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Bush/Vu"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "BD807F",
+   "sources": [
+    "4 sources"
+   ],
+   "label": "AOC/Sharp/Philips"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "E14407F8",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "Emerson/Magnavox"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "18E710EF",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "NEC"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "55AA38C7",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "Pioneer/Casio"
+  },
+  {
+   "proto": "SAMSUNG",
+   "bits": 32,
+   "data": "A0A040BF",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "Samsung/Tevion/Toshiba"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "768928D7",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "LG/Loewe/Aiwa"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "57E3E916",
+   "sources": [
+    "1 sources"
+   ],
+   "label": "TCL"
+  },
+  {
+   "proto": "SONY",
+   "bits": 12,
+   "data": "F50",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "Sony"
+  },
+  {
+   "proto": "PANASONIC",
+   "bits": 48,
+   "addr": 16388,
+   "data": "900BCB5",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "Panasonic/Medion"
+  },
+  {
+   "proto": "RC6",
+   "bits": 20,
+   "addr": 0,
+   "data": "C",
+   "sources": [
+    "4 sources"
+   ],
+   "label": "Philips/Panasonic"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "FE50AF",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Sharp/Apex/Blaupunkt"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "40BE629D",
+   "sources": [
+    "1 sources"
+   ],
+   "label": "Toshiba/Element/Fire Tv"
+  },
+  {
+   "proto": "SAMSUNG",
+   "bits": 32,
+   "data": "707030CF",
+   "sources": [
+    "1 sources"
+   ],
+   "label": "JVC/Prismplus/Strong"
+  },
+  {
+   "proto": "RC5",
+   "bits": 12,
+   "addr": 3,
+   "data": "C",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Hitachi"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "1CE338C7",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "Sanyo"
+  },
+  {
+   "proto": "MITSUBISHI",
+   "bits": 16,
+   "data": "EA41",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Mitsubishi"
+  },
+  {
+   "proto": "SAMSUNG",
+   "bits": 32,
+   "data": "D0D050AF",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "Tesla/Schneider/Akai"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "FF00FF",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Orion/Medion/Focus-Touch"
+  },
+  {
+   "proto": "SAMSUNG",
+   "bits": 32,
+   "data": "6868F00F",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "Emerson"
+  },
+  {
+   "proto": "SAMSUNG",
+   "bits": 32,
+   "data": "E0E06798",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Samsung"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "9696807F",
+   "sources": [
+    "1 sources"
+   ],
+   "label": "LG"
+  },
+  {
+   "proto": "SONY",
+   "bits": 12,
+   "data": "A81",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Sony"
+  },
+  {
+   "proto": "SAMSUNG",
+   "bits": 32,
+   "data": "7C7C30CF",
+   "sources": [
+    "1 sources"
+   ],
+   "label": "Panasonic"
+  },
+  {
+   "proto": "RC5",
+   "bits": 12,
+   "addr": 5,
+   "data": "C",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "Philips/Imex/Tesla"
+  },
+  {
+   "proto": "PANASONIC",
+   "bits": 48,
+   "addr": 21850,
+   "data": "F148688B",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Sharp"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "AB500FF",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Hitachi"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "CF300FF",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Sanyo"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "804E7887",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Bauhn/Akai"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "20250AF",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Samsung/Dyon/Wbox"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "202F10EF",
+   "sources": [
+    "1 sources"
+   ],
+   "label": "LG"
+  },
+  {
+   "proto": "SONY",
+   "bits": 12,
+   "data": "750",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Sony"
+  },
+  {
+   "proto": "RC5",
+   "bits": 12,
+   "addr": 0,
+   "data": "26",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "Philips"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "14EBD02F",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Sharp"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "FF807F",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "Sansonic/Viewsonic"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "C15E10EF",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "Magnasonic"
+  },
+  {
+   "proto": "NEC",
+   "bits": 42,
+   "data": "378043F00FF",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "Aiwa"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "1CE308F7",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "RC5",
+   "bits": 12,
+   "addr": 2,
+   "data": "C",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "Skymaster"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "8E7152AD",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "6F900FF",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "Benq"
+  },
+  {
+   "proto": "RC5",
+   "bits": 12,
+   "addr": 7,
+   "data": "C",
+   "sources": [
+    "3 sources"
+   ],
+   "label": "Lemon"
+  },
+  {
+   "proto": "SAMSUNG",
+   "bits": 32,
+   "data": "E0E09966",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Samsung"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "FB38C7",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Awa/Bbk/Dolamee"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "768940BF",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Slim Devices"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "5FA38C7",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Kivi/Strong"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "1C6F00F",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Durabrand/Konig"
+  },
+  {
+   "proto": "SAMSUNG",
+   "bits": 32,
+   "data": "E0E019E6",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Samsung"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "1FE48B7",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Grandin/Freecom"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "209D00FF",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Olevia/Syntax-Brillian"
+  },
+  {
+   "proto": "SAMSUNG",
+   "bits": 32,
+   "data": "707028D7",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "Rolsen"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "8E7110EF",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "SAMSUNG",
+   "bits": 32,
+   "data": "1010F00F",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "181803FC",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "CA35E817",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "55AAA35C",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "12ED00FF",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "55AAD827",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "JVC",
+   "bits": 16,
+   "data": "F8EB",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "SHARP",
+   "bits": 15,
+   "data": "59A2",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "6F9C03F",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "42BD807F",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "AF5FC03",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "SAMSUNG",
+   "bits": 32,
+   "data": "6060F00F",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "10EF48B7",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "SAMSUNG",
+   "bits": 32,
+   "data": "1010D02F",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "FF8A75",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "SAMSUNG",
+   "bits": 32,
+   "data": "F00F",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 42,
+   "data": "E218EF48B7",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "PANASONIC",
+   "bits": 48,
+   "addr": 10438,
+   "data": "212140",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "PANASONIC",
+   "bits": 48,
+   "addr": 10438,
+   "data": "215100",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "A85748B7",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "SAMSUNG",
+   "bits": 32,
+   "data": "E01F40BF",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "SAMSUNG",
+   "bits": 32,
+   "data": "FFF00F",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "23DC18E7",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "EC1348B7",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "B64928D7",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "4FB8877",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "5FAD02F",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "FF00FC03",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "SAMSUNG",
+   "bits": 32,
+   "data": "1FE040BF",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "FFD02F",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "MITSUBISHI",
+   "bits": 16,
+   "data": "812D",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "606028D7",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "55AA01FE",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "8A7510EF",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "55AAE51A",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "8B4F807",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "48FF708F",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "C13EFF00",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "SAMSUNG",
+   "bits": 32,
+   "data": "10EFF00F",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "5FA50AF",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "NEC",
+   "bits": 32,
+   "data": "C13E10EF",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  },
+  {
+   "proto": "SAMSUNG",
+   "bits": 32,
+   "data": "FF00F00F",
+   "sources": [
+    "2 sources"
+   ],
+   "label": "TV-B-Gone/Flipper univer"
+  }
+ ]
+}

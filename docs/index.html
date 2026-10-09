@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#7a2cf0"><link rel="icon" href="icon.png">
+<title>Pocket Nova</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one readable column like a field manual; every app gets a live 5x5 LED preview beside its instructions. */
+:root {
+  --bg: #f3f2f7;
+  --surface: #ffffff;
+  --fg: #1c1b24;
+  --muted: #5d5a6e;
+  --line: #dcdae6;
+  --accent: #7a2cf0;
+  --accent-soft: #efe6ff;
+  --panel: #111016;        /* the Atom's black face: same in both themes */
+  --panel-edge: #2a2833;
+  --led-off: #23212b;
+  --font-display: "Pixelify Sans", "Courier New", monospace;
+  --font-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121118; --surface: #1b1a23; --fg: #ecebf3; --muted: #a29fb5;
+    --line: #2f2d3b; --accent: #b48cff; --accent-soft: #2a2140;
+    --panel: #09080c; --panel-edge: #2a2833; --led-off: #1d1b24;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121118; --surface: #1b1a23; --fg: #ecebf3; --muted: #a29fb5;
+  --line: #2f2d3b; --accent: #b48cff; --accent-soft: #2a2140;
+  --panel: #09080c; --panel-edge: #2a2833; --led-off: #1d1b24;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0;
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+}
+.wrap { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 64px; display: grid; gap: 40px; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2rem, 7vw, 2.9rem); letter-spacing: .01em; }
+h2 { font-size: 1.55rem; }
+h3 { font-size: 1.15rem; }
+p { margin: 0; max-width: 65ch; }
+.muted { color: var(--muted); }
+code, kbd { font-family: var(--font-mono); font-size: .86em; }
+kbd { background: var(--accent-soft); color: var(--accent); padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+.eyebrow { font-family: var(--font-mono); font-size: .75rem; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+section { display: grid; gap: 16px; }
+
+/* LED matrix */
+.matrix {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;
+  width: 92px; aspect-ratio: 1; max-width: 100%; padding: 9px;
+  background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 10px;
+  flex: none;
+}
+.matrix.big { width: 150px; padding: 14px; gap: 7px; border-radius: 16px; }
+.led { border-radius: 50%; background: var(--led-off); transition: background .12s; }
+
+/* hero */
+.hero { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+.hero > div { flex: 1 1 300px; min-width: 0; display: grid; gap: 12px; }
+
+/* controls */
+.controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.control { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 4px; }
+.control b { font-family: var(--font-display); font-size: 1.1rem; font-weight: 500; }
+
+.flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: .85rem; }
+.flow span.node { background: var(--surface); border: 1px solid var(--line); padding: 6px 12px; border-radius: 999px; }
+.flow span.arrow { color: var(--muted); }
+
+.note { border-left: 3px solid var(--accent); padding: 10px 14px; background: var(--accent-soft); border-radius: 0 8px 8px 0; }
+.note p { max-width: none; }
+
+/* apps */
+.apps { display: grid; gap: 14px; }
+.app { display: flex; gap: 18px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+.app-body { flex: 1; min-width: 0; display: grid; gap: 8px; }
+.app-body ul { margin: 0; padding-left: 18px; display: grid; gap: 2px; }
+.tag { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+@media (max-width: 460px) { .app { flex-direction: column; } }
+
+.gestures { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 10px; }
+.gesture { display: grid; justify-items: center; gap: 4px; text-align: center; font-size: .82rem; }
+.gesture .matrix { width: 64px; padding: 6px; gap: 3px; border-radius: 8px; }
+.gesture b { font-size: .9rem; }
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+td.letter { font-family: var(--font-display); font-size: 1.15rem; }
+
+ol.steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; max-width: 65ch; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
+details + details { margin-top: 8px; }
+summary { cursor: pointer; font-weight: 700; }
+summary:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+details p, details ul { margin-top: 8px; }
+pre { background: var(--panel); color: #e6e4ef; padding: 12px 14px; border-radius: 8px; overflow-x: auto; font-family: var(--font-mono); font-size: .8rem; margin: 8px 0 0; }
+a { color: var(--accent); }
+@media (prefers-reduced-motion: reduce) { .led { transition: none; } }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.cta { display: inline-flex; align-items: center; min-height: 44px; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font-weight: 700; text-decoration: none; }
+.cta.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.cta:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .cta.primary, :root:not([data-theme="light"]) .btn.primary, :root:not([data-theme="light"]) .pad .t { color: #121118; } }
+:root[data-theme="dark"] .cta.primary, :root[data-theme="dark"] .btn.primary, :root[data-theme="dark"] .pad .t { color: #121118; }
+</style>
+</head><body>
+
+<div class="wrap">
+
+  <header class="hero">
+    <div class="matrix big" data-anim="PET_LOOK" aria-label="The pet's eyes on the LED matrix"></div>
+    <div>
+      <span class="eyebrow">M5Stack Atom Matrix · firmware 2.3</span>
+      <h1>Pocket Nova</h1>
+      <p>A pocket remote, clicker and pet on a 5×5 LED screen, with a control panel on your PC. One button and a tilt sensor run everything. This guide covers every control, every app, Nova the pet, the PC panel and the phone remote.</p>
+      <div class="actions">
+        <a class="cta primary" href="remote.html">Open the phone remote</a>
+        <a class="cta" href="#download">Download</a>
+        <a class="cta" href="https://github.com/UnoRfl/PocketNova">Source code</a>
+      </div>
+    </div>
+  </header>
+
+  <section id="download">
+    <h2>Download and install</h2>
+    <p>You need an <b>M5Stack Atom Matrix</b> and a USB-C cable that carries data (some only charge).</p>
+    <div class="actions">
+      <a class="cta primary" href="https://github.com/UnoRfl/PocketNova/releases/latest">Download the latest version</a>
+    </div>
+    <ol class="steps">
+      <li><b>Firmware:</b> download <code>PocketNova-firmware.bin</code>. Plug the Atom into a computer, open <a href="https://espressif.github.io/esptool-js/">Espressif's web flasher</a> in Chrome or Edge, click Connect and pick the Atom's port. Set the flash address to <code>0x0</code>, choose the file and click Program.</li>
+      <li><b>PC panel (Windows, optional):</b> download <code>PocketNova-Panel.zip</code>, unzip it, right-click <code>install.ps1</code> and choose "Run with PowerShell". It needs Python 3. The panel then opens by itself whenever Pocket Nova is plugged in.</li>
+      <li><b>Phone remote:</b> nothing to install. Open the <a href="remote.html">remote page</a> in Chrome on Android.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>The three moves</h2>
+    <p>The whole top face of the Atom is the button.</p>
+    <div class="controls">
+      <div class="control"><b>Hold</b><span>About 1 second. Opens the menu from the pet, and goes back one step everywhere else.</span></div>
+      <div class="control"><b>Tap</b><span>A quick press. Opens the app you're on, or does the thing the screen shows.</span></div>
+      <div class="control"><b>Tilt</b><span>Tip it left or right about 37° to move one item. Bring it back flat before the next one.</span></div>
+      <div class="control"><b>Double tap</b><span>On Nova: jump straight back into the last app you used. In Media: mute.</span></div>
+    </div>
+    <p class="muted">The first time Pocket Nova starts, a short tutorial teaches these moves. You can replay it from Settings or the PC panel.</p>
+    <div class="flow" aria-label="Navigation">
+      <span class="node">Pet (home)</span><span class="arrow">— hold →</span>
+      <span class="node">Menu</span><span class="arrow">— tap →</span>
+      <span class="node">App</span><span class="arrow">— hold →</span>
+      <span class="node">Menu</span><span class="arrow">— hold →</span>
+      <span class="node">Pet</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>How tilting works</h2>
+    <ul style="margin:0;padding-left:20px;display:grid;gap:6px;max-width:65ch">
+      <li><b>One item per tilt.</b> Holding a tilt does not keep scrolling. Return close to flat, then tilt again.</li>
+      <li><b>Watch the edge glow.</b> A faint light grows on the side you're tilting toward. When it's bright, the next item is about to slide in.</li>
+      <li><b>Whatever angle you're holding it at counts as flat.</b> The Atom resets "level" each time you open an app, so you don't need to hold it perfectly flat.</li>
+      <li><b>Bumps are ignored.</b> A quick knock, or the wobble from pressing the button, won't move anything.</li>
+      <li><b>Rest on an icon</b> for a moment and its name scrolls across the screen.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Nova, the pet</h2>
+    <p>Nova lives on the home screen. Nova reacts to almost everything you do, but <b>only a hold</b> takes you into the menu, and a <b>double tap</b> opens your last app.</p>
+    <div class="gestures">
+      <div class="gesture"><div class="matrix" data-anim="PET_LOOK"></div><b>Tilt</b><span>eyes follow</span></div>
+      <div class="gesture"><div class="matrix" data-sprite="PET_HAPPY"></div><b>Tap</b><span>happy</span></div>
+      <div class="gesture"><div class="matrix" data-anim="PET_LOVE"></div><b>Triple tap</b><span>love heart</span></div>
+      <div class="gesture"><div class="matrix" data-anim="PET_DIZZY"></div><b>Shake</b><span>dizzy</span></div>
+      <div class="gesture"><div class="matrix" data-anim="PET_ROCK"></div><b>Rock gently</b><span>falls asleep</span></div>
+      <div class="gesture"><div class="matrix" data-anim="PET_YAWN"></div><b>Tap asleep</b><span>yawns awake</span></div>
+      <div class="gesture"><div class="matrix" data-sprite="PET_PEEK"></div><b>Face down, then up</b><span>peekaboo</span></div>
+      <div class="gesture"><div class="matrix" data-anim="PET_SAD"></div><b>App failed</b><span>sad</span></div>
+    </div>
+    <ul style="margin:0;padding-left:20px;display:grid;gap:6px;max-width:65ch">
+      <li><b>Rocking</b> means tilting it gently left and right a few times, like a cradle.</li>
+      <li><b>Face down</b> makes Nova hide and the screen go dark. Turn it back over and Nova pops out.</li>
+      <li><b>Coming back from an app:</b> Nova is happy if what you did worked, and sad (with a tear) if something failed.</li>
+      <li><b>Left alone:</b> Nova gets bored after 45 seconds and looks around and yawns. After 2 minutes Nova falls asleep.</li>
+      <li><b>At night (10 pm to 7 am):</b> Nova's eyes are sleepy and Nova dozes off after 30 seconds. The time comes from the PC panel.</li>
+      <li><b>Affection</b> goes up by 1 for each tap and by 3 for a triple tap. From 50, a little heart floats up now and then. The PC panel shows the score.</li>
+    </ul>
+    <p class="muted">The menu goes back to Nova by itself after 25 seconds of no use.</p>
+  </section>
+
+  <section>
+    <h2>The apps</h2>
+    <p>These are in menu order. Tilt right from the pet's menu to go through them.</p>
+    <div class="apps">
+
+      <article class="app">
+        <div class="matrix" data-anim="ICON_MEDIA"></div>
+        <div class="app-body">
+          <span class="tag">Bluetooth</span>
+          <h3>Media</h3>
+          <p>Controls music or video on your PC. Tilt to choose, then tap.</p>
+          <div class="gestures">
+            <div class="gesture"><div class="matrix" data-sprite="SPR_PLAY"></div><b>Flat</b><span>play / pause</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_PREV"></div><b>Left</b><span>previous</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_NEXT"></div><b>Right</b><span>next</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_VOLUP"></div><b>Top down</b><span>volume up</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_VOLDN"></div><b>Top up</b><span>volume down</span></div>
+          </div>
+          <p><b>Double tap</b> to mute. <b>Volume dial:</b> keep it tilted forward or back for half a second and the volume keeps changing. The lights fill up like a bar, until you level it again.</p>
+          <p class="muted">A pulsing yellow Bluetooth sign means it isn't connected. Pair <b>Pocket Nova</b> in your PC's Bluetooth settings.</p>
+        </div>
+      </article>
+
+      <article class="app">
+        <div class="matrix" data-anim="ICON_TV"></div>
+        <div class="app-body">
+          <span class="tag">Infrared</span>
+          <h3>TV remote</h3>
+          <p>Tilt to choose a button, then tap to send it. Point the Atom at the TV and stay within a couple of metres.</p>
+          <div class="gestures">
+            <div class="gesture"><div class="matrix" data-sprite="SPR_POWER"></div><b>Power</b><span>any TV</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_TVUP"></div><b>Vol +</b></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_TVDN"></div><b>Vol −</b></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_MUTE"></div><b>Mute</b></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_CHUP"></div><b>Ch +</b></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_CHDN"></div><b>Ch −</b></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_INPUT"></div><b>Input</b></div>
+            <div class="gesture"><div class="matrix" data-sprite="BRAND_L"></div><b>Brand</b><span>tap to change</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_FIND"></div><b>Find TV</b><span>auto-detect</span></div>
+          </div>
+          <p><b>Power works on any TV.</b> Tapping Power sends the power code of every TV Pocket Nova knows (your picked TV first), over about 15 seconds, with the lights filling up as it goes. <b>Tap again once your TV switches off</b> to stop, so it doesn&#8217;t get switched back on by a later code. <b>Every other button</b> (volume, mute, channels, input) <b>needs your TV picked first</b>: tap the brand button (it shows a blinking ? until you pick one) or use Find TV. Until then those buttons look dim and show &#8220;pick your TV&#8221;.</p>
+          <p><b>Find TV</b> picks your TV for you: it tries power codes slowly, one every 1.3 seconds. Tap the moment your TV switches off, Pocket Nova switches it back on to double-check, and you tap again to save. <b>Volume dial:</b> once your TV is picked, tilt forward or back and hold to keep turning the volume up or down.</p>
+        </div>
+      </article>
+
+      <article class="app">
+        <div class="matrix" data-anim="ICON_SLIDES"></div>
+        <div class="app-body">
+          <span class="tag">Bluetooth</span>
+          <h3>Slides</h3>
+          <p>A presentation clicker for PowerPoint, Google Slides or Canva.</p>
+          <div class="gestures">
+            <div class="gesture"><div class="matrix" data-sprite="SPR_ARROW_R"></div><b>Flat / right</b><span>next slide</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_ARROW_L"></div><b>Left</b><span>previous</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_START"></div><b>Top down</b><span>start show</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_STOP"></div><b>Top up</b><span>end show</span></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="app">
+        <div class="matrix" data-anim="ICON_KEYS"></div>
+        <div class="app-body">
+          <span class="tag">Bluetooth</span>
+          <h3>Keys</h3>
+          <p>Windows shortcuts. Tilt to choose one, then tap to run it.</p>
+          <div class="gestures">
+            <div class="gesture"><div class="matrix" data-sprite="SPR_LOCK"></div><b>Lock PC</b><span>Win+L</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_SNIP"></div><b>Snip</b><span>Win+Shift+S</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_DESK"></div><b>Desktop</b><span>Win+D</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_TASK"></div><b>Task Mgr</b><span>Ctrl+Shift+Esc</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_CALC"></div><b>Calculator</b></div>
+          </div>
+          <p class="muted"><b>Lock PC needs two taps.</b> The first tap shows a blinking "?", and a second tap within 2 seconds locks the PC. This stops a bump from locking your computer.</p>
+        </div>
+      </article>
+
+      <article class="app">
+        <div class="matrix" data-anim="ICON_LEVEL"></div>
+        <div class="app-body">
+          <span class="tag">Sensor</span>
+          <h3>Level</h3>
+          <p>A spirit level. The dot drifts to the high side. It's green when level (within about 2°), yellow when close and red when far off. <b>Tap</b> to set the current angle as level, for example when your desk isn't flat.</p>
+        </div>
+      </article>
+
+      <article class="app">
+        <div class="matrix" data-anim="ICON_DICE"></div>
+        <div class="app-body">
+          <span class="tag">Fun</span>
+          <h3>Dice</h3>
+          <p><b>Shake</b> it or <b>tap</b> to roll. The face tumbles and slows down before it lands.</p>
+        </div>
+      </article>
+
+      <article class="app">
+        <div class="matrix" data-anim="ICON_TIMER"></div>
+        <div class="app-body">
+          <span class="tag">Tool</span>
+          <h3>Timer</h3>
+          <ul>
+            <li>Tilt to choose the length: <b>1, 3, 5, 10, 15, 25, 45 or 60 minutes</b>. Two-digit numbers scroll.</li>
+            <li>Tap to start. The 25 lights drain as time runs out, changing from green to red.</li>
+            <li>Tap to pause (the lights blink), and tap again to carry on.</li>
+            <li>It flashes rainbow when the time is up. Tap to set a new time.</li>
+          </ul>
+          <p class="muted">Leaving the app with a hold stops the timer.</p>
+        </div>
+      </article>
+
+      <article class="app">
+        <div class="matrix" data-anim="ICON_LIGHT"></div>
+        <div class="app-body">
+          <span class="tag">Ambient</span>
+          <h3>Lights</h3>
+          <p>Mood lighting. Tap or tilt to change the effect: <b>rainbow, fire, ocean, breathe, tilt</b> (the colour follows the way you tip it) and <b>sparkle</b>.</p>
+        </div>
+      </article>
+
+      <article class="app">
+        <div class="matrix" data-anim="ICON_TORCH"></div>
+        <div class="app-body">
+          <span class="tag">Tool</span>
+          <h3>Torch</h3>
+          <p>A flashlight. Tap to switch between <b>white, warm, red</b> (keeps your night vision) and <b>off</b>. It turns itself off after 3 minutes so the LEDs don't get hot.</p>
+        </div>
+      </article>
+
+      <article class="app">
+        <div class="matrix" data-anim="ICON_SNAKE"></div>
+        <div class="app-body">
+          <span class="tag">Game</span>
+          <h3>Snake</h3>
+          <p>Tap to start, then tilt to steer. Eat the blinking red dots. You can pass through the edges and come out the other side, but don't run into yourself. The snake speeds up as it grows. Your score and best score scroll at the end, with "NEW BEST" when you beat it. Tap to play again.</p>
+        </div>
+      </article>
+
+      <article class="app">
+        <div class="matrix" data-anim="ICON_SET"></div>
+        <div class="app-body">
+          <span class="tag">System</span>
+          <h3>Settings</h3>
+          <div class="gestures">
+            <div class="gesture"><div class="matrix" data-sprite="SPR_SUN"></div><b>Brightness</b><span>5 levels</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_ROT"></div><b>Rotate</b><span>90° per tap</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_AUTOROT"></div><b>Auto rotate</b><span>tap: on / off</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_BT"></div><b>Bluetooth</b><span>tap: status<br>double: next slot</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_PAIR"></div><b>Pair new</b><span>double: forget all</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_WIFI"></div><b>Wi-Fi</b><span>tap: status<br>double: setup</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_CALIB"></div><b>Calibrate</b><span>fix tilt</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_TUTOR"></div><b>Tutorial</b><span>replay it</span></div>
+            <div class="gesture"><div class="matrix" data-sprite="SPR_INFO"></div><b>Info</b><span>name, version, Bluetooth</span></div>
+          </div>
+          <p class="muted">Anything risky (switching slot, forgetting devices) needs a double tap, so a stray press can't trigger it. <b>Auto rotate:</b> hold Pocket Nova upright like a phone and the screen turns itself the right way up. Settings, the TV brand and Nova's affection stay saved when you unplug it.</p>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <section>
+    <h2>The PC panel</h2>
+    <p>The <b>Pocket Nova Panel</b> is a program on your PC that gives you every setting with normal buttons. It runs quietly in the background and <b>opens by itself the moment you plug Pocket Nova in</b>. You can also open it from the Start menu.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Part</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><b>Live screen</b></td><td>A copy of the 5×5 screen that updates as it happens, plus what Nova is feeling and whether Bluetooth is connected.</td></tr>
+          <tr><td><b>Remote control</b></td><td>Press tap, double, triple, hold, tilt, shake or rock from the PC.</td></tr>
+          <tr><td><b>Device</b></td><td>Brightness, rotation, auto-rotate, swapping tilt directions, which app a double tap opens, the Bluetooth name, and replaying the tutorial.</td></tr>
+          <tr><td><b>Bluetooth</b></td><td>The 3 slots, a list of paired devices you can name and remove, "Forget all and pair new", and the Windows "Connect" pop-up switch.</td></tr>
+          <tr><td><b>Wi-Fi</b></td><td>Status and address, the on/off switch, "Open setup network" (shows its name and password) and "Forget saved network".</td></tr>
+          <tr><td><b>TV remote</b></td><td>Pick the brand and test each button.</td></tr>
+          <tr><td><b>Nova</b></td><td>Mood, affection, day or night, Snake best score, and buttons to play with Nova.</td></tr>
+          <tr><td><b>System</b></td><td>Firmware version, a firmware update button, restart, <b>factory reset</b>, startup options and a live activity log.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note"><p><b>Bluetooth slots:</b> each slot is a separate Bluetooth identity, so your devices don't fight over Pocket Nova. Pair your PC on slot 1 and your phone on slot 2, then switch slots in the panel (or Settings → Bluetooth, double tap) to change which one it controls.</p></div>
+    <div class="note"><p><b>Factory reset</b> erases every setting, forgets every paired device and resets Nova's affection. Pocket Nova then starts again with the tutorial. In the panel, type RESET to unlock the button.</p></div>
+    <p class="muted">The panel only listens to this PC. Other websites can't control Pocket Nova through it.</p>
+  </section>
+
+  <section>
+    <h2>Wi-Fi setup</h2>
+    <p>Wi-Fi lets Pocket Nova get the time from the internet, so Nova knows when it's night even on a phone charger. It's off until you set it up.</p>
+    <ol class="steps">
+      <li>On the Atom, go to Settings → <b>Wi-Fi</b> and <b>double tap</b>. Or use the PC panel: Wi-Fi → Open setup network.</li>
+      <li>The icon pulses magenta, and the network name (<b>NOVA-</b> plus 4 characters) and an 8-digit password scroll past. Tap the icon to see them again.</li>
+      <li>On your phone, join that network with that password. A setup page opens by itself. If it doesn't, open <code>http://192.168.4.1</code>.</li>
+      <li>Pick your home network, type its password and tap <b>Connect</b>. The page shows "Connected!" and the setup network closes.</li>
+    </ol>
+    <div class="note"><p>The icon is green when online, yellow while joining and red if joining failed (tap it to see why). The setup network closes by itself after 10 minutes, and each time it opens it has a new password.</p></div>
+  </section>
+
+  <section>
+    <h2>Phone remote</h2>
+    <p>The <a href="remote.html">remote page</a> controls Pocket Nova from your phone over Bluetooth: the buttons, tilting, the TV remote, Nova and brightness, with a live copy of the screen. Your PC stays connected as the keyboard at the same time.</p>
+    <ol class="steps">
+      <li>Open the remote page in <b>Chrome on Android</b> (or Chrome/Edge on a computer). On an iPhone, use the free <b>Bluefy</b> browser, because Safari can't use Bluetooth from a web page.</li>
+      <li>Tap <b>Connect to Pocket Nova</b> and pick it from the list.</li>
+      <li>A 4-digit code scrolls on Pocket Nova's lights. Type it in. This proves you're next to the device, so nobody nearby can take over.</li>
+    </ol>
+    <div class="note"><p>The phone can't forget pairings, rename the device or factory reset it. Those stay on the device and the PC panel. The remote also sets Pocket Nova's clock from your phone.</p></div>
+  </section>
+
+  <section>
+    <h2>First-time setup</h2>
+    <p>Do this once if the icons look sideways or tilting goes the wrong way. The PC panel's Device tab can also swap left/right or forward/back with one click.</p>
+    <ol class="steps">
+      <li>Hold on the pet to open the menu, then tilt until you reach <b>Settings</b> (the gear). Tap.</li>
+      <li>Tilt to <b>Rotate</b>. Tap until the arrow points away from you.</li>
+      <li>Tilt to <b>Calibrate</b> and tap. A blinking arrow appears. Tip the Atom toward the arrow and tap.</li>
+      <li>A second arrow appears. Tip toward that one and tap. "OK" scrolls when it's saved.</li>
+    </ol>
+    <div class="note"><p>Always do Rotate before Calibrate. If Calibrate shows a red X, you didn't tilt far enough or tilted the same way twice. Try again.</p></div>
+  </section>
+
+  <section>
+    <h2>TV brands</h2>
+    <p>The letter is what the Brand button shows. Every code was checked against several independent IR databases: the Flipper Zero community IRDB, the LIRC remotes database, probonopd's irdb, Home Assistant's SmartIR, TV-B-Gone, and recordings of real remotes. "Confirmed" means at least two of them agree.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Letter</th><th>Brand</th><th>Confirmed</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="letter">L</td><td>LG</td><td>7 of 7</td><td>Also Zenith and many Haier sets</td></tr>
+          <tr><td class="letter">V</td><td>Vizio</td><td>7 of 7</td><td></td></tr>
+          <tr><td class="letter">S</td><td>Samsung</td><td>7 of 7</td><td>Sends both power codes, so older and newer remotes' TVs respond</td></tr>
+          <tr><td class="letter">Y</td><td>Sony</td><td>7 of 7</td><td>Also Sceptre</td></tr>
+          <tr><td class="letter">P</td><td>Panasonic</td><td>7 of 7</td><td></td></tr>
+          <tr><td class="letter">6</td><td>Philips (newer)</td><td>7 of 7</td><td>Most Philips sets since about 2005</td></tr>
+          <tr><td class="letter">5</td><td>Philips (older)</td><td>7 of 7</td><td>Also Magnavox sets built by Philips</td></tr>
+          <tr><td class="letter">T</td><td>Toshiba</td><td>7 of 7</td><td>Sends both input codes</td></tr>
+          <tr><td class="letter">I</td><td>Hisense</td><td>7 of 7</td><td>Some newer Hisense models answer to LG instead</td></tr>
+          <tr><td class="letter">R</td><td>TCL / Roku TV</td><td>4 of 4</td><td>Also onn., and Hisense and Sharp Roku TVs. No channel or input buttons</td></tr>
+          <tr><td class="letter">Q</td><td>Sharp</td><td>7 of 7</td><td>Sharp's own protocol, plus the European Aquos codes as a backup</td></tr>
+          <tr><td class="letter">J</td><td>JVC</td><td>7 of 7</td><td></td></tr>
+          <tr><td class="letter">H</td><td>Hitachi</td><td>7 of 7</td><td></td></tr>
+          <tr><td class="letter">M</td><td>Mitsubishi</td><td>7 of 7</td><td></td></tr>
+          <tr><td class="letter">N</td><td>Insignia</td><td>6 of 7</td><td>Also Dynex</td></tr>
+          <tr><td class="letter">F</td><td>Fire TV Edition</td><td>single source</td><td>Insignia, Toshiba and Element Fire TVs. Included because they're common</td></tr>
+          <tr><td class="letter">E</td><td>Funai / Emerson</td><td>7 of 7</td><td>Also Sylvania. Sends both of Funai's code families</td></tr>
+          <tr><td class="letter">A</td><td>Sanyo</td><td>7 of 7</td><td></td></tr>
+          <tr><td class="letter">B</td><td>Bush / Telefunken / OKI</td><td>7 of 7</td><td>Vestel-made TVs, also some Medion</td></tr>
+          <tr><td class="letter">D</td><td>Daewoo</td><td>2 of 7</td><td>Power and Vol+ confirmed</td></tr>
+          <tr><td class="letter">?</td><td>No TV picked</td><td></td><td>Power still works on any TV. Pick a brand to unlock the other buttons</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>If something's wrong</h2>
+    <details>
+      <summary>The Bluetooth apps show a pulsing yellow sign</summary>
+      <p>Pocket Nova isn't connected. On Windows, a <b>"New Bluetooth device found, Connect"</b> pop-up appears while Pocket Nova is ready to pair (when nothing is paired, or for 3 minutes after it starts or switches slot): click Connect. Or open Settings → Bluetooth &amp; devices → Add device → Bluetooth, then choose <b>Pocket Nova</b>. Once you've paired it, it reconnects by itself every time. If it doesn't appear, the current slot is still paired to another device. Switch slot, or remove that device in the panel's Bluetooth tab.</p>
+    </details>
+    <details>
+      <summary>The TV doesn't react</summary>
+      <ul>
+        <li>Check the brand letter in the TV app, or use Find TV.</li>
+        <li>Get closer (within 2 metres) and point the Atom straight at the TV.</li>
+        <li>Try a different angle. The IR light only shines one way.</li>
+      </ul>
+    </details>
+    <details>
+      <summary>Tilting moves the wrong way or the pictures are sideways</summary>
+      <p>Follow the first-time setup above: Rotate, then Calibrate.</p>
+    </details>
+    <details>
+      <summary>The PC doesn't see the Atom when it's plugged in</summary>
+      <p>Use a USB-C cable that carries data. Cables that come with microphones often only charge. A working connection shows up as COM3.</p>
+    </details>
+    <details>
+      <summary>The panel didn't open when I plugged it in</summary>
+      <p>Open it from the Start menu: <b>Pocket Nova Panel</b>. It only opens itself once per plug-in, and not if it's already open. To reinstall it, run <code>install.ps1</code> from the panel download again.</p>
+    </details>
+    <details>
+      <summary>Reinstalling the firmware</summary>
+      <p>The easiest way is the web flasher from <a href="#download">Download and install</a>. To build it yourself, get the <a href="https://github.com/UnoRfl/PocketNova">source code</a> and, with the Atom plugged in, run this from the <code>firmware</code> folder (ESP32 core 2.0.17, FastLED 3.6.0, M5Atom, IRremoteESP8266 and ArduinoJson 7 installed):</p>
+      <pre>arduino-cli compile --fqbn "esp32:esp32:m5stack-atom:PartitionScheme=min_spiffs" PocketNova
+arduino-cli upload -p COM3 --fqbn "esp32:esp32:m5stack-atom:PartitionScheme=min_spiffs,UploadSpeed=115200" PocketNova</pre>
+      <p>An upload takes about 80 seconds. Don't unplug it partway through, or it will restart over and over until you upload again.</p>
+    </details>
+  </section>
+
+  <section>
+    <h2>Make it yours</h2>
+    <p>Every picture in this guide is drawn from the same text the Atom uses. Open <code>Sprites.h</code> and each icon is 5 rows of 5 letters, where a letter is a colour (R red, G green, B blue, Y yellow, W white) and a dot is off. Change the letters, re-upload, and your icon is on the device.</p>
+  </section>
+
+</div>
+
+<script>
+// Colours match spriteColor() in Display.h. Dim colours are lifted a little so they read on a screen.
+const COLORS = {
+  R: "#ff2a2a", G: "#2aff4a", B: "#2a62ff", C: "#2affd2", M: "#ff2abb", Y: "#ffcc22",
+  O: "#ff6a1a", P: "#9a2aff", W: "#ffffff", w: "#5d5d72", g: "#1f7a2c", b: "#22337a", r: "#7a1f1f"
+};
+const S = (...rows) => rows.join("");
+// Copied from Sprites.h
+const SPRITES = {
+  ICO_MEDIA_1: S("..PP.","..P.P","..P..","PPP..","PPP.."),
+  ICO_MEDIA_2: S("..M.M","..M..","MMM..","MMM..","....."),
+  ICO_TV_1: S(".W.W.","..W..","BBBBB","BCCCB","BBBBB"),
+  ICO_TV_2: S(".W.W.","..W..","BBBBB","BMMMB","BBBBB"),
+  ICO_TV_3: S("W...W",".W.W.","BBBBB","BYYYB","BBBBB"),
+  ICO_SLIDES_1: S("BBBBB","BG..B","BGG.B","BG..B","BBBBB"),
+  ICO_SLIDES_2: S("BBBBB","B.G.B","B.GGB","B.G.B","BBBBB"),
+  ICO_KEYS_1: S(".....","OWOWO",".....","WOWOW","....."),
+  ICO_KEYS_2: S(".....","WOWOW",".....","OWOWO","....."),
+  ICO_LEVEL_1: S(".....",".....","wGwww",".....","....."),
+  ICO_LEVEL_2: S(".....",".....","wwGww",".....","....."),
+  ICO_LEVEL_3: S(".....",".....","wwwGw",".....","....."),
+  ICO_DICE_1: S("W...W",".....","..W..",".....","W...W"),
+  ICO_DICE_2: S("R....",".....","..R..",".....","....R"),
+  ICO_DICE_3: S("Y...Y",".....","Y...Y",".....","Y...Y"),
+  ICO_TIMER_1: S("YYYYY",".YYY.","..Y..",".w.w.","wwwww"),
+  ICO_TIMER_2: S("wwwww",".YYY.","..Y..",".wYw.","wwwww"),
+  ICO_TIMER_3: S("wwwww",".w.w.","..Y..",".YYY.","YYYYY"),
+  ICO_LIGHT_1: S("RYGCB","YGCBM","GCBMR","CBMRY","BMRYG"),
+  ICO_LIGHT_2: S("YGCBM","GCBMR","CBMRY","BMRYG","MRYGC"),
+  ICO_LIGHT_3: S("GCBMR","CBMRY","BMRYG","MRYGC","RYGCB"),
+  ICO_TORCH_1: S("Y.Y.Y",".YYY.","..W..","..w..","..w.."),
+  ICO_TORCH_2: S(".....",".YYY.","..W..","..w..","..w.."),
+  ICO_SNAKE_1: S(".....","gggG.",".....","...R.","....."),
+  ICO_SNAKE_2: S(".....",".ggg.","...G.","...R.","....."),
+  ICO_SNAKE_3: S(".....","..gg.","...g.","...G.","....."),
+  ICO_SET_1: S("..w..",".WWW.","wW.Ww",".WWW.","..w.."),
+  ICO_SET_2: S("w...w",".WWW.",".W.W.",".WWW.","w...w"),
+  SPR_PLAY: S(".G...",".GG..",".GGG.",".GG..",".G..."),
+  SPR_PREV: S("C...C","C..CC","C.CCC","C..CC","C...C"),
+  SPR_NEXT: S("C...C","CC..C","CCC.C","CC..C","C...C"),
+  SPR_VOLUP: S(".....","..Y..",".YYY.","..Y..","....."),
+  SPR_VOLDN: S(".....",".....",".YYY.",".....","....."),
+  SPR_POWER: S("..R..","R.R.R","R.R.R","R...R",".RRR."),
+  SPR_TVUP: S(".....","..G..",".GGG.","..G..","....."),
+  SPR_TVDN: S(".....",".....",".GGG.",".....","....."),
+  SPR_MUTE: S("O...O",".O.O.","..O..",".O.O.","O...O"),
+  SPR_CHUP: S("..C..",".CCC.","C.C.C","..C..","..C.."),
+  SPR_CHDN: S("..C..","..C..","C.C.C",".CCC.","..C.."),
+  SPR_INPUT: S("..Y..","...Y.","YYYYY","...Y.","..Y.."),
+  SPR_FIND: S("WWW..","W.W..","WWW..","...W.","....W"),
+  BRAND_L: S(".M...",".M...",".M...",".M...",".MMM."),
+  SPR_ARROW_R: S("..G..","...G.","GGGGG","...G.","..G.."),
+  SPR_ARROW_L: S("..G..",".G...","GGGGG",".G...","..G.."),
+  SPR_START: S(".Y...",".YY..",".YYY.",".YY..",".Y..."),
+  SPR_STOP: S("RRRRR","R...R","R...R","R...R","RRRRR"),
+  SPR_LOCK: S(".YYY.",".Y.Y.","YYYYY","YY.YY","YYYYY"),
+  SPR_SNIP: S("C...C",".C.C.","..C..","CC.CC","CC.CC"),
+  SPR_DESK: S("BBBBB","BbbbB","BBBBB","..B..",".BBB."),
+  SPR_TASK: S("....G","..G.G","..G.G","G.G.G","G.G.G"),
+  SPR_CALC: S("OOOOO","O.O.O","OOOOO","O.O.O","OOOOO"),
+  SPR_SUN: S("Y.Y.Y",".YYY.","YYYYY",".YYY.","Y.Y.Y"),
+  SPR_ROT: S("..C..",".CCC.","C.C.C","..C..","..C.."),
+  SPR_CALIB: S(".GGG.","G...G","G.G.G","G...G",".GGG."),
+  SPR_INFO: S("..B..",".....","..B..","..B..","..B.."),
+  // The pet (drawn in code on the device; reproduced here)
+  PET_C: S(".....","ww.ww","wC.wC","ww.ww","....."),
+  PET_R: S(".....","ww.ww","Cw.Cw","ww.ww","....."),
+  PET_BLINK: S(".....",".....","ww.ww",".....","....."),
+  PET_UP: S(".....","wC.wC","ww.ww","ww.ww","....."),
+  PET_DN: S(".....","ww.ww","ww.ww","Cw.Cw","....."),
+  PET_HAPPY: S(".....",".w.w.","w...w",".....",".MMM."),
+  PET_SLEEP: S(".....",".....",".....","bb.bb","....b"),
+  PET_HALF: S(".....",".....","ww.ww","Cw.Cw","....."),
+  PET_SHUT: S(".....",".....",".....","ww.ww","....."),
+  PET_Z1: S(".....",".....","....b","bb.bb","....."),
+  PET_Z2: S(".....","....b",".....","bb.bb","....."),
+  PET_Z3: S("....b",".....",".....","bb.bb","....."),
+  PET_SHUT_M: S(".....",".....",".....","ww.ww","..r.."),
+  PET_HALF_M: S(".....",".....","ww.ww","Cw.Cw",".rrr."),
+  PET_PEEK: S("ww.ww","Cw.Cw","ww.ww","ww.ww","....."),
+  PET_SAD1: S(".....",".....","ww.ww","CB.Cw","....."),
+  PET_SAD2: S(".....",".....","ww.ww","Cw.Cw",".B..."),
+  HEART_A: S(".R.R.","RRRRR","RRRRR",".RRR.","..R.."),
+  HEART_B: S(".r.r.","rrrrr","rrrrr",".rrr.","..r.."),
+  SPR_BT: S("..BB.","B.B.B",".BBB.","B.B.B","..BB."),
+  SPR_AUTOROT: S(".CCC.","C...C","C...C","C..CC",".C.CC"),
+  SPR_WIFI: S(".CCC.","C...C",".CCC.",".....","..C.."),
+  SPR_PAIR: S("..B.O","B.BOO",".BB.O","B.B..","..B.."),
+  SPR_TUTOR: S(".YYY.","Y...Y","...Y.","..Y..","..Y.."),
+};
+const ANIMS = {
+  ICON_MEDIA: ["ICO_MEDIA_1","ICO_MEDIA_2"],
+  ICON_TV: ["ICO_TV_1","ICO_TV_2","ICO_TV_3"],
+  ICON_SLIDES: ["ICO_SLIDES_1","ICO_SLIDES_2"],
+  ICON_KEYS: ["ICO_KEYS_1","ICO_KEYS_2"],
+  ICON_LEVEL: ["ICO_LEVEL_1","ICO_LEVEL_2","ICO_LEVEL_3","ICO_LEVEL_2"],
+  ICON_DICE: ["ICO_DICE_1","ICO_DICE_2","ICO_DICE_3"],
+  ICON_TIMER: ["ICO_TIMER_1","ICO_TIMER_2","ICO_TIMER_3"],
+  ICON_LIGHT: ["ICO_LIGHT_1","ICO_LIGHT_2","ICO_LIGHT_3"],
+  ICON_TORCH: ["ICO_TORCH_1","ICO_TORCH_2"],
+  ICON_SNAKE: ["ICO_SNAKE_1","ICO_SNAKE_2","ICO_SNAKE_3"],
+  ICON_SET: ["ICO_SET_1","ICO_SET_2"],
+  PET_LOOK: ["PET_C","PET_C","PET_R","PET_R","PET_BLINK","PET_C","PET_UP","PET_C","PET_DN"],
+  PET_DIZZY: ["PET_UP","PET_C","PET_DN","PET_R"],
+  PET_LOVE: ["HEART_A","HEART_A","HEART_B"],
+  PET_ROCK: ["PET_C","PET_HALF","PET_SHUT","PET_Z1","PET_Z2","PET_Z3"],
+  PET_YAWN: ["PET_SHUT_M","PET_HALF_M","PET_C","PET_C"],
+  PET_SAD: ["PET_SAD1","PET_SAD2"],
+};
+
+function build(el) {
+  for (let i = 0; i < 25; i++) {
+    const d = document.createElement("i");
+    d.className = "led";
+    el.appendChild(d);
+  }
+  el.setAttribute("role", "img");
+  if (!el.hasAttribute("aria-label")) el.setAttribute("aria-label", "5 by 5 LED picture");
+}
+function paint(el, key) {
+  const s = SPRITES[key] || "";
+  const leds = el.children;
+  for (let i = 0; i < 25; i++) {
+    const c = COLORS[s[i]];
+    leds[i].style.background = c || "";
+    leds[i].style.boxShadow = c ? `0 0 6px ${c}66` : "";
+  }
+}
+
+const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const animated = [];
+document.querySelectorAll(".matrix").forEach(el => {
+  build(el);
+  if (el.dataset.sprite) paint(el, el.dataset.sprite);
+  if (el.dataset.anim) {
+    const frames = ANIMS[el.dataset.anim];
+    paint(el, frames[0]);
+    const SPEEDS = { PET_DIZZY: 160, PET_LOOK: 700, PET_LOVE: 260, PET_ROCK: 600, PET_YAWN: 500, PET_SAD: 500 };
+    animated.push({ el, frames, speed: SPEEDS[el.dataset.anim] || 350 });
+  }
+});
+if (!reduce) {
+  const start = performance.now();
+  (function tick(now) {
+    for (const a of animated) paint(a.el, a.frames[Math.floor((now - start) / a.speed) % a.frames.length]);
+    requestAnimationFrame(tick);
+  })(start);
+}
+</script>
+</body></html>

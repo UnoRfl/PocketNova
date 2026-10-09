@@ -1,0 +1,10 @@
+# local notes and backups
+backups/
+POCKET_NOVA_SUMMARY.md
+guide.html
+
+# build output and caches
+build/
+__pycache__/
+*.pyc
+*.log

@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#7a2cf0">
+<title>Pocket Nova Remote</title>
+<link rel="icon" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+:root {
+  --bg: #f3f2f7; --surface: #fff; --fg: #1c1b24; --muted: #5d5a6e; --line: #dcdae6;
+  --accent: #7a2cf0; --accent-soft: #efe6ff; --good: #1b8a3a; --warn: #b26a00; --bad: #c62828;
+  --panel: #111016; --led-off: #23212b;
+  --font-display: "Pixelify Sans", "Courier New", monospace;
+  --font-body: "Atkinson Hyperlegible", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121118; --surface: #1b1a23; --fg: #ecebf3; --muted: #a29fb5; --line: #2f2d3b;
+    --accent: #b48cff; --accent-soft: #2a2140; --good: #4cd17a; --warn: #ffb547; --bad: #ff6b6b;
+    --panel: #09080c; --led-off: #1d1b24; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121118; --surface: #1b1a23; --fg: #ecebf3; --muted: #a29fb5; --line: #2f2d3b;
+  --accent: #b48cff; --accent-soft: #2a2140; --good: #4cd17a; --warn: #ffb547; --bad: #ff6b6b;
+  --panel: #09080c; --led-off: #1d1b24; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 var(--font-body);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+main { max-width: 480px; margin: 0 auto; padding: 20px 16px 48px; display: grid; gap: 18px; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+h1 { font: 700 1.6rem/1.1 var(--font-display); margin: 0; }
+h2 { font: 700 1.05rem/1.2 var(--font-display); margin: 0; }
+a { color: var(--accent); }
+p { margin: 0; }
+.muted { color: var(--muted); font-size: .92rem; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 12px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font: 500 .75rem var(--font-mono); padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); white-space: nowrap; }
+.chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.chip.good i { background: var(--good); box-shadow: 0 0 8px var(--good); }
+.chip.warn i { background: var(--warn); }
+button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.btn { min-height: 48px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font-weight: 700; user-select: none; -webkit-user-select: none; }
+.btn:active { transform: scale(.97); background: var(--accent-soft); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn:disabled { opacity: .45; cursor: default; transform: none; }
+.btn:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.grid { display: grid; gap: 8px; }
+.g2 { grid-template-columns: repeat(2, 1fr); }
+.g3 { grid-template-columns: repeat(3, 1fr); }
+.g4 { grid-template-columns: repeat(4, 1fr); }
+
+.screen-wrap { display: flex; gap: 16px; align-items: center; }
+.matrix { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; width: 132px; aspect-ratio: 1; padding: 12px;
+  background: var(--panel); border-radius: 14px; flex: none; }
+.led { border-radius: 50%; background: var(--led-off); }
+.facts { display: grid; gap: 4px; min-width: 0; font-size: .92rem; }
+.facts b { font-family: var(--font-display); font-weight: 500; font-size: 1.05rem; }
+
+.pad { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-areas: ". f ." "l t r" ". k ."; gap: 8px; }
+.pad .f { grid-area: f; } .pad .l { grid-area: l; } .pad .t { grid-area: t; } .pad .r { grid-area: r; } .pad .k { grid-area: k; }
+.pad .t { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.code { display: flex; gap: 8px; }
+.code input { flex: 1; min-width: 0; font: 700 1.6rem var(--font-mono); letter-spacing: .4em; text-align: center; padding: 10px;
+  border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: inherit; }
+.note { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 10px 14px; border-radius: 0 10px 10px 0; font-size: .92rem; }
+.bad { color: var(--bad); }
+[hidden] { display: none !important; }
+.range { display: flex; align-items: center; gap: 10px; }
+.range input { flex: 1; accent-color: var(--accent); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .cta.primary, :root:not([data-theme="light"]) .btn.primary, :root:not([data-theme="light"]) .pad .t { color: #121118; } }
+:root[data-theme="dark"] .cta.primary, :root[data-theme="dark"] .btn.primary, :root[data-theme="dark"] .pad .t { color: #121118; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Pocket Nova Remote</h1>
+    <span class="chip" id="linkChip"><i></i><span id="linkText">not connected</span></span>
+  </header>
+
+  <!-- not supported (iPhone Safari, Firefox...) -->
+  <div class="card" id="unsupported" hidden>
+    <h2>This browser can't use Bluetooth</h2>
+    <p class="muted">The remote uses <b>Web Bluetooth</b>. It works in <b>Chrome on Android</b>, and in Chrome or Edge on a computer. iPhone Safari doesn't support it. On an iPhone, open this page in the free <b>Bluefy</b> browser app instead.</p>
+  </div>
+
+  <!-- connect -->
+  <div class="card" id="connectCard">
+    <p class="muted">Plug Pocket Nova into power, then connect. Your PC can stay connected as the keyboard at the same time.</p>
+    <button class="btn primary" id="connectBtn">Connect to Pocket Nova</button>
+    <p class="muted bad" id="connectErr" role="alert"></p>
+  </div>
+
+  <!-- code -->
+  <form class="card" id="codeCard" hidden>
+    <h2>Type the code</h2>
+    <p class="muted">A 4-digit code is scrolling on Pocket Nova's lights. Typing it proves you're next to the device.</p>
+    <div class="code">
+      <input id="codeIn" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="one-time-code" aria-label="4-digit code">
+      <button class="btn primary">OK</button>
+    </div>
+    <p class="muted bad" id="codeErr" role="alert"></p>
+  </form>
+
+  <!-- the remote -->
+  <div id="remote" hidden class="grid" style="gap:18px">
+    <div class="card">
+      <div class="screen-wrap">
+        <div class="matrix" id="mirror" role="img" aria-label="Live copy of Pocket Nova's screen"></div>
+        <div class="facts">
+          <span>Showing <b id="where">-</b></span>
+          <span>Nova is <b id="mood">-</b></span>
+          <span class="muted" id="pcState">-</span>
+          <span class="muted" id="wifiState">-</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Buttons</h2>
+      <div class="pad">
+        <button class="btn f" data-tilt="F" aria-label="Tilt forward (hold)">Tilt ▲</button>
+        <button class="btn l" data-ev="left">◀ Left</button>
+        <button class="btn t" data-ev="tap">Tap</button>
+        <button class="btn r" data-ev="right">Right ▶</button>
+        <button class="btn k" data-tilt="K" aria-label="Tilt back (hold)">Tilt ▼</button>
+      </div>
+      <div class="grid g4">
+        <button class="btn" data-ev="double">Double</button>
+        <button class="btn" data-ev="triple">Triple</button>
+        <button class="btn" data-ev="hold">Hold</button>
+        <button class="btn" data-ev="shake">Shake</button>
+      </div>
+      <p class="muted"><b>Hold</b> opens the menu from Nova and goes back everywhere else. Press and hold the tilt buttons to keep tilting (volume dial, Snake...).</p>
+    </div>
+
+    <div class="card">
+      <h2>TV</h2>
+      <div class="grid g3">
+        <button class="btn" data-ir="0">Power</button>
+        <button class="btn" data-ir="1">Vol +</button>
+        <button class="btn" data-ir="2">Vol −</button>
+        <button class="btn" data-ir="3">Mute</button>
+        <button class="btn" data-ir="4">Ch +</button>
+        <button class="btn" data-ir="5">Ch −</button>
+        <button class="btn" data-ir="6">Input</button>
+      </div>
+      <p class="muted" id="tvNote">Point Pocket Nova at the TV. Power works on any TV. The other buttons need your TV brand picked on the device or in the PC panel.</p>
+    </div>
+
+    <div class="card">
+      <h2>Nova</h2>
+      <div class="grid g3">
+        <button class="btn" data-mood="happy">Happy</button>
+        <button class="btn" data-mood="love">Love</button>
+        <button class="btn" data-mood="dizzy">Spin</button>
+        <button class="btn" data-mood="sleep">Lullaby</button>
+        <button class="btn" data-mood="wake">Wake</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Brightness</h2>
+      <div class="range"><span aria-hidden="true">☼</span><input type="range" id="bright" min="0" max="4" step="1" aria-label="Brightness"><span aria-hidden="true">☀</span></div>
+      <button class="btn" id="disconnectBtn">Disconnect</button>
+    </div>
+  </div>
+
+  <p class="muted"><a href="./">← Pocket Nova guide and downloads</a></p>
+</main>
+
+<script>
+// Must match NovaRemote.h / PocketNova.ino on the device.
+const SVC = "8f3c0001-5b2a-4c8e-9a71-2f6d1e0b9a10";
+const CMD = "8f3c0002-5b2a-4c8e-9a71-2f6d1e0b9a10";
+const OUT = "8f3c0003-5b2a-4c8e-9a71-2f6d1e0b9a10";
+const $ = (id) => document.getElementById(id);
+let dev = null, cmdChar = null, inbox = "", queue = Promise.resolve(), statusTimer = null, authed = false;
+
+for (let i = 0; i < 25; i++) { const d = document.createElement("i"); d.className = "led"; $("mirror").appendChild(d); }
+
+if (!navigator.bluetooth) { $("unsupported").hidden = false; $("connectBtn").disabled = true; }
+
+function setLink(state, text) {
+  $("linkChip").className = "chip " + state;
+  $("linkText").textContent = text;
+}
+
+// Writes go one after another: Bluetooth only does one at a time.
+function send(obj) {
+  if (!cmdChar) return;
+  const data = new TextEncoder().encode(JSON.stringify(obj));
+  queue = queue.then(() => cmdChar.writeValueWithResponse(data)).catch((e) => console.warn(e));
+  return queue;
+}
+
+// Replies arrive in packet-sized pieces; a newline ends each one.
+function onNotify(e) {
+  inbox += new TextDecoder().decode(e.target.value);
+  let n;
+  while ((n = inbox.indexOf("\n")) >= 0) {
+    const line = inbox.slice(0, n).replace(/^@/, "");
+    inbox = inbox.slice(n + 1);
+    try { handle(JSON.parse(line)); } catch (err) { console.warn("bad line", line); }
+  }
+}
+
+function handle(m) {
+  if (m.t === "auth") {
+    if (m.ok) { authed = true; showRemote(); return; }
+    $("codeCard").hidden = false; $("remote").hidden = true; $("connectCard").hidden = true;
+    if ($("codeIn").dataset.tried) $("codeErr").textContent = "That code didn't match. A new one is on the lights now.";
+    $("codeIn").value = ""; $("codeIn").focus();
+    setLink("warn", "type the code");
+    return;
+  }
+  if (m.t === "fb") return paint(m.d);
+  if (m.t === "status") return showStatus(m);
+  if (m.t === "config") { if (document.activeElement !== $("bright")) $("bright").value = m.brightIdx; return; }
+  if (m.t === "error") console.warn(m.msg);
+}
+
+function paint(hex) {
+  const leds = $("mirror").children;
+  for (let i = 0; i < 25; i++) {
+    const c = "#" + hex.substr(i * 6, 6);
+    const on = c !== "#000000";
+    // the real LEDs are dim (max 40/255); lift them so they read on a screen
+    leds[i].style.background = on ? lift(hex.substr(i * 6, 6)) : "";
+    leds[i].style.boxShadow = on ? `0 0 6px ${lift(hex.substr(i * 6, 6))}` : "";
+  }
+}
+function lift(h) {
+  const v = [0, 2, 4].map((k) => parseInt(h.substr(k, 2), 16));
+  const m = Math.max(...v, 1), s = 255 / m;
+  return `rgb(${v.map((x) => Math.round(x * s)).join(",")})`;
+}
+
+const WHERE = { PET: "Nova (home)", MENU: "the menu", TUTORIAL: "the tutorial" };
+function showStatus(s) {
+  $("where").textContent = s.screen === "APP" ? s.app[0] + s.app.slice(1).toLowerCase() : (WHERE[s.screen] || s.screen);
+  $("mood").textContent = s.pet;
+  $("pcState").textContent = s.ble ? "Keyboard: connected to your PC" : "Keyboard: no PC connected";
+  const w = s.wifi || {};
+  $("wifiState").textContent = w.state === "online" ? `Wi-Fi: online (${w.ssid})` : w.on ? `Wi-Fi: ${w.state}` : "Wi-Fi: off";
+}
+
+function showRemote() {
+  $("codeCard").hidden = true; $("connectCard").hidden = true; $("remote").hidden = false;
+  setLink("good", "connected");
+  // Give Pocket Nova this phone's clock and time zone (for Nova's night mode).
+  send({ cmd: "time", epoch: Math.floor(Date.now() / 1000), tz: -new Date().getTimezoneOffset() * 60 });
+  send({ cmd: "get" });
+  send({ cmd: "mirror", on: true });
+  send({ cmd: "status" });
+  clearInterval(statusTimer);
+  statusTimer = setInterval(() => send({ cmd: "status" }), 2500);
+}
+
+async function connect() {
+  $("connectErr").textContent = "";
+  try {
+    dev = await navigator.bluetooth.requestDevice({ filters: [{ services: [SVC] }, { namePrefix: "Pocket" }], optionalServices: [SVC] });
+    dev.addEventListener("gattserverdisconnected", onGone);
+    setLink("warn", "connecting...");
+    const server = await dev.gatt.connect();
+    const svc = await server.getPrimaryService(SVC);
+    cmdChar = await svc.getCharacteristic(CMD);
+    const out = await svc.getCharacteristic(OUT);
+    out.addEventListener("characteristicvaluechanged", onNotify);
+    await out.startNotifications();
+    authed = false;
+    send({ cmd: "hello" });   // answered with "type the code"
+  } catch (e) {
+    if (e.name !== "NotFoundError") $("connectErr").textContent = "Couldn't connect: " + e.message;
+    setLink("", "not connected");
+  }
+}
+
+function onGone() {
+  clearInterval(statusTimer);
+  cmdChar = null; authed = false;
+  $("remote").hidden = true; $("codeCard").hidden = true; $("connectCard").hidden = false;
+  setLink("", "not connected");
+}
+
+$("connectBtn").onclick = connect;
+$("disconnectBtn").onclick = () => { send({ cmd: "mirror", on: false }); setTimeout(() => dev && dev.gatt.disconnect(), 200); };
+$("codeCard").onsubmit = (e) => {
+  e.preventDefault();
+  const c = $("codeIn").value.trim();
+  if (!/^\d{4}$/.test(c)) { $("codeErr").textContent = "The code is 4 digits."; return; }
+  $("codeErr").textContent = ""; $("codeIn").dataset.tried = "1";
+  send({ cmd: "auth", code: c });
+};
+
+document.querySelectorAll("[data-ev]").forEach((b) => (b.onclick = () => { send({ cmd: "input", ev: b.dataset.ev }); buzz(); }));
+document.querySelectorAll("[data-mood]").forEach((b) => (b.onclick = () => send({ cmd: "pet", mood: b.dataset.mood })));
+document.querySelectorAll("[data-ir]").forEach((b) => (b.onclick = () => { send({ cmd: "ir", code: +b.dataset.ir }); buzz(); }));
+// Tilt buttons: held down = Pocket Nova acts as if tilted, released = level again.
+document.querySelectorAll("[data-tilt]").forEach((b) => {
+  const down = (e) => { e.preventDefault(); send({ cmd: "tilt", dir: b.dataset.tilt }); buzz(); };
+  const up = () => send({ cmd: "tilt", dir: "0" });
+  b.addEventListener("pointerdown", down);
+  b.addEventListener("pointerup", up);
+  b.addEventListener("pointercancel", up);
+  b.addEventListener("pointerleave", (e) => { if (e.buttons) up(); });
+  b.addEventListener("contextmenu", (e) => e.preventDefault());
+});
+$("bright").onchange = (e) => send({ cmd: "set", cfg: { brightIdx: +e.target.value } });
+function buzz() { if (navigator.vibrate) navigator.vibrate(12); }
+</script>
+</body>
+</html>

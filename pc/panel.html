@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pocket Nova Panel</title>
+<link rel="icon" href="/icon.png">
+<style>
+/* Layout: device on the left (live screen + remote pad), settings on the right in tabs.
+   One deliberate dark look: it sits next to a glowing LED device. */
+:root {
+  --bg: #0d0b12;
+  --panel: #16131e;
+  --panel-2: #1d1928;
+  --line: #2c2639;
+  --fg: #ece9f5;
+  --muted: #9a93ad;
+  --nova: #a46bff;
+  --nova-soft: #2a1f42;
+  --good: #3ddc84;
+  --warn: #ffb547;
+  --bad: #ff5d6c;
+  --led-off: #1a1622;
+  --font-ui: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 var(--font-ui); }
+button, input, select { font: inherit; color: inherit; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; font-weight: 600; text-wrap: balance; }
+h2 { font-size: 1.05rem; }
+.muted { color: var(--muted); }
+.mono { font-family: var(--font-mono); font-size: .85em; }
+
+.app { display: grid; grid-template-columns: 340px 1fr; gap: 16px; padding: 16px; min-height: 100%; }
+@media (max-width: 860px) { .app { grid-template-columns: 1fr; } }
+
+/* header */
+.brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brand h1 { font-size: 1.35rem; letter-spacing: .01em; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px;
+        background: var(--panel-2); border: 1px solid var(--line); font-size: .8rem; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.chip.good .dot { background: var(--good); box-shadow: 0 0 8px var(--good); }
+.chip.warn .dot { background: var(--warn); }
+.chip.bad .dot { background: var(--bad); }
+
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 14px; align-content: start; }
+.left { display: grid; gap: 16px; align-content: start; }
+
+/* live screen */
+.screen-wrap { display: grid; justify-items: center; gap: 10px; }
+.matrix { display: grid; grid-template-columns: repeat(5, 1fr); gap: 9px; width: 230px; max-width: 100%; aspect-ratio: 1;
+          padding: 18px; background: #08070b; border-radius: 20px; border: 1px solid var(--line); }
+.led { border-radius: 50%; background: var(--led-off); transition: background .08s; }
+.mood { font-size: .9rem; }
+
+/* remote pad */
+.pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pad button, .btn { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; cursor: pointer; }
+.pad button:hover, .btn:hover { border-color: var(--nova); }
+.pad button:active, .btn:active { transform: translateY(1px); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--nova); outline-offset: 2px; }
+.btn.primary { background: var(--nova); border-color: var(--nova); color: #120a1f; font-weight: 600; }
+.btn.danger { border-color: #5a2630; color: #ffb3bb; }
+.btn.danger.armed { background: var(--bad); color: #1a0508; border-color: var(--bad); font-weight: 600; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+
+/* tabs */
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.tab { background: none; border: 0; padding: 7px 12px; border-radius: 8px; cursor: pointer; color: var(--muted); }
+.tab[aria-selected="true"] { background: var(--nova-soft); color: var(--fg); }
+.pane { display: grid; gap: 18px; align-content: start; }
+.pane[hidden] { display: none !important; }
+
+.row { display: grid; grid-template-columns: 190px 1fr; gap: 12px; align-items: center; }
+@media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
+.row > label, .row > .label { color: var(--muted); }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.seg button { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; min-width: 44px; }
+.seg button[aria-pressed="true"] { background: var(--nova); color: #120a1f; border-color: var(--nova); font-weight: 600; }
+input[type=text], select { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; min-width: 0; }
+.inline { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.inline > input[type=text] { flex: 1 1 180px; }
+.toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.toggle input { width: 38px; height: 22px; appearance: none; background: var(--line); border-radius: 999px; position: relative; cursor: pointer; transition: background .15s; }
+.toggle input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--fg); transition: left .15s; }
+.toggle input:checked { background: var(--nova); }
+.toggle input:checked::after { left: 19px; }
+
+.section { display: grid; gap: 10px; }
+.section + .section { border-top: 1px solid var(--line); padding-top: 18px; }
+.hint { color: var(--muted); font-size: .88rem; max-width: 70ch; margin: 0; }
+
+.devices { display: grid; gap: 8px; }
+.device { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.device .who { display: grid; gap: 4px; min-width: 0; }
+.device input { width: 100%; }
+.empty { color: var(--muted); padding: 10px 0; }
+
+.slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.slot { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px; text-align: left; cursor: pointer; display: grid; gap: 2px; }
+.slot[aria-pressed="true"] { border-color: var(--nova); background: var(--nova-soft); }
+.slot b { font-family: var(--font-display); }
+
+.tv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+.stat { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.stat .v { font-family: var(--font-display); font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.stat .k { color: var(--muted); font-size: .8rem; }
+
+table.cheat { border-collapse: collapse; width: 100%; font-size: .9rem; }
+table.cheat td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
+.table-wrap { overflow-x: auto; }
+
+.console { background: #08070b; border: 1px solid var(--line); border-radius: 10px; padding: 10px; height: 260px; overflow: auto;
+           font-family: var(--font-mono); font-size: .78rem; white-space: pre-wrap; word-break: break-word; }
+.console .sys { color: var(--nova); }
+
+/* disconnected overlay */
+.offline { position: fixed; inset: 0; background: rgba(13, 11, 18, .92); display: grid; place-items: center; z-index: 10; padding: 16px; }
+.offline[hidden] { display: none; }
+.offline .box { text-align: center; display: grid; gap: 12px; justify-items: center; max-width: 420px; }
+.offline .matrix { width: 140px; padding: 12px; gap: 6px; }
+
+.toast { position: fixed; right: 16px; bottom: 16px; background: var(--panel-2); border: 1px solid var(--line); border-left: 3px solid var(--nova);
+         padding: 10px 14px; border-radius: 10px; max-width: 360px; z-index: 20; }
+.toast.bad { border-left-color: var(--bad); }
+.toast[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Device column -->
+  <div class="left">
+    <div class="brand">
+      <h1 id="devName">Pocket Nova</h1>
+      <span class="chip" id="usbChip"><span class="dot"></span><span id="usbText">Looking…</span></span>
+    </div>
+
+    <div class="card">
+      <div class="screen-wrap">
+        <div class="matrix" id="mirror" aria-label="Live copy of Pocket Nova's screen" role="img"></div>
+        <div class="mood" id="moodLine">Nova is <b id="moodText">…</b></div>
+        <div class="inline">
+          <span class="chip" id="bleChip"><span class="dot"></span><span id="bleText">Bluetooth</span></span>
+          <span class="chip" id="screenChip"><span class="dot"></span><span id="screenText">-</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Remote control</h2>
+      <p class="hint">Press the Atom's controls from here. Tilt buttons act like holding the tilt for a moment.</p>
+      <div class="pad">
+        <span></span>
+        <button data-tilt="F" title="Top edge down">Tilt ▲</button>
+        <span></span>
+        <button data-input="left">◀ Left</button>
+        <button data-input="tap">Tap</button>
+        <button data-input="right">Right ▶</button>
+        <button data-input="double">Double</button>
+        <button data-tilt="K" title="Top edge up">Tilt ▼</button>
+        <button data-input="hold">Hold</button>
+        <button data-input="triple">Triple</button>
+        <button data-input="shake">Shake</button>
+        <button data-input="rock">Rock</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings column -->
+  <div class="card">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="true" data-tab="device">Device</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="bt">Bluetooth</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="wifi">Wi-Fi</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="tv">TV remote</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="pet">Nova</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="system">System</button>
+    </div>
+
+    <!-- DEVICE -->
+    <section class="pane" id="pane-device">
+      <div class="section">
+        <h2>Display and controls</h2>
+        <div class="row"><span class="label">Brightness</span><div class="seg" id="brightSeg"></div></div>
+        <div class="row"><span class="label">Screen rotation</span><div class="seg" id="rotSeg"></div></div>
+        <div class="row"><span class="label">Auto-rotate</span>
+          <label class="toggle"><input type="checkbox" id="autoRot"><span class="muted">Turn upright when held like a phone</span></label></div>
+        <div class="row"><span class="label">Tilt direction</span>
+          <div class="inline"><button class="btn" id="flipX">Swap left / right</button><button class="btn" id="flipY">Swap forward / back</button></div></div>
+        <div class="row"><label for="lastApp">Double tap on Nova opens</label><select id="lastApp"></select></div>
+      </div>
+      <div class="section">
+        <h2>Name</h2>
+        <p class="hint">This is the name your PC and phone see in their Bluetooth lists. Saving it restarts Pocket Nova.</p>
+        <div class="inline"><input type="text" id="nameInput" maxlength="24" aria-label="Device name"><button class="btn primary" id="nameSave">Save name</button></div>
+      </div>
+      <div class="section">
+        <h2>Tutorial</h2>
+        <p class="hint">Plays the tilt, tap and hold lesson on the Atom.</p>
+        <div><button class="btn" id="tutorialBtn">Play tutorial</button></div>
+      </div>
+    </section>
+
+    <!-- BLUETOOTH -->
+    <section class="pane" id="pane-bt" hidden>
+      <div class="section">
+        <h2>Bluetooth slot</h2>
+        <p class="hint">Each slot is a separate Bluetooth identity. Pair your PC on one slot and your phone on another, then switch here to change which one Pocket Nova controls. Switching restarts it.</p>
+        <div class="slots" id="slots"></div>
+        <div class="muted">This slot's address: <span class="mono" id="ownAddr">-</span></div>
+      </div>
+      <div class="section">
+        <h2>Paired devices</h2>
+        <p class="hint">Devices that have paired with Pocket Nova (all slots). Give them names so you know which is which. Removing one makes that device forget Pocket Nova, so it has to pair again.</p>
+        <div class="devices" id="devices"></div>
+        <div class="inline"><button class="btn danger" id="forgetAll" data-confirm="Click again to forget every device">Forget all and pair new</button></div>
+      </div>
+      <div class="section">
+        <h2>Connect pop-up on Windows</h2>
+        <p class="hint">While Pocket Nova is ready to pair, a nearby Windows PC shows "New Bluetooth device found, Connect". One click pairs it. This is Microsoft's <b>Swift Pair</b>. It's on when nothing is paired, and for 3 minutes after Pocket Nova starts or switches slot. On the PC it also needs Settings → Bluetooth &amp; devices → Devices → "Show notifications to connect using Swift Pair".</p>
+        <div class="row"><span class="label">Pop-up</span>
+          <label class="toggle"><input type="checkbox" id="swiftPair"><span class="muted" id="swiftState">Show the Connect pop-up while pairing</span></label></div>
+      </div>
+      <div class="section">
+        <h2>How to pair a new device</h2>
+        <p class="hint">On Windows: Settings → Bluetooth &amp; devices → Add device → Bluetooth → choose <b id="pairName">Pocket Nova</b>. On a phone, open Bluetooth settings and tap it. If it doesn't show up, the slot is still connected to another device: switch slot or forget that device first.</p>
+      </div>
+    </section>
+
+    <!-- WI-FI -->
+    <section class="pane" id="pane-wifi" hidden>
+      <div class="section">
+        <h2>Wi-Fi</h2>
+        <div class="stats">
+          <div class="stat"><div class="v" id="wfState">-</div><div class="k">status</div></div>
+          <div class="stat"><div class="v" id="wfSsid">-</div><div class="k">network</div></div>
+          <div class="stat"><div class="v mono" id="wfIp">-</div><div class="k">address</div></div>
+          <div class="stat"><div class="v" id="wfRssi">-</div><div class="k">signal</div></div>
+        </div>
+        <p class="hint">Pocket Nova uses Wi-Fi to get the time from the internet, so Nova's night mode works on a phone charger too.</p>
+        <div class="row"><span class="label">Use Wi-Fi</span>
+          <label class="toggle"><input type="checkbox" id="wifiOn"><span class="muted">Join the saved network</span></label></div>
+      </div>
+      <div class="section">
+        <h2>Set up a network</h2>
+        <p class="hint">Opens Pocket Nova's own setup network for 10 minutes. Join it from your phone with the password below, and a page opens by itself where you pick your home Wi-Fi. If the page doesn't open, go to <b class="mono">http://192.168.4.1</b>. On the Atom: Settings → Wi-Fi, double tap.</p>
+        <div class="stats" id="wfSetup" hidden>
+          <div class="stat"><div class="v mono" id="wfApSsid">-</div><div class="k">join this network</div></div>
+          <div class="stat"><div class="v mono" id="wfApPass">-</div><div class="k">password</div></div>
+          <div class="stat"><div class="v" id="wfApLeft">-</div><div class="k">closes in</div></div>
+        </div>
+        <div class="inline"><button class="btn primary" id="wfSetupBtn">Open setup network</button>
+          <button class="btn danger" id="wfForget" data-confirm="Click again to forget it">Forget saved network</button></div>
+      </div>
+    </section>
+
+    <!-- TV -->
+    <section class="pane" id="pane-tv" hidden>
+      <div class="section">
+        <h2>Your TV</h2>
+        <div class="row"><label for="tvBrand">Brand</label><select id="tvBrand"></select></div>
+        <p class="hint" id="tvFound" hidden></p>
+        <p class="hint"><b>Power works on any TV</b> without picking anything. It sends every TV's power code (your TV's first) over about 15 seconds. Tap the Atom once your TV switches off to stop it. <b>Volume, mute, channels and input</b> need your TV's brand: pick it here, or let Pocket Nova find it.</p>
+      </div>
+      <div class="section">
+        <h2>Find my TV</h2>
+        <p class="hint">Point Pocket Nova at the TV and press start. It tries <span id="sweepCount">many</span> power codes, one every 1.3 seconds, with the lights filling up as it goes. <b>Tap the Atom the moment your TV switches off.</b> It then switches the TV back on to double-check: tap again to save. Hold the Atom to cancel.</p>
+        <div><button class="btn primary" id="findTvBtn">Start finding</button></div>
+      </div>
+      <div class="section">
+        <h2>Test buttons</h2>
+        <p class="hint">Point the Atom at the TV, within about 2 metres, then press a button here. On the Atom you can also tilt forward or back and hold to keep changing the volume.</p>
+        <div class="tv-grid" id="tvGrid"></div>
+      </div>
+      <div class="section">
+        <h2>Supported brands</h2>
+        <p class="hint">"Confirmed" counts the buttons whose code at least two independent IR databases agree on.</p>
+        <div class="table-wrap"><table class="cheat" id="brandTable"></table></div>
+      </div>
+    </section>
+
+    <!-- PET -->
+    <section class="pane" id="pane-pet" hidden>
+      <div class="section">
+        <h2>Nova</h2>
+        <div class="stats">
+          <div class="stat"><div class="v" id="petMood">-</div><div class="k">mood</div></div>
+          <div class="stat"><div class="v" id="petLove">0</div><div class="k">affection</div></div>
+          <div class="stat"><div class="v" id="petTime">-</div><div class="k">time of day</div></div>
+          <div class="stat"><div class="v" id="snakeBest">0</div><div class="k">Snake best</div></div>
+        </div>
+      </div>
+      <div class="section">
+        <h2>Play with Nova</h2>
+        <div class="inline">
+          <button class="btn" data-mood="happy">Make happy</button>
+          <button class="btn" data-mood="love">Send love</button>
+          <button class="btn" data-mood="dizzy">Spin</button>
+          <button class="btn" data-mood="sleep">Lullaby</button>
+          <button class="btn" data-mood="wake">Wake up</button>
+        </div>
+      </div>
+      <div class="section">
+        <h2>What Nova reacts to</h2>
+        <div class="table-wrap"><table class="cheat">
+          <tr><td>Tilt</td><td>Eyes follow you</td></tr>
+          <tr><td>Tap</td><td>Happy eyes and a smile, +1 affection</td></tr>
+          <tr><td>Triple tap</td><td>A beating heart, +3 affection</td></tr>
+          <tr><td>Double tap</td><td>Opens your last app</td></tr>
+          <tr><td>Hold</td><td>Opens the menu</td></tr>
+          <tr><td>Shake</td><td>Dizzy spinning eyes</td></tr>
+          <tr><td>Rock gently side to side</td><td>Gets sleepy and falls asleep</td></tr>
+          <tr><td>Tap while asleep</td><td>Wakes up with a yawn</td></tr>
+          <tr><td>Turn face down</td><td>Hides. Turn it back over for peekaboo</td></tr>
+          <tr><td>Leave it alone</td><td>Gets bored after 45 s, dozes after 2 min</td></tr>
+          <tr><td>Come back from an app</td><td>Happy if things worked, sad if something failed</td></tr>
+          <tr><td>Night (10 pm–7 am)</td><td>Sleepy eyes, dozes after 30 s. The clock comes from this PC.</td></tr>
+          <tr><td>50+ affection</td><td>Floats a little heart now and then</td></tr>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- SYSTEM -->
+    <section class="pane" id="pane-system" hidden>
+      <div class="section">
+        <h2>About</h2>
+        <div class="stats">
+          <div class="stat"><div class="v" id="fwVer">-</div><div class="k">firmware</div></div>
+          <div class="stat"><div class="v" id="uptime">-</div><div class="k">running for</div></div>
+          <div class="stat"><div class="v mono" id="portName">-</div><div class="k">USB port</div></div>
+          <div class="stat"><div class="v" id="heap">-</div><div class="k">free memory</div></div>
+        </div>
+      </div>
+      <div class="section">
+        <h2>This PC</h2>
+        <label class="toggle"><input type="checkbox" id="autoOpen"><span>Open this panel when Pocket Nova is plugged in</span></label>
+        <label class="toggle"><input type="checkbox" id="autostart"><span>Start the watcher with Windows</span></label>
+      </div>
+      <div class="section">
+        <h2>Firmware</h2>
+        <p class="hint">Rebuilds and installs the firmware from <span class="mono" id="fwDir"></span>. Takes about 3 minutes. Keep Pocket Nova plugged in until it says Done.</p>
+        <div class="inline"><button class="btn" id="updateBtn">Update firmware</button><button class="btn" id="rebootBtn">Restart Pocket Nova</button></div>
+        <div class="console" id="updateLog" hidden></div>
+      </div>
+      <div class="section">
+        <h2>Factory reset</h2>
+        <p class="hint">Erases every setting, forgets every paired device, resets Nova's affection and plays the tutorial again. This can't be undone.</p>
+        <div class="inline">
+          <input type="text" id="resetConfirm" placeholder="Type RESET" aria-label="Type RESET to confirm" style="max-width:160px">
+          <button class="btn danger" id="resetBtn" disabled>Factory reset</button>
+        </div>
+      </div>
+      <div class="section">
+        <h2>Activity</h2>
+        <div class="console" id="console" aria-live="off"></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="offline" id="offline">
+  <div class="box">
+    <div class="matrix" id="offMatrix"></div>
+    <h2 id="offTitle">Plug in Pocket Nova</h2>
+    <p class="muted" id="offText">Use a USB-C cable that carries data. The panel connects by itself as soon as it's plugged in.</p>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let S = {};                 // latest state from the server
+let logSince = 0, replySince = 0;
+const MOOD_WORDS = { idle: "relaxing", happy: "happy", love: "in love", dizzy: "dizzy", sad: "sad", sleepy: "getting sleepy",
+  asleep: "asleep", waking: "waking up", hiding: "hiding (face down)", peekaboo: "saying peekaboo", bored: "bored" };
+
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? {} : {
+    method: "POST", headers: { "Content-Type": "application/json", "X-PocketNova": "1" }, body: JSON.stringify(body)
+  });
+  return r.json().catch(() => ({}));
+}
+const cmd = (o) => api("/api/cmd", o);
+
+function toast(text, bad) {
+  const t = $("toast");
+  t.textContent = text;
+  t.classList.toggle("bad", !!bad);
+  t.hidden = false;
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => (t.hidden = true), 3500);
+}
+
+// ---- LED grids
+function buildGrid(el) { for (let i = 0; i < 25; i++) { const d = document.createElement("i"); d.className = "led"; el.appendChild(d); } }
+buildGrid($("mirror")); buildGrid($("offMatrix"));
+// LEDs look much brighter to the eye than their raw values on a monitor,
+// so dim pixels get a square-root lift to stay visible.
+const lift = (v) => Math.round(255 * Math.sqrt(v / 255)).toString(16).padStart(2, "0");
+function paintHex(el, hex) {
+  const leds = el.children;
+  for (let i = 0; i < 25; i++) {
+    const h = hex ? hex.substr(i * 6, 6) : "000000";
+    const lit = h !== "000000";
+    const c = lit ? "#" + [0, 2, 4].map((k) => lift(parseInt(h.substr(k, 2), 16))).join("") : "";
+    leds[i].style.background = c;
+    leds[i].style.boxShadow = lit ? `0 0 10px ${c}88` : "";
+  }
+}
+// The offline grid shows sleeping eyes.
+paintHex($("offMatrix"), "000000".repeat(15) + "2d2d3c2d2d3c0000002d2d3c2d2d3c" + "000000".repeat(5));
+
+// ---- static controls
+function seg(el, labels, onPick) {
+  el.innerHTML = "";
+  labels.forEach((l, i) => {
+    const b = document.createElement("button");
+    b.textContent = l; b.dataset.i = i; b.setAttribute("aria-pressed", "false");
+    b.onclick = () => onPick(i);
+    el.appendChild(b);
+  });
+}
+function setSeg(el, i) { [...el.children].forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.i === i))); }
+
+seg($("brightSeg"), ["1", "2", "3", "4", "5"], (i) => cmd({ cmd: "set", cfg: { brightIdx: i } }));
+seg($("rotSeg"), ["0°", "90°", "180°", "270°"], (i) => cmd({ cmd: "set", cfg: { rotation: i } }));
+$("autoRot").onchange = (e) => cmd({ cmd: "set", cfg: { autoRotate: e.target.checked } });
+$("swiftPair").onchange = (e) => cmd({ cmd: "set", cfg: { swiftPair: e.target.checked } });
+$("flipX").onclick = () => { cmd({ cmd: "flip", axis: "x" }); toast("Left and right swapped"); };
+$("flipY").onclick = () => { cmd({ cmd: "flip", axis: "y" }); toast("Forward and back swapped"); };
+$("lastApp").onchange = (e) => cmd({ cmd: "set", cfg: { lastApp: +e.target.value } });
+$("tvBrand").onchange = (e) => cmd({ cmd: "set", cfg: { tvBrand: +e.target.value } });
+$("nameSave").onclick = () => {
+  const n = $("nameInput").value.trim();
+  if (!n) return toast("Type a name first", true);
+  cmd({ cmd: "set", cfg: { name: n } });
+  toast("Saved. Pocket Nova is restarting with its new name.");
+};
+$("tutorialBtn").onclick = () => { cmd({ cmd: "tutorial" }); toast("Tutorial playing on the Atom"); };
+$("findTvBtn").onclick = () => { cmd({ cmd: "findtv" }); toast("Finding your TV. Tap the Atom when the TV switches off."); };
+
+let brandKey = "";
+function renderBrands() {
+  const tb = S.tvbrands;
+  if (!tb) return;
+  $("sweepCount").textContent = tb.sweep;
+  $("tvFound").hidden = !tb.found;
+  if (tb.found) $("tvFound").textContent = `Find TV saved a power code for your TV: ${tb.found}. Power uses it; other buttons try all brands.`;
+  const key = JSON.stringify(tb.list);
+  if (key === brandKey) return;
+  brandKey = key;
+  const rows = tb.list.map((b) => {
+    const pct = b.buttons ? b.verified / b.buttons : 0;
+    const tag = pct >= 0.99 ? "all confirmed" : pct > 0 ? `${b.verified} of ${b.buttons} confirmed` : "single source";
+    return `<tr><td>${b.letter}</td><td>${niceName(b.name)}</td><td class="muted">${b.proto}</td><td>${b.buttons} buttons</td><td class="muted">${tag}</td></tr>`;
+  });
+  $("brandTable").innerHTML = rows.join("");
+}
+document.querySelectorAll("[data-input]").forEach((b) => (b.onclick = () => cmd({ cmd: "input", ev: b.dataset.input })));
+document.querySelectorAll("[data-tilt]").forEach((b) => (b.onclick = async () => {
+  await cmd({ cmd: "tilt", dir: b.dataset.tilt });
+  setTimeout(() => cmd({ cmd: "tilt", dir: "0" }), 900);
+}));
+document.querySelectorAll("[data-mood]").forEach((b) => (b.onclick = () => cmd({ cmd: "pet", mood: b.dataset.mood })));
+
+// Danger buttons: first click arms, second click (within 4 s) does it.
+function armed(btn, action) {
+  btn.onclick = () => {
+    if (btn.classList.contains("armed")) { btn.classList.remove("armed"); btn.textContent = btn.dataset.label; action(); return; }
+    btn.dataset.label = btn.dataset.label || btn.textContent;
+    btn.classList.add("armed"); btn.textContent = btn.dataset.confirm || "Click again to confirm";
+    setTimeout(() => { btn.classList.remove("armed"); btn.textContent = btn.dataset.label; }, 4000);
+  };
+}
+$("wifiOn").onchange = (e) => cmd({ cmd: "wifi", action: e.target.checked ? "on" : "off" });
+$("wfSetupBtn").onclick = () => cmd({ cmd: "wifi", action: S.status && S.status.wifi && S.status.wifi.setup ? "stop" : "setup" });
+armed($("wfForget"), () => { cmd({ cmd: "wifi", action: "forget" }); toast("Forgot the saved Wi-Fi network"); });
+armed($("forgetAll"), () => { cmd({ cmd: "unbond_all" }); toast("Forgetting all devices. Pocket Nova is restarting."); });
+
+$("resetConfirm").oninput = (e) => ($("resetBtn").disabled = e.target.value.trim().toUpperCase() !== "RESET");
+$("resetBtn").onclick = () => {
+  cmd({ cmd: "factory_reset" });
+  $("resetConfirm").value = ""; $("resetBtn").disabled = true;
+  toast("Factory reset. Pocket Nova is restarting into the tutorial.");
+};
+$("rebootBtn").onclick = () => { cmd({ cmd: "reboot" }); toast("Restarting Pocket Nova"); };
+$("updateBtn").onclick = async () => {
+  const r = await api("/api/firmware", {});
+  toast(r.started ? "Firmware update started" : "An update is already running");
+};
+$("autoOpen").onchange = (e) => api("/api/settings", { autoOpen: e.target.checked });
+$("autostart").onchange = async (e) => {
+  const r = await api("/api/settings", { autostart: e.target.checked });
+  if (r.error) toast("Couldn't change startup: " + r.error, true);
+};
+
+// Tabs
+document.querySelectorAll(".tab").forEach((t) => (t.onclick = () => {
+  document.querySelectorAll(".tab").forEach((x) => x.setAttribute("aria-selected", String(x === t)));
+  document.querySelectorAll(".pane").forEach((p) => (p.hidden = p.id !== "pane-" + t.dataset.tab));
+  try { localStorage.setItem("pn-tab", t.dataset.tab); } catch (e) {}
+}));
+try { const last = localStorage.getItem("pn-tab"); if (last) document.querySelector(`.tab[data-tab="${last}"]`)?.click(); } catch (e) {}
+
+// ---- rendering
+// "TCL ROKU TV" -> "TCL Roku TV": title case, but keep acronyms.
+const ACRONYMS = new Set(["LG", "JVC", "TCL", "TV", "RC5", "RC6", "OKI"]);
+const niceName = (s) => s.split(/([ /])/).map((w) => ACRONYMS.has(w) || w.length < 2 ? w : w[0] + w.slice(1).toLowerCase()).join("");
+let builtFor = "";
+function buildLists(h) {
+  const key = JSON.stringify([h.apps, h.brands, h.tvCmds, h.slots]);
+  if (key === builtFor) return;
+  builtFor = key;
+  $("lastApp").innerHTML = h.apps.map((a, i) => `<option value="${i}">${a[0] + a.slice(1).toLowerCase()}</option>`).join("");
+  $("tvBrand").innerHTML = `<option value="${h.brands.length}" disabled>Pick your TV…</option>`
+    + h.brands.map((b, i) => `<option value="${i}">${niceName(b)}</option>`).join("");
+  $("tvGrid").innerHTML = "";
+  h.tvCmds.forEach((c, i) => {
+    const b = document.createElement("button");
+    b.className = "btn"; b.dataset.code = i;
+    b.textContent = i === 0 ? "Power (any TV)" : c;
+    b.onclick = () => {
+      if (i !== 0 && +$("tvBrand").value >= h.brands.length) return toast("Pick your TV's brand first", true);
+      cmd({ cmd: "ir", brand: +$("tvBrand").value, code: i });
+      if (i === 0) toast("Sending every TV's power code. Tap the Atom when your TV switches off.");
+    };
+    $("tvGrid").appendChild(b);
+  });
+  $("slots").innerHTML = "";
+  for (let i = 0; i < h.slots; i++) {
+    const b = document.createElement("button");
+    b.className = "slot"; b.dataset.i = i;
+    b.innerHTML = `<b>Slot ${i + 1}</b><span class="muted">${["e.g. your PC", "e.g. your phone", "e.g. a laptop"][i] || ""}</span>`;
+    b.onclick = () => {
+      if (S.config && S.config.slot === i) return;
+      cmd({ cmd: "slot", n: i });
+      toast(`Switching to slot ${i + 1}. Pocket Nova is restarting.`);
+    };
+    $("slots").appendChild(b);
+  }
+}
+
+let devicesKey = "";
+function renderDevices() {
+  const list = (S.bonds && S.bonds.list) || [];
+  const key = JSON.stringify([list, S.labels]);
+  if (key === devicesKey) return;
+  devicesKey = key;
+  const box = $("devices");
+  if (!list.length) { box.innerHTML = `<div class="empty">No devices paired yet.</div>`; return; }
+  box.innerHTML = "";
+  list.forEach((addr) => {
+    const row = document.createElement("div");
+    row.className = "device";
+    const who = document.createElement("div"); who.className = "who";
+    const inp = document.createElement("input"); inp.type = "text"; inp.maxLength = 40;
+    inp.placeholder = "Name this device (e.g. Gaming PC)"; inp.value = (S.labels || {})[addr] || "";
+    inp.setAttribute("aria-label", "Name for " + addr);
+    inp.onchange = () => api("/api/label", { addr, label: inp.value });
+    const a = document.createElement("span"); a.className = "mono muted"; a.textContent = addr;
+    who.append(inp, a);
+    const rm = document.createElement("button"); rm.className = "btn danger"; rm.textContent = "Remove";
+    rm.dataset.confirm = "Click to confirm";
+    armed(rm, () => { cmd({ cmd: "unbond", addr }); toast("Removed. Pocket Nova is restarting."); });
+    row.append(who, rm);
+    box.appendChild(row);
+  });
+}
+
+function fmtUptime(s) {
+  if (s == null) return "-";
+  if (s < 60) return s + " s";
+  if (s < 3600) return Math.floor(s / 60) + " min";
+  return Math.floor(s / 3600) + " h " + Math.floor((s % 3600) / 60) + " min";
+}
+
+function chip(el, cls, text, textEl) {
+  el.classList.remove("good", "warn", "bad");
+  if (cls) el.classList.add(cls);
+  textEl.textContent = text;
+}
+
+function render() {
+  const on = S.connected;
+  $("offline").hidden = !!on;
+  chip($("usbChip"), on ? "good" : "bad", on ? "Connected" : "Not plugged in", $("usbText"));
+  if (S.paused) chip($("usbChip"), "warn", "Updating firmware", $("usbText"));
+
+  const h = S.hello, c = S.config, st = S.status;
+  if (h) {
+    buildLists(h);
+    $("devName").textContent = (c && c.name) || h.name;
+    $("pairName").textContent = (c && c.name) || h.name;
+    $("ownAddr").textContent = h.address;
+    $("fwVer").textContent = h.fw;
+  }
+  if (c) {
+    setSeg($("brightSeg"), c.brightIdx);
+    setSeg($("rotSeg"), c.rotation);
+    $("autoRot").checked = !!c.autoRotate;
+    $("swiftPair").checked = c.swiftPair !== false;
+    if (document.activeElement !== $("lastApp")) $("lastApp").value = c.lastApp;
+    if (document.activeElement !== $("tvBrand")) $("tvBrand").value = c.tvBrand;
+    const picked = h && c.tvBrand < h.brands.length;
+    [...$("tvGrid").children].forEach((b) => { if (+b.dataset.code !== 0) b.disabled = !picked; });
+    if (document.activeElement !== $("nameInput") && !$("nameInput").dataset.touched) $("nameInput").value = c.name;
+    [...$("slots").children].forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.i === c.slot)));
+    $("snakeBest").textContent = c.snakeHigh;
+  }
+  if (st) {
+    const wf = st.wifi || {};
+    const WF_WORDS = { off: "Off", connecting: "Joining...", online: "Online", failed: "Couldn't join" };
+    $("wfState").textContent = (WF_WORDS[wf.state] || "-") + (wf.reason ? ` (${wf.reason})` : "");
+    $("wfSsid").textContent = wf.ssid || "none saved";
+    $("wfIp").textContent = wf.ip || "-";
+    $("wfRssi").textContent = wf.rssi != null ? `${wf.rssi} dBm` : "-";
+    $("wfSetup").hidden = !wf.setup;
+    if (document.activeElement !== $("wifiOn")) $("wifiOn").checked = !!wf.on;
+    $("wfApSsid").textContent = wf.apSsid || "-";
+    $("wfApPass").textContent = wf.apPass || "-";
+    $("wfApLeft").textContent = wf.setupLeft != null ? `${Math.floor(wf.setupLeft / 60)}:${String(wf.setupLeft % 60).padStart(2, "0")}` : "-";
+    $("wfSetupBtn").textContent = wf.setup ? "Close setup network" : "Open setup network";
+    $("swiftState").textContent = st.swiftPair ? "On now: nearby Windows PCs can see the pop-up" : st.ble ? "Off while connected" : "Show the Connect pop-up while pairing";
+    chip($("bleChip"), st.ble ? "good" : "warn", st.ble ? "Bluetooth connected" : "Bluetooth waiting", $("bleText"));
+    const where = st.screen === "APP" ? st.app[0] + st.app.slice(1).toLowerCase() : { PET: "Home", MENU: "Menu", TUTORIAL: "Tutorial" }[st.screen];
+    chip($("screenChip"), null, where, $("screenText"));
+    $("moodText").textContent = MOOD_WORDS[st.pet] || st.pet;
+    $("petMood").textContent = st.pet;
+    $("petLove").textContent = st.love;
+    $("petTime").textContent = st.clock ? (st.night ? "night" : "day") : "unknown";
+    $("uptime").textContent = fmtUptime(st.uptime);
+    $("heap").textContent = Math.round(st.heap / 1024) + " KB";
+  }
+  $("portName").textContent = S.port || "-";
+  $("fwDir").textContent = S.firmwareDir || "";
+  if (document.activeElement !== $("autoOpen")) $("autoOpen").checked = !!S.autoOpen;
+  if (document.activeElement !== $("autostart")) $("autostart").checked = !!S.autostart;
+  paintHex($("mirror"), S.fb);
+  renderDevices();
+  renderBrands();
+
+  const up = S.update || {};
+  $("updateBtn").disabled = !!up.running || !on;
+  if (up.lines && up.lines.length) {
+    const box = $("updateLog");
+    box.hidden = false;
+    box.textContent = up.lines.join("\n");
+    box.scrollTop = box.scrollHeight;
+  }
+}
+$("nameInput").oninput = (e) => (e.target.dataset.touched = "1");
+
+function appendLogs(logs) {
+  if (!logs || !logs.length) return;
+  const box = $("console");
+  const atBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 20;
+  for (const l of logs) {
+    const div = document.createElement("div");
+    if (l.text.startsWith("--")) div.className = "sys";
+    div.textContent = l.text;
+    box.appendChild(div);
+    logSince = l.i;
+  }
+  while (box.childElementCount > 400) box.firstChild.remove();
+  if (atBottom) box.scrollTop = box.scrollHeight;
+}
+
+function handleReplies(replies) {
+  for (const r of replies || []) {
+    replySince = r.i;
+    if (r.t === "error") toast("Pocket Nova: " + r.msg, true);
+  }
+}
+
+async function poll() {
+  try {
+    const s = await (await fetch(`/api/state?since=${logSince}&rsince=${replySince}`)).json();
+    if (!s.connected) { s.hello = S.hello; }
+    S = s;
+    $("offTitle").textContent = "Plug in Pocket Nova";
+    $("offText").textContent = "Use a USB-C cable that carries data. The panel connects by itself as soon as it's plugged in.";
+    appendLogs(s.logs);
+    handleReplies(s.replies);
+    render();
+  } catch (e) {
+    // The background program isn't answering - that's different from "not plugged in".
+    $("offline").hidden = false;
+    $("offTitle").textContent = "The Pocket Nova program isn't running";
+    $("offText").textContent = "Double-click Pocket Nova on your desktop to start it again. It also restarts by itself within a few minutes.";
+  }
+  setTimeout(poll, 150);
+}
+poll();
+</script>
+</body>
+</html>
