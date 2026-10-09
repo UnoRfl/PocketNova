@@ -48,6 +48,7 @@ APP_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = APP_DIR   # settings + log live next to the app (Store Python virtualises AppData)
 SETTINGS_PATH = os.path.join(DATA_DIR, "settings.json")
 LOG_PATH = os.path.join(DATA_DIR, "panel.log")
+HISTORY_PATH = os.path.join(DATA_DIR, "history.json")
 HTTP_PORT = 47800
 BAUD = 115200
 
@@ -58,7 +59,7 @@ KNOWN_USB = {(0x0403, 0x6001), (0x1A86, 0x55D4), (0x1A86, 0x7523), (0x10C4, 0xEA
 ALLOWED_CMDS = {
     "hello", "get", "status", "bonds", "set", "flip", "unbond", "unbond_all", "slot",
     "factory_reset", "reboot", "input", "tilt", "ir", "time", "mirror", "tutorial", "pet",
-    "tvbrands", "findtv", "wifi", "keys", "keytest", "netscan",
+    "tvbrands", "findtv", "wifi", "keys", "keytest", "netscan", "block",
 }
 
 STARTUP_LNK = os.path.join(os.environ.get("APPDATA", ""), r"Microsoft\Windows\Start Menu\Programs\Startup",
@@ -106,6 +107,71 @@ def save_settings(s):
 
 settings = load_settings()
 settings_lock = threading.Lock()
+
+
+# ---------------------------------------------------------------- history
+
+class History:
+    """Every event Pocket Nova reports (joins, tries, wrong codes...) plus
+    new devices found on the home network, kept in history.json."""
+
+    MAX = 2000
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.items, self.boot, self.last = [], None, 0
+        try:
+            with open(HISTORY_PATH, encoding="utf-8") as f:
+                saved = json.load(f)
+            self.items = saved.get("items", [])[-self.MAX:]
+            self.boot = saved.get("boot")     # the device start we're reading
+            self.last = saved.get("last", 0)  # newest event number read from it
+        except (OSError, ValueError, AttributeError):
+            pass
+
+    def add(self, item):
+        with self.lock:
+            self.items.append(item)
+            del self.items[:-self.MAX]
+            self._save()
+
+    def _save(self):
+        tmp = HISTORY_PATH + ".tmp"
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump({"boot": self.boot, "last": self.last, "items": self.items}, f)
+            os.replace(tmp, HISTORY_PATH)
+        except OSError:
+            pass
+
+    def from_device(self, msg):
+        """Takes a @{"t":"history"} reply; returns True if there's more to fetch."""
+        if msg.get("boot") != self.boot:      # Pocket Nova restarted: its numbers start again
+            self.boot, self.last = msg.get("boot"), 0
+            return True                       # ask again from #0
+        now = time.time()
+        fresh = [e for e in msg.get("list", []) if e.get("n", 0) > self.last]
+        with self.lock:
+            for e in fresh:
+                self.items.append({"t": round(now - e.get("ago", 0) / 1000), "k": e.get("k"), "mac": e.get("mac", ""),
+                                   "ip": e.get("ip", ""), "note": e.get("note", "")})
+                self.last = e["n"]
+            if fresh:
+                del self.items[:-self.MAX]
+                self._save()
+        return self.last < msg.get("last", 0)
+
+    def clear(self):
+        with self.lock:
+            self.items = []
+            self._save()
+
+    def recent(self, n=300):
+        with self.lock:
+            return self.items[-n:]
+
+
+history = History()
 
 
 # ---------------------------------------------------------------- network devices
@@ -157,6 +223,8 @@ def enrich_netscan(msg):
             d["first"] = entry["first"]
             d["router"] = d["ip"] == msg.get("router")
             d["pc"] = d["ip"] in mine
+            if d["new"]:
+                history.add({"t": now, "k": "home_new", "mac": mac, "ip": d["ip"], "note": d.get("name", "")})
         save_settings(settings)
     return {"at": now, "ssid": msg.get("ssid", ""), "router": msg.get("router", ""),
             "list": found, "firstScan": first_scan}
@@ -296,6 +364,7 @@ class DeviceLink:
         self._next_status = 0.0
         self._next_bonds = 0.0
         self._next_time = 0.0
+        self._next_hist = 0.0
         self._failed = {}                     # port -> time of last failed probe
         self.ble = BleLink(self._ble_line, self._ble_up, self._ble_down)
         self._next_ble = 0.0
@@ -428,6 +497,7 @@ class DeviceLink:
         self.send({"cmd": "status"})
         self.mirror_on = False
         self._next_time = now + 600
+        self._next_hist = 0.0                   # catch up on what happened while we were away
 
     def scan(self):
         for dev in self._candidates():
@@ -469,6 +539,9 @@ class DeviceLink:
                     self.state[t] = msg
                     if t == "hello":
                         self.state["helloAt"] = time.time()
+                elif t == "history":
+                    if history.from_device(msg):
+                        self._next_hist = 0.0       # more waiting: ask again right away
                 elif t == "fb":
                     self.state["fb"] = msg.get("d")
                 elif t == "netscan":            # names come from DNS, which takes a moment
@@ -496,6 +569,15 @@ class DeviceLink:
 
     def _periodic(self):
         now = time.time()
+        if now >= self._next_hist:              # always, panel open or not: it's a log
+            fw = (self.state.get("hello") or {}).get("fw", "0")
+            try:
+                has_history = tuple(int(x) for x in fw.split(".")[:2]) >= (2, 8)   # older firmware doesn't know it
+            except ValueError:
+                has_history = False
+            if has_history:
+                self.send({"cmd": "history", "since": history.last})
+            self._next_hist = now + 3
         active = self.ui_active()
         if now >= self._next_status:
             self.send({"cmd": "status"})
@@ -797,6 +879,9 @@ class Handler(BaseHTTPRequestHandler):
                 "autostart": autostart_enabled(),
                 "update": updater.info(),
                 "usbPresent": link.usb_present(),
+                "history": history.recent(),
+                "netLabels": {m: e.get("label") or e.get("name", "") for m, e in settings.get("netDevices", {}).items()
+                              if e.get("label") or e.get("name")},
                 "firmwareDir": settings.get("firmwareDir"),
             })
         return self._send(404, {"error": "not found"})
@@ -840,6 +925,9 @@ class Handler(BaseHTTPRequestHandler):
                 for d in (link.state.get("netscan") or {}).get("list", []):
                     if d["mac"].upper() == mac:
                         d["label"] = label
+            return self._send(200, {"ok": True})
+        if path == "/api/history/clear":
+            history.clear()
             return self._send(200, {"ok": True})
         if path == "/api/settings":
             with settings_lock:

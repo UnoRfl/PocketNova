@@ -168,10 +168,14 @@ void remoteHandle(const char* line, uint16_t id) {
       authMask |= 1u << id;
       authCode[0] = 0;
       authScroll.stop();
+      uint8_t a[6];
+      histAdd(H_CODE_OK, bleKeyboard.peerAddress(id, a) ? a : nullptr);
       fxRipple(CRGB::Green);
       Serial.println("[REMOTE] Phone connected");
       remoteReply("auth", "ok", "yes");
     } else {
+      uint8_t a[6];
+      histAdd(H_CODE_BAD, bleKeyboard.peerAddress(id, a) ? a : nullptr);
       authCode[0] = 0;              // a wrong guess gets a new code
       fxError();
       remoteAskCode(id);

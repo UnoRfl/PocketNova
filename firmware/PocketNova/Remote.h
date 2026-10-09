@@ -30,6 +30,8 @@
 //    wifi  {"action":"setup"|"stop"|"on"|"off"|"join"|"forget"}
 //    wifi  {"action":"names","apName":"..","apPass":"..","host":".."}
 //                                 setup network name/password and router name ("" = automatic)
+//    history {"since":n}          events after #n (History.h)
+//    block {"mac":"AA:..","on":true}  block/unblock a device on the setup network (blocking kicks it)
 //    netscan                      list the devices on your Wi-Fi network
 //                                 (answers @{"t":"netscan",...} when done)
 //    keys  {"list":[ids], "custom":[{"n":0,"name":"..","mods":n,"key":n}]}
@@ -109,6 +111,9 @@ void sendConfig() {
   d["host"] = myHost;
   d["hostname"] = wifiHostname;
   d["apPassCustom"] = myApPass[0] != 0;
+  d["apOpen"] = myApOpen;
+  JsonArray bl = d["blocked"].to<JsonArray>();
+  for (int i = 0; i < blockedCount; i++) bl.add(macToString(blocked[i]));
   if (!replyBle) d["apPass"] = myApPass;          // the PC (USB) only, never the phone page
   d["lastApp"] = cfg.lastApp;
   d["tutorialDone"] = cfg.tutorialDone;
@@ -191,6 +196,7 @@ void sendStatus() {
   w["setup"] = setupOn;
   if (setupOn) {
     w["apSsid"] = apSsid;
+    w["apOpen"] = myApOpen;
     if (!replyBle) w["apPass"] = apPass;        // not to the phone page
     w["setupLeft"] = (int32_t)(setupUntil - millis()) / 1000;
     // Phones and laptops joined to the setup network right now.
@@ -258,6 +264,33 @@ Event eventFromName(const char* s) {
   if (!strcmp(s, "shake")) return EV_SHAKE;
   if (!strcmp(s, "rock")) return EV_ROCK;
   return EV_NONE;
+}
+
+// Events after #since, oldest first. "ago" is in ms so the PC can turn
+// it into a clock time without Pocket Nova needing to know the time.
+void sendHistory(uint32_t since) {
+  JsonDocument d;
+  d["t"] = "history";
+  d["boot"] = histBoot;
+  d["last"] = histSeq;
+  JsonArray a = d["list"].to<JsonArray>();
+  uint32_t first = histSeq > HIST_LEN ? histSeq - HIST_LEN + 1 : 1;
+  if (since + 1 > first) first = since + 1;
+  for (uint32_t s = first; s <= histSeq && a.size() < 16; s++) {   // 16 at a time keeps Bluetooth replies small
+    HistEntry e;
+    portENTER_CRITICAL(&histMux);
+    e = hist[(s - 1) % HIST_LEN];
+    portEXIT_CRITICAL(&histMux);
+    JsonObject o = a.add<JsonObject>();
+    o["n"] = e.seq;
+    o["k"] = HIST_NAMES[e.kind];
+    o["ago"] = millis() - e.at;
+    static const uint8_t ZERO[6] = {0};
+    if (memcmp(e.mac, ZERO, 6)) o["mac"] = macToString(e.mac);
+    if (e.ip) o["ip"] = IPAddress(e.ip).toString();
+    if (e.note[0]) o["note"] = e.note;
+  }
+  sendJson(d);
 }
 
 // The result of a network scan (Wifi.h), sorted by address.
@@ -405,13 +438,23 @@ void handleRemoteLine(const char* line) {
       char keep[64];                          // no "apPass" sent = keep the current one
       strcpy(keep, myApPass);
       const char* pw = in["apPass"].is<const char*>() ? in["apPass"].as<const char*>() : keep;
-      const char* err = wifiSetNames(in["apName"] | "", pw, in["host"] | "");
+      const char* err = wifiSetNames(in["apName"] | "", pw, in["host"] | "", in["open"] | myApOpen);
       if (err) { replyError(err); return; }
       sendConfig();
     }
     else { replyError("unknown wifi action"); return; }
     replyOk(cmd, a);
     sendStatus();
+    return;
+  }
+  if (!strcmp(cmd, "history")) { sendHistory(in["since"] | 0); return; }
+  if (!strcmp(cmd, "block")) {
+    uint8_t m[6];
+    if (sscanf(in["mac"] | "", "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &m[0], &m[1], &m[2], &m[3], &m[4], &m[5]) != 6) {
+      replyError("bad address"); return;
+    }
+    if (!wifiBlock(m, in["on"] | true)) { replyError("block list is full (16)"); return; }
+    sendConfig();
     return;
   }
   if (!strcmp(cmd, "netscan")) {

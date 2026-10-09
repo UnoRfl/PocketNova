@@ -950,7 +950,7 @@ bool settingsFrame(Event e) {
         break;
       case ST_WIFI:
         if (setupOn)
-          snprintf(buf, sizeof(buf), "JOIN %s PASS %s", apSsid, apPass);
+          snprintf(buf, sizeof(buf), myApOpen ? "JOIN %s - NO PASSWORD" : "JOIN %s PASS %s", apSsid, apPass);
         else if (wifiState == WF_ONLINE)
           snprintf(buf, sizeof(buf), "ONLINE %s", WiFi.localIP().toString().c_str());
         else if (!wifiHasNetwork())

@@ -45,7 +45,7 @@
 #include "Input.h"
 #include "Ir.h"
 
-const char* const FW_VERSION = "2.7.0";
+const char* const FW_VERSION = "2.8.0";
 
 // The phone remote's Bluetooth service and its two characteristics
 // (NovaRemote.h). Made-up IDs; the web page uses the same ones.
@@ -68,6 +68,7 @@ class PocketKeyboard : public NovaKeyboard {
 PocketKeyboard bleKeyboard("Pocket Nova", "M5Stack", 100);
 
 #include "BleCtl.h"
+#include "History.h"
 #include "Wifi.h"
 #include "Shortcuts.h"
 #include "Apps.h"
@@ -342,6 +343,7 @@ void setup() {
   bleKeyboard.setScanService(REMOTE_SVC);
   bleKeyboard.begin();
   tzOffsetSec = cfg.tz;                 // until the PC or the internet says otherwise
+  histBoot = esp_random();
   wifiBegin();
   irsend.begin();
 

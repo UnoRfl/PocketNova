@@ -203,8 +203,22 @@ input[type=text]:focus, input[type=password]:focus, select:focus { box-shadow: i
 .field-note { color: var(--muted); font-size: .8rem; margin: -6px 0 4px 202px; max-width: 72ch; }   /* lines up under the inputs (.row's 190px label + 12px gap) */
 @media (max-width: 560px) { .field-note { margin-left: 0; } }
 #wfNamesMsg.bad { color: var(--bad); }
+.hist { display: grid; gap: 4px; max-height: 420px; overflow: auto; padding-right: 4px; }
+.hrow { display: grid; grid-template-columns: 96px 1fr auto; gap: 10px; align-items: center; padding: 7px 10px; background: var(--panel-2);
+        box-shadow: inset 3px 0 0 var(--line); font-size: .88rem; }
+.hrow.bad { box-shadow: inset 3px 0 0 var(--bad); }
+.hrow.warn { box-shadow: inset 3px 0 0 var(--warn); }
+.hrow.good { box-shadow: inset 3px 0 0 var(--good); }
+.hrow time { font-family: var(--font-mono); font-size: .78rem; color: var(--muted); }
+.hrow .what { min-width: 0; overflow-wrap: anywhere; }
+.hrow .who { color: var(--muted); font-size: .8rem; }
+.hrow .btn { padding: 4px 9px; font-size: .78rem; }
+.blocked { display: flex; flex-wrap: wrap; gap: 6px; }
+.blocked .btn { padding: 4px 9px; font-size: .78rem; }
+.apclient { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: .85rem; }
+.apclient .btn { padding: 3px 8px; font-size: .76rem; }
 .netnames { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
-#wfApClients { white-space: pre-line; }
+
 
 .tv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
 
@@ -446,6 +460,9 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
           <div class="namerow"><input type="password" id="wfApPassInput" class="pix" maxlength="63" autocomplete="new-password" placeholder="New random 8 digits each time">
             <button class="btn pix" id="wfApPassShow" type="button" aria-pressed="false">Show</button></div></div>
         <div class="field-note">8 to 63 characters. Anyone who knows it can join while the setup network is open (10 minutes at a time) and change which Wi-Fi Pocket Nova uses, so pick something people won't guess.</div>
+        <div class="row"><span class="label">No password</span>
+          <label class="toggle"><input type="checkbox" id="wfApOpen"><span class="muted">Open network: anyone nearby can join without a password</span></label></div>
+        <div class="field-note" id="wfOpenNote" hidden>Open networks aren't encrypted, so others nearby could read what's typed on the setup page (including your home Wi-Fi password). The History below shows everyone who joins, and you can block anyone.</div>
         <div class="inline"><button class="btn primary pix" id="wfNamesSave">Save</button><span class="hint" id="wfNamesMsg" role="status"></span></div>
         <div class="netnames">
           <div class="stat pix"><div class="v mono" id="wfHostPrev">-</div><div class="k">your router lists it as</div></div>
@@ -474,9 +491,18 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
           <div class="stat pix"><div class="v" id="wfApLeft">-</div><div class="k">closes in</div></div>
           <div class="stat pix"><div class="v" id="wfApCount">0</div><div class="k">joined now</div></div>
         </div>
-        <p class="hint mono" id="wfApClients" hidden></p>
+        <div class="devices" id="wfApClients" hidden></div>
         <div class="inline"><button class="btn primary pix" id="wfSetupBtn">Open setup network</button>
           <button class="btn danger pix" id="wfForget" data-confirm="Click again to forget it">Forget saved network</button></div>
+      </div>
+      <div class="section">
+        <h2>History <span class="count" id="histCount"></span></h2>
+        <p class="hint">Everything that happens on the setup network: who joined and left, every Connect press (the network name typed, never the password), wrong phone-remote codes, and new devices found on your home Wi-Fi. Kept on this PC, even while the panel is closed. Pocket Nova slows down repeated wrong tries by itself, and blocks a device for 10 minutes if it joins 6 times in a minute.</p>
+        <div class="stats" id="histStats"></div>
+        <div class="seg" id="histFilter"></div>
+        <div class="hist" id="histList"></div>
+        <div id="blockedBox" hidden><h3 class="tiny muted" style="margin:6px 0">Blocked from the setup network</h3><div class="blocked" id="blockedList"></div></div>
+        <div class="inline"><button class="btn danger pix" id="histClear" data-confirm="Click again to clear the history">Clear history</button></div>
       </div>
     </section>
 
@@ -940,10 +966,10 @@ function saveWfNames() {
   const name = $("wfNameInput").value.trim(), host = $("wfHostInput").value.trim();
   const apName = $("wfApNameInput").value.trim(), pass = $("wfApPassInput").value;
   const msg = $("wfNamesMsg");
-  const bad = wfNamesProblem(apName, pass, name);
+  const bad = wfNamesProblem(apName, $("wfApOpen").checked ? "" : pass, name);
   msg.className = bad ? "hint bad" : "hint"; msg.textContent = bad;
   if (bad) return;
-  const o = { cmd: "wifi", action: "names", apName, host };
+  const o = { cmd: "wifi", action: "names", apName, host, open: $("wfApOpen").checked };
   // Only send the password if it was typed, or if we know the saved one
   // (over Bluetooth Pocket Nova doesn't send it, so leaving it out keeps it).
   if ($("wfApPassInput").dataset.touched || c.apPass !== undefined) o.apPass = pass;
@@ -951,10 +977,18 @@ function saveWfNames() {
   const renaming = name !== c.name;
   if (renaming) cmd({ cmd: "set", cfg: { name } });
   WF_FIELDS.forEach((id) => delete $(id).dataset.touched);
+  delete $("wfApOpen").dataset.touched;
   delete $("nameInput").dataset.touched;
   toast(renaming ? "Saved. Pocket Nova is restarting with its new name." : "Saved");
 }
 $("wfNamesSave").onclick = saveWfNames;
+$("wfApOpen").onchange = (e) => { e.target.dataset.touched = "1"; renderOpen(); };
+function renderOpen() {
+  const open = $("wfApOpen").checked;
+  $("wfApPassInput").disabled = open;
+  $("wfApPassShow").disabled = open;
+  $("wfOpenNote").hidden = !open;
+}
 WF_FIELDS.forEach((id) => {
   $(id).oninput = (e) => { e.target.dataset.touched = "1"; $("wfNamesMsg").textContent = ""; renderNamePreview(); };
   $(id).onkeydown = (e) => { if (e.key === "Enter") saveWfNames(); };
@@ -971,6 +1005,8 @@ function fillWfNames(c) {
   put("wfHostInput", c.host);
   put("wfApNameInput", c.apName);
   if (c.apPass !== undefined) put("wfApPassInput", c.apPass);
+  if (document.activeElement !== $("wfApOpen") && !$("wfApOpen").dataset.touched) $("wfApOpen").checked = !!c.apOpen;
+  renderOpen();
   $("wfApPassInput").placeholder = c.apPassCustom && c.apPass === undefined ? "Your password (hidden over Bluetooth)" : "New random 8 digits each time";
 }
 
@@ -1017,6 +1053,91 @@ setInterval(() => {
   const wf = (S.status && S.status.wifi) || {};
   if ($("netWatch").checked && S.connected && wf.state === "online" && wf.scan == null) netScan();
 }, 120000);
+
+// ---- history
+const H_WORDS = {
+  setup_open: ["Setup network opened", ""], setup_close: ["Setup network closed", ""],
+  join: ["Joined the setup network", ""], leave: ["Left the setup network", ""],
+  try: ["Pressed Connect", "warn"], joined: ["Pocket Nova joined the Wi-Fi", "good"], failed: ["Connect didn't work", "bad"],
+  limited: ["Too many tries: told to wait", "bad"], blocked: ["Blocked device tried to join: kicked", "bad"],
+  flood: ["Joined 6 times in a minute: blocked for 10 minutes", "bad"], kick: ["Kicked and blocked from the panel", "bad"],
+  code_bad: ["Wrong phone-remote code", "bad"], code_ok: ["Phone remote connected", "good"],
+  home_new: ["New device on your home Wi-Fi", "warn"],
+};
+const H_GROUPS = { all: null, setup: ["setup_open", "setup_close", "join", "leave", "blocked", "flood", "kick"],
+  tries: ["try", "joined", "failed", "limited"], codes: ["code_bad", "code_ok"], home: ["home_new"] };
+let histFilter = "all", histKey = "";
+try { histFilter = localStorage.getItem("pn-histfilter") || "all"; } catch (e) {}
+seg($("histFilter"), ["All", "Setup network", "Connect tries", "Phone codes", "Home Wi-Fi"], (i) => {
+  histFilter = Object.keys(H_GROUPS)[i]; histKey = "";
+  try { localStorage.setItem("pn-histfilter", histFilter); } catch (e) {}
+  renderHistory();
+});
+const isBlocked = (mac) => ((S.config && S.config.blocked) || []).includes(mac);
+function whoIs(mac) {
+  const n = (S.netLabels || {})[mac] || (S.labels || {})[mac];
+  return n ? `${n} (${mac})` : mac;
+}
+function blockBtn(mac) {
+  const b = document.createElement("button"); b.className = "btn pix" + (isBlocked(mac) ? "" : " danger");
+  b.textContent = isBlocked(mac) ? "Unblock" : "Block";
+  b.onclick = () => {
+    const on = !isBlocked(mac);
+    cmd({ cmd: "block", mac, on });
+    toast(on ? `Blocked ${mac}. If it's on the setup network it gets kicked now, and every time it comes back.` : `Unblocked ${mac}`);
+  };
+  return b;
+}
+function histTime(t) {
+  const d = new Date(t * 1000), today = new Date().toDateString() === d.toDateString();
+  return today ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+               : d.toLocaleDateString([], { month: "short", day: "numeric" }) + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+function renderHistory() {
+  const all = S.history || [], blocked = (S.config && S.config.blocked) || [];
+  const key = JSON.stringify([all.length, all.length && all[all.length - 1], histFilter, blocked, S.netLabels]);
+  if (key === histKey) return;
+  histKey = key;
+  $("histCount").textContent = all.length || "";
+  // The last hour at a glance.
+  const hour = Date.now() / 1000 - 3600, recent = all.filter((e) => e.t > hour);
+  const count = (...k) => recent.filter((e) => k.includes(e.k)).length;
+  $("histStats").innerHTML = "";
+  [[count("join"), "joins (last hour)"], [count("failed", "limited"), "failed tries"], [count("blocked", "flood", "kick"), "kicked"],
+   [count("code_bad"), "wrong codes"]].forEach(([v, k]) => {
+    const d = document.createElement("div"); d.className = "stat pix" + (v && k !== "joins (last hour)" ? " warn" : "");
+    d.innerHTML = `<div class="v">${v}</div><div class="k">${k}</div>`;
+    $("histStats").appendChild(d);
+  });
+  setSeg($("histFilter"), Object.keys(H_GROUPS).indexOf(histFilter));
+  const want = H_GROUPS[histFilter];
+  const list = all.filter((e) => !want || want.includes(e.k)).slice(-200).reverse();
+  const box = $("histList");
+  box.innerHTML = "";
+  if (!list.length) box.innerHTML = `<div class="empty">Nothing yet.</div>`;
+  list.forEach((e) => {
+    const [words, cls] = H_WORDS[e.k] || [e.k, ""];
+    const row = document.createElement("div"); row.className = "hrow pix " + cls;
+    const tm = document.createElement("time"); tm.textContent = histTime(e.t); tm.title = new Date(e.t * 1000).toLocaleString();
+    const what = document.createElement("div"); what.className = "what";
+    what.textContent = words + (e.note ? (e.k === "try" || e.k === "joined" || e.k === "limited" ? `: "${e.note}"` : `: ${e.note}`) : "");
+    if (e.mac || e.ip) {
+      const who = document.createElement("div"); who.className = "who mono";
+      who.textContent = [e.mac && whoIs(e.mac), e.ip].filter(Boolean).join(" · ");
+      what.appendChild(who);
+    }
+    const ap = e.mac && !["code_bad", "code_ok", "home_new"].includes(e.k);   // Bluetooth/home devices can't be blocked here
+    row.append(tm, what, ap ? blockBtn(e.mac) : document.createElement("span"));
+    box.appendChild(row);
+  });
+  $("blockedBox").hidden = !blocked.length;
+  $("blockedList").innerHTML = "";
+  blocked.forEach((m) => {
+    const b = blockBtn(m); b.textContent = `${whoIs(m)} · Unblock`;
+    $("blockedList").appendChild(b);
+  });
+}
+armed($("histClear"), async () => { await api("/api/history/clear", {}); histKey = ""; toast("History cleared"); });
 
 function renderNet() {
   const wf = (S.status && S.status.wifi) || {};
@@ -1560,7 +1681,19 @@ function render() {
     const cl = wf.apClients || [];
     $("wfApCount").textContent = cl.length;
     $("wfApClients").hidden = !cl.length;
-    $("wfApClients").textContent = cl.map((x) => `${x.mac}${x.ip ? " · " + x.ip : " · getting an address…"}`).join("\n");
+    const clKey = JSON.stringify(cl);
+    if ($("wfApClients").dataset.key !== clKey) {
+      $("wfApClients").dataset.key = clKey;
+      $("wfApClients").innerHTML = "";
+      cl.forEach((x) => {
+        const row = document.createElement("div"); row.className = "apclient";
+        const t = document.createElement("span"); t.className = "mono";
+        t.textContent = `${whoIs(x.mac)} · ${x.ip || "getting an address…"}`;
+        row.append(t, blockBtn(x.mac));
+        $("wfApClients").appendChild(row);
+      });
+    }
+    if (wf.apOpen) $("wfApPass").textContent = "none (open)";
     $("swiftState").textContent = st.swiftPair ? "On now: nearby Windows PCs can see the pop-up" : st.ble ? "Off while connected" : "Show the Connect pop-up while pairing";
     const slotTxt = st.slot != null ? ` · slot ${st.slot + 1}` : "";
     chip($("bleChip"), st.ble ? "good" : "warn", st.ble ? `${st.host ? nameFor(st.host) : "Bluetooth connected"}${slotTxt}` : `Bluetooth waiting${slotTxt}`, $("bleText"));
@@ -1586,6 +1719,7 @@ function render() {
   renderDevices();
   renderBrands();
   renderNet();
+  renderHistory();
   renderNamePreview();
 
   const up = S.update || {};
