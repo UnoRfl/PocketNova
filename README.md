@@ -70,3 +70,7 @@ TV codes live in `firmware/tools/tv_codes.json`. Run `gen_tvcodes.py` to rebuild
 
 - The Bluetooth keyboard code (`NovaKeyboard.*`) is based on [ESP32-BLE-Keyboard](https://github.com/T-vK/ESP32-BLE-Keyboard) by T-vK, with fixes.
 - TV codes were checked against Flipper-IRDB, the LIRC remotes database, probonopd/irdb, SmartIR and TV-B-Gone. Sources are listed in `tv_codes.json`.
+
+## License
+
+[MIT](LICENSE), except `firmware/PocketNova/NovaKeyboard.*`, which is based on T-vK's ESP32-BLE-Keyboard and keeps its author's terms.
