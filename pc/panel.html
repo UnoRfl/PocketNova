@@ -267,6 +267,30 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
 .modal .foot { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
 #usbChip.clickable { cursor: pointer; }
 
+/* firmware update screen */
+#updScreen .box { gap: 16px; }
+#updScreen [hidden] { display: none !important; }
+#updScreen .head svg { width: 56px; height: 52px; }
+#updScreen.done .box { box-shadow: inset 0 0 0 2px var(--good), 0 0 40px rgba(61, 220, 132, .25); }
+#updScreen.failed .box { box-shadow: inset 0 0 0 2px var(--bad), 0 0 40px rgba(255, 93, 108, .25); }
+.usteps { list-style: none; margin: 0; padding: 0 !important; display: grid; gap: 8px; }
+.usteps li { display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: center; color: var(--muted); }
+.usteps li::before { content: ""; width: 12px; height: 12px; justify-self: center; box-shadow: inset 0 0 0 2px var(--line); }
+.usteps li.now { color: var(--fg); font-weight: 600; }
+.usteps li.now::before { background: var(--star); box-shadow: 0 0 10px var(--star); animation: blink 1s steps(2) infinite; }
+.usteps li.ok::before { background: var(--good); box-shadow: none; }
+.usteps li.bad { color: var(--bad); }
+.usteps li.bad::before { background: var(--bad); box-shadow: none; }
+.usteps .t { font-family: var(--font-mono); font-size: .8rem; font-weight: 400; color: var(--muted); }
+.progress.big { height: 14px; }
+.progress.big i { transition: width .6s linear; }
+#updScreen.done .progress i { background: var(--good); }
+#updScreen.failed .progress i { background: var(--bad); }
+.updpct { font-family: var(--font-pixel); font-size: 2rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.updwarn { background: #2a1d05; color: #ffd98a; padding: 8px 10px; font-size: .88rem; --px: 4px; }
+#updScreen details summary { cursor: pointer; color: var(--muted); font-size: .85rem; }
+#updScreen .console { height: 160px; margin-top: 8px; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
@@ -539,9 +563,8 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
       </div>
       <div class="section">
         <h2>Firmware</h2>
-        <p class="hint">Rebuilds and installs the firmware from <span class="mono" id="fwDir"></span>. Takes about 3 minutes. Keep Pocket Nova plugged in until it says Done.</p>
+        <p class="hint">Rebuilds and installs the firmware from <span class="mono" id="fwDir"></span>. Takes about 3 minutes, and a progress screen shows each step. Keep Pocket Nova plugged in until it says Done.</p>
         <div class="inline"><button class="btn pix" id="updateBtn">Update firmware</button><button class="btn pix" id="rebootBtn">Restart Pocket Nova</button></div>
-        <div class="console pix" id="updateLog" hidden></div>
       </div>
       <div class="section">
         <h2>Factory reset</h2>
@@ -564,9 +587,35 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
     <svg class="mascot" id="offMascot" viewBox="0 0 16 15" role="img" aria-label="Nova, asleep"></svg>
     <h2 id="offTitle">Looking for Pocket Nova</h2>
     <p class="muted" id="offText">Use a USB-C cable that carries data. The panel connects by itself as soon as it's plugged in.</p>
+    <div class="section" id="offStuck" hidden>
+      <p class="hint">It's plugged in but not answering. If an update was cut off (cable pulled, PC restarted), reinstalling the firmware brings it back.</p>
+      <div><button class="btn primary pix" id="offReinstall">Reinstall firmware</button></div>
+    </div>
   </div>
 </div>
 <div class="toast pix" id="toast" hidden></div>
+
+<div class="modal" id="updScreen" hidden role="dialog" aria-modal="true" aria-labelledby="updTitle">
+  <div class="box pix">
+    <div class="head"><svg id="updMascot" viewBox="0 0 16 15" aria-hidden="true"></svg>
+      <div><h3 id="updTitle">Updating Pocket Nova</h3><div class="muted" id="updSub">Firmware update</div></div></div>
+    <div class="inline" style="justify-content: space-between; align-items: end;">
+      <span class="updpct" id="updPct">0%</span><span class="mono muted" id="updTime">0:00</span></div>
+    <div class="progress big" role="progressbar" aria-labelledby="updTitle" aria-valuemin="0" aria-valuemax="100" id="updBarWrap"><i id="updBar"></i></div>
+    <ol class="usteps">
+      <li data-s="build">Build the firmware on this PC<span class="t" data-t="build">about 1 min</span></li>
+      <li data-s="upload">Install it on Pocket Nova<span class="t" data-t="upload">about 2 min</span></li>
+      <li data-s="restart">Restart and reconnect<span class="t" data-t="restart">a few seconds</span></li>
+    </ol>
+    <p class="updwarn" id="updWarn">Keep Pocket Nova plugged in and leave this window open until it says Done.</p>
+    <p class="hint" id="updText"></p>
+    <details><summary>Details</summary><div class="console" id="updLog"></div></details>
+    <div class="foot" id="updFoot" hidden>
+      <button class="btn pix" id="updRetry" hidden>Try again</button>
+      <button class="btn primary pix" id="updClose">Close</button>
+    </div>
+  </div>
+</div>
 
 <div class="modal" id="btModal" hidden role="dialog" aria-modal="true" aria-labelledby="btModalTitle">
   <div class="box pix">
@@ -1005,10 +1054,70 @@ $("resetBtn").onclick = () => {
   toast("Factory reset. Pocket Nova is restarting into the tutorial.");
 };
 $("rebootBtn").onclick = () => { cmd({ cmd: "reboot" }); toast("Restarting Pocket Nova"); };
-$("updateBtn").onclick = async () => {
+async function startUpdate() {
   const r = await api("/api/firmware", {});
-  toast(r.started ? "Firmware update started" : "An update is already running");
-};
+  updShown = true; updClosed = false;
+  if (!r.started) toast("An update is already running");
+}
+$("updateBtn").onclick = startUpdate;
+$("updRetry").onclick = startUpdate;
+$("offReinstall").onclick = startUpdate;
+$("updClose").onclick = () => { updClosed = true; $("updScreen").hidden = true; };
+
+// ---- firmware update screen
+let updShown = false, updClosed = false, updFace = "", stuckSince = 0;
+const UPD_STEPS = ["build", "upload", "restart"];
+const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+function renderUpdate() {
+  const up = S.update || {};
+  if (up.running) { updShown = true; updClosed = false; }
+  const box = $("updScreen");
+  box.hidden = !updShown || updClosed;
+  if (box.hidden) return;
+  const stage = up.stage || "build", done = stage === "done", failed = stage === "failed";
+  // Overall progress: building ~35% (timed, about 60 s), installing 35-95% (real), restarting 95-100%.
+  let pct = stage === "build" ? Math.min(33, (up.stageElapsed || 0) / 60 * 33)
+          : stage === "upload" ? 35 + (up.pct || 0) * 0.6
+          : stage === "restart" ? 95 + Math.min(4, (up.stageElapsed || 0) / 5) : 100;
+  const reached = failed ? UPD_STEPS.indexOf(updFailedAt(up)) : done ? 3 : UPD_STEPS.indexOf(stage);
+  if (failed) pct = parseFloat($("updBar").style.width) || 0;
+  $("updBar").style.width = pct + "%";
+  $("updBarWrap").setAttribute("aria-valuenow", Math.round(pct));
+  $("updPct").textContent = done ? "Done" : failed ? "Failed" : Math.floor(pct) + "%";
+  $("updTime").textContent = mmss(up.elapsed || 0);
+  box.classList.toggle("done", done);
+  box.classList.toggle("failed", failed);
+  UPD_STEPS.forEach((s, i) => {
+    const li = box.querySelector(`li[data-s="${s}"]`);
+    li.className = i < reached ? "ok" : i === reached ? (failed ? "bad" : "now") : "";
+    const t = box.querySelector(`[data-t="${s}"]`);
+    if (s === "upload" && stage === "upload") t.textContent = `${up.pct || 0}%`;
+    else if (i < reached) t.textContent = "done";
+  });
+  $("updTitle").textContent = done ? "Pocket Nova is up to date" : failed ? "The update didn't finish" : "Updating Pocket Nova";
+  $("updSub").textContent = done && up.fw ? `Now running firmware ${up.fw}` : "Firmware update";
+  $("updWarn").hidden = done || failed;
+  $("updText").textContent = {
+    build: "Building the firmware on this PC. Pocket Nova keeps working until the install starts.",
+    upload: "Installing. Pocket Nova's screen goes dark while this runs. That's normal.",
+    restart: "Installed. Pocket Nova is starting up with the new firmware…",
+    done: up.fw ? "Everything went fine. All your settings were kept." : "Installed. Pocket Nova is restarting and reconnects by itself.",
+    failed: (up.error || "Something went wrong.") + " Your settings are safe. Press Try again; if Pocket Nova seems stuck, it still accepts a new install over the cable.",
+  }[stage] || "";
+  $("updFoot").hidden = !(done || failed);
+  $("updRetry").hidden = !failed;
+  const log = $("updLog");
+  const text = (up.lines || []).join("\n");
+  if (log.textContent !== text) { log.textContent = text; log.scrollTop = log.scrollHeight; }
+  const face = done ? "happy" : failed ? "sad" : "dizzy";
+  if (face !== updFace) { drawNova($("updMascot"), face); updFace = face; }
+}
+// Which step a failed update stopped at, from its log.
+function updFailedAt(up) {
+  const l = (up.lines || []).join("\n");
+  return l.includes("Waiting for Pocket Nova") ? "restart" : l.includes("Uploading to") ? "upload" : "build";
+}
+window.addEventListener("beforeunload", (e) => { if (S.update && S.update.running) { e.preventDefault(); e.returnValue = ""; } });
 $("autoOpen").onchange = (e) => api("/api/settings", { autoOpen: e.target.checked });
 $("autostart").onchange = async (e) => {
   const r = await api("/api/settings", { autostart: e.target.checked });
@@ -1335,12 +1444,16 @@ function chip(el, cls, text, textEl) {
 function render() {
   const on = S.connected;
   const relink = !on && S.bleReconnecting;
-  $("offline").hidden = !!on || !!switching || relink;   // short drops and slot switches: no "looking" flash
+  const updating = !!(S.update && S.update.running);
+  // Plugged in for 10+ s but silent: offer to reinstall.
+  if (!on && S.usbPresent) stuckSince = stuckSince || Date.now(); else stuckSince = 0;
+  $("offStuck").hidden = !stuckSince || Date.now() - stuckSince < 10000;
+  $("offline").hidden = !!on || !!switching || relink || updating;   // short drops, slot switches, updates: no "looking" flash
   const viaBt = S.transport === "bluetooth";
   checkTransport();
   chip($("usbChip"), on ? "good" : relink ? "warn" : "bad",
        on ? (viaBt ? "Linked by Bluetooth" : "Linked by USB") : relink ? "Reconnecting (Bluetooth)…" : switching ? "Restarting…" : "Not linked", $("usbText"));
-  if (S.paused) chip($("usbChip"), "warn", "Updating firmware", $("usbText"));
+  if (updating) chip($("usbChip"), "warn", { build: "Building firmware…", upload: `Installing firmware ${S.update.pct || 0}%`, restart: "Restarting…" }[S.update.stage] || "Updating firmware", $("usbText"));
 
   const h = S.hello, c = S.config, st = S.status;
   if (h) {
@@ -1408,14 +1521,10 @@ function render() {
   renderNamePreview();
 
   const up = S.update || {};
-  $("updateBtn").disabled = !!up.running || !on || viaBt;
+  $("updateBtn").disabled = !!up.running || viaBt;
+  $("updateBtn").textContent = up.running ? "Updating…" : "Update firmware";
   $("updateBtn").title = viaBt ? "Firmware updates need the USB cable" : "";
-  if (up.lines && up.lines.length) {
-    const box = $("updateLog");
-    box.hidden = false;
-    box.textContent = up.lines.join("\n");
-    box.scrollTop = box.scrollHeight;
-  }
+  renderUpdate();
 }
 $("nameInput").oninput = (e) => (e.target.dataset.touched = "1");
 

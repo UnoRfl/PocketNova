@@ -17,6 +17,7 @@ The panel itself is panel.html, served only to this PC (127.0.0.1).
 
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -368,6 +369,13 @@ class DeviceLink:
             self._add_log(f"-- Pocket Nova disconnected ({why})")
 
     # ---- discovery
+    def usb_present(self):
+        """Is a Pocket Nova-type USB port plugged in? (checked at most every 2 s)"""
+        now = time.time()
+        if now - getattr(self, "_usb_at", 0) > 2:
+            self._usb_at, self._usb = now, next(self._candidates(), None) is not None
+        return self._usb
+
     def _candidates(self):
         for p in list_ports.comports():
             if (p.vid, p.pid) in KNOWN_USB:
@@ -433,7 +441,7 @@ class DeviceLink:
             self.port = dev
             self.connected_at = time.time()
             with self.lock:
-                self.state = {"hello": hello}
+                self.state = {"hello": hello, "helloAt": time.time()}
                 self._add_log(f"-- Connected to {hello.get('name')} on {dev} (firmware {hello.get('fw')})")
             log(f"Connected on {dev}: {hello}")
             if self.ble.connected:           # the cable is back: it takes over
@@ -459,6 +467,8 @@ class DeviceLink:
             with self.lock:
                 if t in ("hello", "config", "status", "bonds", "tvbrands", "keys"):
                     self.state[t] = msg
+                    if t == "hello":
+                        self.state["helloAt"] = time.time()
                 elif t == "fb":
                     self.state["fb"] = msg.get("d")
                 elif t == "netscan":            # names come from DNS, which takes a moment
@@ -557,10 +567,30 @@ link = DeviceLink()
 # ---------------------------------------------------------------- firmware update
 
 class Updater:
+    """Rebuilds the firmware and installs it, in four stages the panel shows:
+    build -> upload -> restart -> done (or failed)."""
+
+    WRITING = re.compile(r"Writing at 0x([0-9a-f]+).*\((\d+) ?%\)")
+
     def __init__(self):
         self.running = False
         self.lines = deque(maxlen=300)
         self.ok = None
+        self.stage = ""                       # build / upload / restart / done / failed
+        self.pct = 0                          # upload progress of the firmware itself
+        self.started = 0.0
+        self.stage_at = 0.0
+        self.fw = ""                          # the version Pocket Nova reports afterwards
+        self.error = ""
+
+    def _stage(self, name):
+        self.stage, self.stage_at = name, time.time()
+
+    def info(self):
+        return {"running": self.running, "ok": self.ok, "lines": list(self.lines), "stage": self.stage,
+                "pct": self.pct, "elapsed": int(time.time() - self.started) if self.started else 0,
+                "stageElapsed": int(time.time() - self.stage_at) if self.stage_at else 0,
+                "fw": self.fw, "error": self.error}
 
     def start(self):
         if self.running:
@@ -571,31 +601,57 @@ class Updater:
     def _run(self):
         self.running, self.ok = True, None
         self.lines.clear()
+        self.pct, self.fw, self.error, self.started = 0, "", "", time.time()
+        self._stage("build")
         cli = settings.get("arduinoCli") or "arduino-cli"
         if not os.path.exists(cli):
             cli = shutil.which("arduino-cli") or cli
         sketch = settings.get("firmwareDir")
         fqbn = "esp32:esp32:m5stack-atom:PartitionScheme=min_spiffs"
-        port = link.port
+        # Not answering but plugged in (a cut-off update leaves it like that):
+        # flashing over the cable still works, so use the USB port anyway.
+        port = link.port or next(link._candidates(), None)
         try:
             if not port:
                 raise RuntimeError("Firmware updates need the USB cable. Plug Pocket Nova in." if link.ble.connected
-                                   else "Pocket Nova isn't connected.")
+                                   else "Pocket Nova isn't plugged in. Connect it with a USB-C data cable.")
             if not os.path.isdir(sketch):
                 raise RuntimeError(f"Firmware folder not found: {sketch}")
             self.lines.append("Building firmware... (about a minute)")
             self._exec([cli, "compile", "--fqbn", fqbn, sketch])
-            self.lines.append(f"Uploading to {port}... (about 80 seconds, keep it plugged in)")
+            self.lines.append(f"Uploading to {port}... (about 2 minutes, keep it plugged in)")
+            self._stage("upload")
             link.release()
             self._exec([cli, "upload", "-p", port, "--fqbn", fqbn + ",UploadSpeed=115200", sketch])
-            self.lines.append("Done. Pocket Nova is restarting.")
+            self.pct = 100
+            self.lines.append("Installed. Waiting for Pocket Nova to start up...")
+            self._stage("restart")
+            link.resume()
+            self._wait_for_device()
+            self.lines.append(f"Done. Pocket Nova is running firmware {self.fw}." if self.fw
+                              else "Done. Pocket Nova is restarting.")
+            self._stage("done")
             self.ok = True
         except Exception as e:
             self.lines.append(f"FAILED: {e}")
+            self.error = str(e)
+            self._stage("failed")
             self.ok = False
         finally:
             link.resume()
             self.running = False
+
+    def _wait_for_device(self):
+        """Up to 30 s for the fresh firmware to say hello over USB."""
+        since = time.time()
+        while time.time() - since < 30:
+            with link.lock:
+                hello = link.state.get("hello") or {}
+                fresh = link.state.get("helloAt", 0) > since
+            if fresh and link.connected():
+                self.fw = hello.get("fw", "")
+                return
+            time.sleep(0.5)
 
     def _exec(self, args):
         # Point arduino-cli at its folders explicitly. The tools live in
@@ -617,7 +673,12 @@ class Updater:
                              creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         for raw in p.stdout:
             line = raw.decode("utf-8", "replace").rstrip()
-            if line and not line.startswith("Writing at"):
+            m = self.WRITING.search(line)
+            if m:                               # "Writing at 0x0001c000... (12 %)"
+                if int(m.group(1), 16) >= 0x10000:  # the firmware itself (lower = bootloader bits)
+                    self.pct = int(m.group(2))
+                continue
+            if line:
                 self.lines.append(line)
         if p.wait() != 0:
             raise RuntimeError(f"{os.path.basename(args[0])} {args[1]} failed (exit {p.returncode})")
@@ -734,7 +795,8 @@ class Handler(BaseHTTPRequestHandler):
                 "labels": labels,
                 "autoOpen": auto_open,
                 "autostart": autostart_enabled(),
-                "update": {"running": updater.running, "ok": updater.ok, "lines": list(updater.lines)},
+                "update": updater.info(),
+                "usbPresent": link.usb_present(),
                 "firmwareDir": settings.get("firmwareDir"),
             })
         return self._send(404, {"error": "not found"})

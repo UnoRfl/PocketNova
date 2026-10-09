@@ -28,6 +28,17 @@ Write-Host 'Checking bleak (Bluetooth)...'
 if ($LASTEXITCODE -ne 0) { & python -m pip install --user --disable-pip-version-check bleak==3.0.2 }
 if ($LASTEXITCODE -ne 0) { Write-Host 'Bluetooth library not installed: the panel will work over USB only.' }
 
+# Never stop the panel in the middle of a firmware update: a cut-off
+# install leaves Pocket Nova unable to start until it's flashed again.
+try {
+  $st = Invoke-RestMethod -Uri 'http://127.0.0.1:47800/api/state' -TimeoutSec 3
+  while ($st.update.running) {
+    Write-Host 'A firmware update is running. Waiting for it to finish...'
+    Start-Sleep -Seconds 5
+    $st = Invoke-RestMethod -Uri 'http://127.0.0.1:47800/api/state' -TimeoutSec 3
+  }
+} catch { }
+
 # Stop a running copy so its files can be replaced.
 Get-CimInstance Win32_Process -Filter "Name='pythonw.exe' OR Name='python.exe'" -ErrorAction SilentlyContinue |
   Where-Object { $_.CommandLine -like '*pocketnova_panel.py*' } |
