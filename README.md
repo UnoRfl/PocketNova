@@ -8,7 +8,7 @@ A pocket remote, presentation clicker and virtual pet for the **M5Stack Atom Mat
 ## Features
 
 - **Nova, the pet.** Reacts to taps, tilts, shaking and rocking. Sleeps at night and remembers how much you like it.
-- **14 apps.** Media remote, universal TV remote (infrared, 20 brands), slide clicker, air mouse, Windows shortcuts, spirit level, dice, timer, mood lights, torch, Snake, Reflex, Simon and settings.
+- **19 apps.** Media remote, universal TV remote (infrared, 20 brands), slide clicker, air mouse, Windows shortcuts, smart home buttons, spirit level, dice, timer, mood lights, torch, room climate, network health, Wi-Fi channels, Bluetooth finder, Snake, Reflex, Simon and settings. Pick which ones the menu shows in the panel.
 - **Air mouse.** Point it like a laser pointer: the gyroscope moves the cursor. Tap to click, tilt and tap to right-click or scroll.
 - **Keys app.** 27 Windows shortcuts to choose from (mic mute, Alt+Tab, clipboard, screenshot, virtual desktops...) plus 3 of your own. Pick and order them in the PC panel.
 - **Bluetooth keyboard.** 3 device slots. On Windows, a "Connect" pop-up appears while it's ready to pair (Swift Pair).
@@ -16,6 +16,9 @@ A pocket remote, presentation clicker and virtual pet for the **M5Stack Atom Mat
 - **Phone remote.** A web page that controls it over Bluetooth, protected by a code shown on the LEDs.
 - **PC panel (Windows).** Opens by itself when Pocket Nova is plugged in. Every setting, a live copy of the screen and firmware updates over the cable or over Wi-Fi. With no cable it falls back to Bluetooth.
 - **PC alerts.** A finished download, a maxed-out processor or a low laptop battery pops up on the LEDs.
+- **Network tools.** Pings your router and the internet to tell Wi-Fi trouble from an internet outage (with a latency chart and outage log in the panel), and a Wi-Fi channel analyzer that recommends a channel.
+- **Bluetooth finder.** Find your earbuds or a tracker by signal strength: the LEDs go from blue to red as you get closer.
+- **Smart home.** MQTT with Home Assistant discovery: scene buttons, alerts from Home Assistant to the LEDs, and room temperature/humidity from an M5Stack ENV unit on the Grove port.
 
 ## Download
 

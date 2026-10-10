@@ -23,6 +23,10 @@
  *    BleCtl.h   Bluetooth slots and pairings
  *    Wifi.h     Wi-Fi setup page and internet time
  *    Ota.h      firmware updates over Wi-Fi
+ *    Sensor.h   temperature/humidity sensor on the Grove port
+ *    NetTools.h Wi-Fi channel analyzer and network health monitor
+ *    Finder.h   find a Bluetooth device by its signal
+ *    Home.h     smart home over MQTT (Home Assistant)
  *    Shortcuts.h  the Keys app's shortcut library and your picks
  *    NovaRemote.h  Bluetooth service for the phone remote web page
  *    Apps.h     every app            Pet.h     Nova the pet
@@ -47,7 +51,7 @@
 #include "Ir.h"
 #include <esp_task_wdt.h>
 
-const char* const FW_VERSION = "2.13.0";
+const char* const FW_VERSION = "2.14.0";
 
 // Why Pocket Nova last started (for the panel and the history).
 const char* resetReasonName() {
@@ -90,6 +94,10 @@ PocketKeyboard bleKeyboard("Pocket Nova", "M5Stack", 100);
 #include "Shortcuts.h"
 #include "Apps.h"
 #include "Pet.h"
+#include "Sensor.h"
+#include "NetTools.h"
+#include "Finder.h"
+#include "Home.h"
 
 // ----------------------------------------------------------------------------
 //  The app list. To add an app: write its functions in Apps.h, draw an
@@ -112,11 +120,16 @@ App apps[] = {
   {"SLIDES",   CRGB(0, 255, 80),    ICON_SLIDES, FRAMES(ICON_SLIDES), nullptr,       slidesFrame,   nullptr,    false},
   {"AIR MOUSE",CRGB(255, 255, 255), ICON_MOUSE,  FRAMES(ICON_MOUSE),  mouseEnter,    mouseFrame,    nullptr,    false},
   {"KEYS",     CRGB(255, 120, 0),   ICON_KEYS,   FRAMES(ICON_KEYS),   keysEnter,     keysFrame,     nullptr,    false},
+  {"HOME",     CRGB(255, 200, 0),   ICON_HOME,   FRAMES(ICON_HOME),   homeEnter,     homeFrame,     nullptr,    false},
   {"LEVEL",    CRGB(0, 255, 0),     ICON_LEVEL,  FRAMES(ICON_LEVEL),  nullptr,       levelFrame,    nullptr,    false},
   {"DICE",     CRGB(255, 255, 255), ICON_DICE,   FRAMES(ICON_DICE),   nullptr,       diceFrame,     nullptr,    false},
   {"TIMER",    CRGB(255, 200, 0),   ICON_TIMER,  FRAMES(ICON_TIMER),  timerEnter,    timerFrame,    nullptr,    false},
   {"LIGHTS",   CRGB(255, 0, 180),   ICON_LIGHT,  FRAMES(ICON_LIGHT),  lightEnter,    lightFrame,    nullptr,    false},
   {"TORCH",    CRGB(255, 255, 255), ICON_TORCH,  FRAMES(ICON_TORCH),  torchEnter,    torchFrame,    torchLeave, false},
+  {"CLIMATE",  CRGB(0, 200, 255),   ICON_CLIMATE,FRAMES(ICON_CLIMATE),climateEnter,  climateFrame,  nullptr,    false},
+  {"NETWORK",  CRGB(0, 255, 80),    ICON_NET,    FRAMES(ICON_NET),    netEnter,      netFrame,      nullptr,    false},
+  {"CHANNELS", CRGB(255, 200, 0),   ICON_CHAN,   FRAMES(ICON_CHAN),   chanEnter,     chanFrame,     nullptr,    false},
+  {"FINDER",   CRGB(0, 120, 255),   ICON_FIND,   FRAMES(ICON_FIND),   finderEnter,   finderFrame,   finderLeave,false},
   {"SNAKE",    CRGB(0, 255, 0),     ICON_SNAKE,  FRAMES(ICON_SNAKE),  snakeEnter,    snakeFrame,    nullptr,    false},
   {"REFLEX",   CRGB(0, 255, 0),     ICON_REFLEX, FRAMES(ICON_REFLEX), reflexEnter,   reflexFrame,   nullptr,    false},
   {"SIMON",    CRGB(255, 200, 0),   ICON_SIMON,  FRAMES(ICON_SIMON),  simonEnter,    simonFrame,    nullptr,    false},
@@ -134,6 +147,67 @@ int      currentApp = -1;
 Carousel menu;
 uint32_t menuIdleSince = 0, screenSince = 0;
 bool     mirrorOn = false;       // PC app asked for a live copy of the screen
+
+// ============================================================================
+//  Which apps are on the menu, in what order (picked in the PC panel).
+//  Saved as NAMES, not numbers, so a firmware with new apps doesn't mix
+//  them up; apps the saved list has never heard of are added at the end.
+//  SETTINGS is always there, so you can't lock yourself out.
+// ============================================================================
+uint8_t menuOrder[32];
+uint8_t menuLen = 0;
+
+int appByName(const char* n) {
+  for (int i = 0; i < APP_COUNT; i++) if (!strcmp(apps[i].name, n)) return i;
+  return -1;
+}
+int menuPos(int app) {
+  for (int i = 0; i < menuLen; i++) if (menuOrder[i] == app) return i;
+  return -1;
+}
+bool nameInList(const char* list, const char* n) {   // "A,B,C" contains n?
+  size_t l = strlen(n);
+  for (const char* p = list; *p; ) {
+    const char* e = strchr(p, ',');
+    size_t k = e ? (size_t)(e - p) : strlen(p);
+    if (k == l && !strncmp(p, n, l)) return true;
+    if (!e) break;
+    p = e + 1;
+  }
+  return false;
+}
+void menuAdd(int app) { if (app >= 0 && menuPos(app) < 0 && menuLen < sizeof(menuOrder)) menuOrder[menuLen++] = app; }
+
+void menuSave() {
+  String vis, all;
+  for (int i = 0; i < menuLen; i++) { if (i) vis += ','; vis += apps[menuOrder[i]].name; }
+  for (int i = 0; i < APP_COUNT; i++) { if (i) all += ','; all += apps[i].name; }
+  prefs.begin("menu", false);
+  prefs.putString("vis", vis);
+  prefs.putString("all", all);
+  prefs.end();
+}
+
+void menuLoad() {
+  String vis, all;
+  prefs.begin("menu", true);
+  bool has = prefs.isKey("vis");
+  if (has) { vis = prefs.getString("vis"); all = prefs.getString("all"); }
+  prefs.end();
+  menuLen = 0;
+  if (has) {
+    int from = 0;
+    while (from <= (int)vis.length()) {
+      int comma = vis.indexOf(',', from);
+      if (comma < 0) comma = vis.length();
+      menuAdd(appByName(vis.substring(from, comma).c_str()));
+      from = comma + 1;
+    }
+  }
+  for (int i = 0; i < APP_COUNT; i++)
+    if (!has || !nameInList(all.c_str(), apps[i].name)) menuAdd(i);   // new apps show up
+  menuAdd(APP_COUNT - 1);                                              // SETTINGS, always
+}
 
 // ============================================================================
 //  Moving between screens
@@ -166,7 +240,7 @@ void openApp(int i) {
   screen = SCR_APP;
   screenSince = millis();
   currentApp = i;
-  menu.index = i;
+  if (menuPos(i) >= 0) menu.index = menuPos(i);
   if (cfg.lastApp != i) { cfg.lastApp = i; saveConfig(); }   // remember your place
   Serial.printf("[APP] Open %s\n", apps[i].name);
   setTiltBase();
@@ -195,10 +269,10 @@ void onRotationChanged() {
 // ============================================================================
 
 void drawMenuItem(int i, int xo) {
-  const App& a = apps[i];
+  const App& a = apps[menuOrder[i]];
   drawSprite(a.icon[(millis() / 350) % a.frames], xo, 0);
 }
-const char* menuName(int i) { return apps[i].name; }
+const char* menuName(int i) { return apps[menuOrder[i]].name; }
 
 void menuFrame(Event e) {
   uint32_t now = millis();
@@ -206,13 +280,13 @@ void menuFrame(Event e) {
   switch (e) {
     case EV_LEFT:  menu.move(-1); break;
     case EV_RIGHT: menu.move(+1); break;
-    case EV_TAP:   openApp(menu.index); return;
+    case EV_TAP:   openApp(menuOrder[menu.index]); return;
     case EV_HOLD:  goPet(); return;          // hold in the menu = back to the pet
     default: break;
   }
   if (now - menuIdleSince > MENU_IDLE_MS) { goPet(); return; }
   clearFb();
-  menu.draw(drawMenuItem, menuName, apps[menu.index].color);
+  menu.draw(drawMenuItem, menuName, apps[menuOrder[menu.index]].color);
   // Bluetooth dot: top-right corner glows blue while connected.
   if (bleOK() && !fb[4]) fb[4] = CRGB(0, 0, beatsin8(20, 15, 60));
 }
@@ -229,6 +303,7 @@ void petFrame(Event e) {
   petUpdate(now);
   clearFb();
   drawPet(now);
+  if (nmOn && wifiState == WF_ONLINE && !nmInternetUp && (now / 500) % 2) fb[20] = CRGB(255, 0, 0);   // internet down
 }
 
 // ============================================================================
@@ -345,6 +420,8 @@ void alertShow(const char* kind, const char* msg) {
   if (!strcmp(kind, "download"))     { alert.icon = SPR_AL_DOWN; alert.color = CRGB(0, 255, 80); }
   else if (!strcmp(kind, "cpu"))     { alert.icon = SPR_AL_HOT;  alert.color = CRGB(255, 90, 0); }
   else if (!strcmp(kind, "battery")) { alert.icon = SPR_AL_BATT; alert.color = CRGB(255, 0, 0); }
+  else if (!strcmp(kind, "netdown")) { alert.icon = SPR_AL_NET;  alert.color = CRGB(255, 0, 0); }
+  else if (!strcmp(kind, "netup"))   { alert.icon = SPR_AL_NET;  alert.color = CRGB(0, 255, 80); }
   else                               { alert.icon = SPR_AL_BELL; alert.color = CRGB(160, 60, 255); }
   size_t k = 0;                  // keep what the 3x5 font can show
   for (const char* p = msg; *p && k < sizeof(alert.msg) - 1; p++)
@@ -433,6 +510,9 @@ void setup() {
   }
   wifiBegin();
   otaLoadKey();
+  nmLoad();
+  finderLoad();
+  hmLoad();
   irsend.begin();
 
   // A restart Pocket Nova asked for itself (slot switch, new name...) skips
@@ -441,7 +521,8 @@ void setup() {
   for (int i = 0; i < 15; i++) { readTilt(); delay(10); }   // let the filter settle
   setTiltBase();
   evHead = evTail;   // drop any events from settling
-  menu.reset(APP_COUNT, constrain(cfg.lastApp, 0, APP_COUNT - 1));
+  menuLoad();
+  menu.reset(menuLen, max(0, menuPos(constrain(cfg.lastApp, 0, APP_COUNT - 1))));
 
   Serial.printf("\n=== %s ready (firmware %s, Bluetooth slot %d, %s) ===\n",
                 cfg.name, FW_VERSION, cfg.btSlot + 1, bleOwnAddress().c_str());
@@ -481,6 +562,12 @@ void loop() {
   bleSlotMapUpdate();
   wifiUpdate();
   otaUpdate();
+  sensorUpdate();
+  mdnsUpdate();
+  netMonitorUpdate();
+  chanScanUpdate();
+  finderUpdate();
+  homeUpdate();
   remoteUpdate();
 
   Event e = popEvent();

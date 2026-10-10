@@ -87,6 +87,27 @@ SPRITE(ICO_SIMON_2, ".ggg." "R...b" "r...b" "r...b" ".YYY.")
 SPRITE(ICO_SIMON_3, ".GGG." "r...B" "r...B" "r...b" ".ggg.")
 const char* const ICON_SIMON[] = {ICO_SIMON_1, ICO_SIMON_2, ICO_SIMON_3};
 
+SPRITE(ICO_HOME_1, "..Y.." ".YYY." "YYYYY" ".YwY." ".YwY.")
+SPRITE(ICO_HOME_2, "..Y.." ".YYY." "YYYYY" ".YYY." ".YwY.")
+const char* const ICON_HOME[] = {ICO_HOME_1, ICO_HOME_2};
+
+SPRITE(ICO_CLIM_1, ".w..." ".w..C" ".w..C" "RRR.C" "RRR.C")
+SPRITE(ICO_CLIM_2, ".w..." ".R..." ".R..C" "RRR.C" "RRR.C")
+const char* const ICON_CLIMATE[] = {ICO_CLIM_1, ICO_CLIM_2};
+
+SPRITE(ICO_NET_1, "GGGGG" "....." "....G" "..GGG" "GGGGG")
+SPRITE(ICO_NET_2, "GGGGG" "....." "..Y.." "..YGG" "GYYGG")
+const char* const ICON_NET[] = {ICO_NET_1, ICO_NET_2};
+
+SPRITE(ICO_CHAN_1, "....." "..R.." "..R.Y" "G.RGY" "GGRGY")
+SPRITE(ICO_CHAN_2, "....." "..O.." "..O.." "G.OGY" "GGOGY")
+const char* const ICON_CHAN[] = {ICO_CHAN_1, ICO_CHAN_2};
+
+SPRITE(ICO_FIND_1, "....." ".bbb." ".bWb." ".bbb." ".....")
+SPRITE(ICO_FIND_2, "BBBBB" "B...B" "B.W.B" "B...B" "BBBBB")
+SPRITE(ICO_FIND_3, "RRRRR" "ROOOR" "ROWOR" "ROOOR" "RRRRR")
+const char* const ICON_FIND[] = {ICO_FIND_1, ICO_FIND_2, ICO_FIND_3};
+
 SPRITE(ICO_SET_1, "..w.." ".WWW." "wW.Ww" ".WWW." "..w..")
 SPRITE(ICO_SET_2, "w...w" ".WWW." ".W.W." ".WWW." "w...w")
 const char* const ICON_SET[] = {ICO_SET_1, ICO_SET_2};
@@ -172,3 +193,6 @@ SPRITE(SPR_AL_DOWN,  "..G.." "..G.." "GGGGG" ".GGG." "..G..")
 SPRITE(SPR_AL_HOT,   "..O.." ".OYO." ".OYO." "OYWYO" ".OOO.")
 SPRITE(SPR_AL_BATT,  ".www." "w...w" "w...w" "wRRRw" "wwwww")
 SPRITE(SPR_AL_BELL,  "..P.." ".PPP." ".PPP." "PPPPP" "..W..")
+SPRITE(SPR_AL_NET,   ".www." "w.w.w" "wwwww" "w.w.w" ".www.")
+SPRITE(SPR_PLUG,     ".w.w." ".w.w." "wwwww" ".www." "..Y..")
+SPRITE(SPR_RING,     "BBBBB" "B...B" "B...B" "B...B" "BBBBB")

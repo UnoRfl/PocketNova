@@ -360,6 +360,78 @@ a { color: var(--accent); }
       </article>
 
       <article class="app">
+        <div class="matrix" data-anim="ICON_MOUSE"></div>
+        <div class="app-body">
+          <span class="tag">Bluetooth</span>
+          <h3>Air mouse</h3>
+          <p>Point Pocket Nova like a laser pointer. Hold it flat with the top edge toward the screen: <b>turn</b> it left and right to move the cursor, <b>tip</b> it to go up and down. <b>Tap</b> to click (two quick taps double-click), <b>tilt right and tap</b> to right-click, <b>tilt left and tap</b> to switch scrolling on or off. Hold it still for half a second when it opens. It reads the gyroscope, which measures turning. Speed and direction are in the panel. If the cursor doesn't move, remove Pocket Nova in Windows Bluetooth settings and pair it again once.</p>
+        </div>
+      </article>
+
+      <article class="app">
+        <div class="matrix" data-anim="ICON_HOME"></div>
+        <div class="app-body">
+          <span class="tag">Smart home</span>
+          <h3>Home</h3>
+          <p>Buttons for your smart home. <b>Tilt</b> through your scenes and <b>tap</b> to send one to Home Assistant (over MQTT). The top-right dot is green while it's connected. Name the scenes and set up the connection in the panel's Home tab.</p>
+        </div>
+      </article>
+
+      <article class="app">
+        <div class="matrix" data-anim="ICON_CLIMATE"></div>
+        <div class="app-body">
+          <span class="tag">Sensor</span>
+          <h3>Climate</h3>
+          <p>Room temperature and humidity from an M5Stack <b>ENV II, III or IV</b> unit in the Grove socket. The left bars are a thermometer (blue cold, red warm), the right column is humidity. <b>Tap</b> to read the numbers out. The panel keeps a week of history.</p>
+        </div>
+      </article>
+
+      <article class="app">
+        <div class="matrix" data-anim="ICON_NET"></div>
+        <div class="app-body">
+          <span class="tag">Network</span>
+          <h3>Network</h3>
+          <p>Is it your Wi-Fi or your internet? Pocket Nova pings your router and the internet every 5 seconds. The top row is the router, the columns below are the internet: taller and warmer means slower, a full red column means no answer. <b>Tap</b> to read out the times. While the internet is down, Nova's bottom-left corner blinks red, and an alert pops up when it drops and comes back.</p>
+        </div>
+      </article>
+
+      <article class="app">
+        <div class="matrix" data-anim="ICON_CHAN"></div>
+        <div class="app-body">
+          <span class="tag">Network</span>
+          <h3>Channels</h3>
+          <p>A Wi-Fi channel analyzer. Bars show how crowded each 2.4 GHz channel is (taller = busier). <b>Tilt</b> to see channels 1-5, 5-9 and 9-13. The quietest of 1, 6 and 11 blinks white, and your router's channel has a cyan floor. <b>Tap</b> to scan again. The panel shows all 13 channels and every network.</p>
+        </div>
+      </article>
+
+      <article class="app">
+        <div class="matrix" data-anim="ICON_FIND"></div>
+        <div class="app-body">
+          <span class="tag">Bluetooth</span>
+          <h3>Finder</h3>
+          <p>Find your earbuds, a tracker or a watch by its Bluetooth signal. First, hold Pocket Nova right next to it and <b>tap</b> to lock on (or pick it in the panel). Then walk around: the rings fill in and turn from blue to red as you get closer, and the pulse speeds up. <b>Tap</b> to read the signal, <b>tilt left and tap</b> to pick another device.</p>
+        </div>
+      </article>
+
+      <article class="app">
+        <div class="matrix" data-anim="ICON_REFLEX"></div>
+        <div class="app-body">
+          <span class="tag">Game</span>
+          <h3>Reflex</h3>
+          <p>Reaction time. <b>Press</b> to start, wait for green, press again as fast as you can. Too soon doesn't count. Your time and best time scroll past.</p>
+        </div>
+      </article>
+
+      <article class="app">
+        <div class="matrix" data-anim="ICON_SIMON"></div>
+        <div class="app-body">
+          <span class="tag">Game</span>
+          <h3>Simon</h3>
+          <p>Watch the sides light up, then repeat the order by <b>tilting</b> toward each side. One more step every round, and it gets faster. Your best is saved.</p>
+        </div>
+      </article>
+
+      <article class="app">
         <div class="matrix" data-anim="ICON_SET"></div>
         <div class="app-body">
           <span class="tag">System</span>
@@ -391,13 +463,15 @@ a { color: var(--accent); }
         <tbody>
           <tr><td><b>Live screen</b></td><td>A copy of the 5×5 screen that updates as it happens, plus what Nova is feeling and whether Bluetooth is connected.</td></tr>
           <tr><td><b>Remote control</b></td><td>Press tap, double, triple, hold, tilt, shake or rock from the PC.</td></tr>
-          <tr><td><b>Device</b></td><td>Brightness, rotation, auto-rotate, swapping tilt directions, which app a double tap opens, the Bluetooth name, and replaying the tutorial.</td></tr>
-          <tr><td><b>Bluetooth</b></td><td>Which slot is in use and what's connected, each slot's own devices (named and removable), live progress while switching slot, and the Windows "Connect" pop-up switch.</td></tr>
+          <tr><td><b>Device</b></td><td>Brightness, rotation, auto-rotate, swapping tilt directions, which app a double tap opens, <b>which apps the menu shows and their order</b>, air mouse speed and direction, the Bluetooth name, and replaying the tutorial.</td></tr>
+          <tr><td><b>Bluetooth</b></td><td>Which slot is in use and what's connected, each slot's own devices (named and removable), live progress while switching slot, the Windows "Connect" pop-up switch, and <b>Find a device</b> (scan nearby Bluetooth devices, pick one, and watch it get warmer).</td></tr>
           <tr><td><b>Keys</b></td><td>Which shortcuts are in the Keys app and their order, the full library with a Test button for each, and your 3 custom shortcuts.</td></tr>
           <tr><td><b>Wi-Fi</b></td><td>Status and address, the on/off switch, "Open setup network" (shows its name and password) and "Forget saved network".</td></tr>
+          <tr><td><b>Network</b></td><td>Network health (router and internet pings, a latency chart, an outage log and a verdict on where the trouble is) and the Wi-Fi channel analyzer with a recommended channel.</td></tr>
           <tr><td><b>TV remote</b></td><td>Pick the brand and test each button.</td></tr>
-          <tr><td><b>Nova</b></td><td>Mood, affection, day or night, Snake best score, and buttons to play with Nova.</td></tr>
-          <tr><td><b>System</b></td><td>Firmware version, a firmware update button, restart, <b>factory reset</b>, startup options and a live activity log.</td></tr>
+          <tr><td><b>Home</b></td><td>Smart home over MQTT (broker, login, topic, Home Assistant discovery), your scenes for the HOME app, and the room sensor with temperature and humidity charts.</td></tr>
+          <tr><td><b>Nova</b></td><td>Mood, affection, day or night, best scores for Snake, Reflex and Simon, and buttons to play with Nova.</td></tr>
+          <tr><td><b>System</b></td><td>Firmware version, firmware updates over the cable <b>or over Wi-Fi</b>, PC alerts on the LEDs (finished downloads, a busy processor, a low laptop battery), restart, <b>factory reset</b>, startup options and a live activity log.</td></tr>
         </tbody>
       </table>
     </div>
@@ -532,6 +606,24 @@ const COLORS = {
 const S = (...rows) => rows.join("");
 // Copied from Sprites.h
 const SPRITES = {
+  ICO_CHAN_1: S(".....","..R..","..R.Y","G.RGY","GGRGY"),
+  ICO_CHAN_2: S(".....","..O..","..O..","G.OGY","GGOGY"),
+  ICO_CLIM_1: S(".w...",".w..C",".w..C","RRR.C","RRR.C"),
+  ICO_CLIM_2: S(".w...",".R...",".R..C","RRR.C","RRR.C"),
+  ICO_FIND_1: S(".....",".bbb.",".bWb.",".bbb.","....."),
+  ICO_FIND_2: S("BBBBB","B...B","B.W.B","B...B","BBBBB"),
+  ICO_FIND_3: S("RRRRR","ROOOR","ROWOR","ROOOR","RRRRR"),
+  ICO_HOME_1: S("..Y..",".YYY.","YYYYY",".YwY.",".YwY."),
+  ICO_HOME_2: S("..Y..",".YYY.","YYYYY",".YYY.",".YwY."),
+  ICO_MOUSE_1: S("W....","WW...","WWW..","WWWW.","..W.."),
+  ICO_MOUSE_2: S(".W...",".WW..",".WWW.",".WWWW","...W."),
+  ICO_NET_1: S("GGGGG",".....","....G","..GGG","GGGGG"),
+  ICO_NET_2: S("GGGGG",".....","..Y..","..YGG","GYYGG"),
+  ICO_REFLEX_1: S("rrrrr","rrrrr","rrrrr","rrrrr","rrrrr"),
+  ICO_REFLEX_2: S("GGGGG","GGGGG","GGWGG","GGGGG","GGGGG"),
+  ICO_SIMON_1: S(".GGG.","R...B","R...B","R...B",".YYY."),
+  ICO_SIMON_2: S(".ggg.","R...b","r...b","r...b",".YYY."),
+  ICO_SIMON_3: S(".GGG.","r...B","r...B","r...b",".ggg."),
   ICO_MEDIA_1: S("..PP.","..P.P","..P..","PPP..","PPP.."),
   ICO_MEDIA_2: S("..M.M","..M..","MMM..","MMM..","....."),
   ICO_TV_1: S(".W.W.","..W..","BBBBB","BCCCB","BBBBB"),
@@ -646,6 +738,14 @@ const ANIMS = {
   ICON_LIGHT: ["ICO_LIGHT_1","ICO_LIGHT_2","ICO_LIGHT_3"],
   ICON_TORCH: ["ICO_TORCH_1","ICO_TORCH_2"],
   ICON_SNAKE: ["ICO_SNAKE_1","ICO_SNAKE_2","ICO_SNAKE_3"],
+  ICON_MOUSE: ["ICO_MOUSE_1","ICO_MOUSE_2"],
+  ICON_HOME: ["ICO_HOME_1","ICO_HOME_2"],
+  ICON_CLIMATE: ["ICO_CLIM_1","ICO_CLIM_2"],
+  ICON_NET: ["ICO_NET_1","ICO_NET_2"],
+  ICON_CHAN: ["ICO_CHAN_1","ICO_CHAN_2"],
+  ICON_FIND: ["ICO_FIND_1","ICO_FIND_2","ICO_FIND_3"],
+  ICON_REFLEX: ["ICO_REFLEX_1","ICO_REFLEX_1","ICO_REFLEX_2"],
+  ICON_SIMON: ["ICO_SIMON_1","ICO_SIMON_2","ICO_SIMON_3"],
   ICON_SET: ["ICO_SET_1","ICO_SET_2"],
   PET_LOOK: ["PET_C","PET_C","PET_R","PET_R","PET_BLINK","PET_C","PET_UP","PET_C","PET_DN"],
   PET_DIZZY: ["PET_UP","PET_C","PET_DN","PET_R"],

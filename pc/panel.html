@@ -349,6 +349,74 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
 #updScreen details summary { cursor: pointer; color: var(--muted); font-size: .85rem; }
 #updScreen .console { height: 160px; margin-top: 8px; }
 
+
+/* ---- tools (2.14): locked sections, verdicts, network path, charts, finder */
+.needs { background: #2a1d05; color: #ffd98a; padding: 8px 10px; margin: 0; font-size: .88rem; --px: 4px; }
+.note { background: rgba(77, 163, 255, .12); color: #bcdcff; padding: 8px 10px; margin: 0; font-size: .88rem; --px: 4px; }
+.note.bad { background: rgba(255, 93, 108, .12); color: #ffc2c8; }
+.section.locked > :not(h2):not(.needs) { opacity: .35; pointer-events: none; filter: grayscale(.7); }
+.verdict { display: flex; gap: 12px; align-items: center; padding: 12px 14px; background: var(--panel-2); box-shadow: inset 4px 0 0 var(--muted); --px: 5px; }
+.verdict::before { content: ""; width: 12px; height: 12px; flex: none; background: var(--muted); }
+.verdict.good { box-shadow: inset 4px 0 0 var(--good); } .verdict.good::before { background: var(--good); box-shadow: 0 0 10px var(--good); }
+.verdict.warn { box-shadow: inset 4px 0 0 var(--warn); } .verdict.warn::before { background: var(--warn); animation: blink 1s steps(2) infinite; }
+.verdict.bad { box-shadow: inset 4px 0 0 var(--bad); } .verdict.bad::before { background: var(--bad); box-shadow: 0 0 10px var(--bad); animation: blink .6s steps(2) infinite; }
+.verdict b { font-family: var(--font-pixel); font-weight: 600; font-size: 1.05rem; }
+.netpath { display: grid; grid-template-columns: auto 1fr auto 1fr auto; align-items: center; }
+.hop { display: grid; justify-items: center; gap: 3px; padding: 10px 12px; background: var(--panel-2); box-shadow: inset 0 0 0 2px var(--line); min-width: 120px; text-align: center; --px: 6px; }
+.hop svg { width: 32px; height: 32px; image-rendering: pixelated; }
+.hop b { font-family: var(--font-pixel); font-weight: 600; }
+.hop .ms { font-family: var(--font-pixel); font-size: 1.3rem; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.hop .sub { font-family: var(--font-tiny); font-size: .62rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.hop.good { box-shadow: inset 0 0 0 2px var(--good); } .hop.good .ms { color: var(--good); }
+.hop.warn { box-shadow: inset 0 0 0 2px var(--warn); } .hop.warn .ms { color: var(--warn); }
+.hop.bad { box-shadow: inset 0 0 0 2px var(--bad), 0 0 18px rgba(255, 93, 108, .25); } .hop.bad .ms { color: var(--bad); }
+.wire { height: 6px; position: relative; background: repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 12px); }
+.wire.good { background: repeating-linear-gradient(90deg, var(--good) 0 6px, transparent 6px 12px); background-size: 24px 6px; animation: flow .9s linear infinite; }
+.wire.warn { background: repeating-linear-gradient(90deg, var(--warn) 0 6px, transparent 6px 12px); background-size: 24px 6px; animation: flow 2.4s linear infinite; }
+.wire.bad { background: rgba(255, 93, 108, .45); }
+.wire.bad::after { content: "\2715"; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -52%); color: var(--bad); background: var(--space);
+                   padding: 0 6px; font-weight: 700; }
+@keyframes flow { to { background-position: 24px 0; } }
+@media (max-width: 640px) { .netpath { grid-template-columns: 1fr; justify-items: center; } .wire { width: 6px; height: 22px; background: var(--line); } }
+.chartbox { background: #0b0913; box-shadow: inset 0 0 0 2px var(--line); padding: 10px 12px; display: grid; gap: 8px; --px: 6px; }
+.charthead { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .8rem; color: var(--muted); align-items: center; }
+.legend i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
+svg.chart { width: 100%; height: auto; aspect-ratio: 600 / 170; display: block; }
+svg.chart.small { aspect-ratio: 600 / 120; }
+.chart text { fill: var(--muted); font: 10px var(--font-mono); }
+.chartempty { color: var(--muted); font-size: .88rem; padding: 18px 0; text-align: center; }
+table.nets { border-collapse: collapse; width: 100%; font-size: .88rem; }
+table.nets th { text-align: left; font-family: var(--font-tiny); font-size: .64rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 400; padding: 4px 8px; }
+table.nets td { padding: 6px 8px; border-top: 1px dashed var(--line); }
+table.nets tr.mine td { background: rgba(42, 255, 210, .06); }
+.sigbars { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; vertical-align: -1px; margin-right: 6px; }
+.sigbars i { width: 3px; background: var(--line); }
+.sigbars i:nth-child(1) { height: 25%; } .sigbars i:nth-child(2) { height: 50%; } .sigbars i:nth-child(3) { height: 75%; } .sigbars i:nth-child(4) { height: 100%; }
+.sigbars i.on { background: var(--good); }
+.findnow { display: grid; gap: 10px; padding: 14px 16px; background: var(--nova-soft); box-shadow: inset 0 0 0 2px var(--nova); --px: 6px; }
+.findnow .top { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+.findnow .big { font-family: var(--font-pixel); font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+.heat { position: relative; height: 16px; background: linear-gradient(90deg, #2a6bff, #3ddc84 45%, #ffd34d 70%, #ff5d6c); --px: 4px; }
+.heat.off { filter: grayscale(1); opacity: .35; }
+.heat b { position: absolute; top: -5px; width: 4px; height: 26px; background: var(--fg); box-shadow: 0 0 8px #fff; transform: translateX(-2px); transition: left .6s; }
+.heatlbl { display: flex; justify-content: space-between; font-family: var(--font-tiny); font-size: .64rem; color: var(--muted); text-transform: uppercase; }
+.letter { width: 30px; height: 30px; display: grid; place-items: center; font-family: var(--font-pixel); font-size: 1.1rem; color: #140b24; flex: none; --px: 4px; }
+.krow.off { opacity: .5; }
+.krow .lock { font-family: var(--font-tiny); font-size: .62rem; color: var(--muted); text-transform: uppercase; }
+.form { display: grid; gap: 10px; }
+.form .row input[type=text], .form .row input[type=password], .form .row input[type=number] { width: 100%; max-width: 340px; }
+input[type=number] { background: #120f1c; border: 0; box-shadow: inset 0 0 0 2px var(--line); padding: 8px 10px; min-width: 0; width: 120px; }
+input[type=number]:focus { box-shadow: inset 0 0 0 2px var(--nova); outline: 0; }
+.msg { font-size: .88rem; color: var(--muted); } .msg.bad { color: var(--bad); } .msg.good { color: var(--good); }
+.topics { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: .86rem; }
+.topics code { font-family: var(--font-mono); font-size: .8rem; color: var(--cyan); overflow-wrap: anywhere; }
+details.howto summary { cursor: pointer; color: var(--nova-hi); }
+details.howto[open] summary { margin-bottom: 8px; }
+.empty-state { display: flex; gap: 14px; align-items: center; padding: 14px; background: var(--panel-2); box-shadow: inset 0 0 0 2px var(--line); --px: 6px; }
+.empty-state svg { width: 44px; height: 44px; image-rendering: pixelated; flex: none; }
+.stat .v.cool { color: #7cc4ff; } .stat .v.ok { color: var(--good); } .stat .v.hot { color: var(--warn); }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
@@ -407,9 +475,11 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
       <button class="tab pix" role="tab" aria-selected="true" data-tab="device" data-icon="device">Device</button>
       <button class="tab pix" role="tab" aria-selected="false" data-tab="bt" data-icon="bt">Bluetooth</button>
       <button class="tab pix" role="tab" aria-selected="false" data-tab="wifi" data-icon="wifi">Wi-Fi</button>
+      <button class="tab pix" role="tab" aria-selected="false" data-tab="net" data-icon="router">Network</button>
       <button class="tab pix" role="tab" aria-selected="false" data-tab="watch" data-icon="eye">Watch</button>
       <button class="tab pix" role="tab" aria-selected="false" data-tab="keys" data-icon="keys">Keys</button>
       <button class="tab pix" role="tab" aria-selected="false" data-tab="tv" data-icon="tv">TV remote</button>
+      <button class="tab pix" role="tab" aria-selected="false" data-tab="home" data-icon="home">Home</button>
       <button class="tab pix" role="tab" aria-selected="false" data-tab="pet" data-icon="pet">Nova</button>
       <button class="tab pix" role="tab" aria-selected="false" data-tab="system" data-icon="gear">System</button>
     </div>
@@ -425,6 +495,12 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
         <div class="row"><span class="label">Tilt direction</span>
           <div class="inline"><button class="btn pix" id="flipX">Swap left / right</button><button class="btn pix" id="flipY">Swap forward / back</button></div></div>
         <div class="row"><label for="lastApp">Double tap on Nova opens</label><select id="lastApp" class="pix"></select></div>
+      </div>
+      <div class="section" id="secApps">
+        <h2>Apps on the menu</h2>
+        <p class="hint">Pick which apps the Atom's menu shows, and their order. Fewer apps = less tilting to reach the ones you use. Hidden apps still open from this panel. Settings always stays, so you can't lock yourself out.</p>
+        <div class="klist" id="appList"></div>
+        <div class="inline"><button class="btn primary pix" id="appSave" disabled>Save menu</button><button class="btn pix" id="appAll">Show every app</button><span class="count" id="appCount"></span></div>
       </div>
       <div class="section">
         <h2>Air mouse</h2>
@@ -469,6 +545,20 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
         <p class="hint">While Pocket Nova is ready to pair, a nearby Windows PC shows "New Bluetooth device found, Connect". One click pairs it. This is Microsoft's <b>Swift Pair</b>. It's on when nothing is paired, and for 3 minutes after Pocket Nova starts or switches slot. On the PC it also needs Settings → Bluetooth &amp; devices → Devices → "Show notifications to connect using Swift Pair".</p>
         <div class="row"><span class="label">Pop-up</span>
           <label class="toggle"><input type="checkbox" id="swiftPair"><span class="muted" id="swiftState">Show the Connect pop-up while pairing</span></label></div>
+      </div>
+      <div class="section" id="secFind">
+        <h2>Find a device</h2>
+        <p class="hint">Lost your earbuds, a tracker or a watch? Pocket Nova listens for its Bluetooth signal and shows how close you are: the FINDER app on the Atom glows blue when you're far and red when you're on top of it, and pulses faster as you get closer. Pick the device here, or open FINDER, hold the Atom right next to the device and tap.</p>
+        <div class="findnow pix" id="findNow">
+          <div class="top"><div><b class="big" id="findName">Nothing picked yet</b><div class="mono muted" id="findAddr"></div></div>
+            <div class="big" id="findDb">-</div></div>
+          <div class="heat pix" id="findHeat"><b id="findMark" style="left:0%"></b></div>
+          <div class="heatlbl"><span>Far</span><span id="findTrend"></span><span>Right here</span></div>
+          <div class="inline"><button class="btn primary pix" id="findOpen">Open FINDER on Pocket Nova</button><button class="btn pix" id="findForget">Stop tracking</button></div>
+        </div>
+        <div class="inline"><button class="btn pix" id="findScan">Scan nearby</button><span class="muted" id="findScanState">Lists every Bluetooth device Pocket Nova can hear, strongest first.</span></div>
+        <div class="devices" id="findList"></div>
+        <p class="hint">Some phones and earbuds change their Bluetooth address every few minutes for privacy. If the one you track goes quiet, Pocket Nova follows a device with the same name instead. Walls and bodies weaken the signal, so walk around slowly and watch which way it gets warmer.</p>
       </div>
       <div class="section">
         <h2>How to pair a new device</h2>
@@ -593,6 +683,55 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
       </div>
     </section>
 
+    <!-- NETWORK -->
+    <section class="pane" id="pane-net" hidden>
+      <div class="section" id="secHealth">
+        <h2>Network health</h2>
+        <p class="hint">Every 5 seconds Pocket Nova pings your router and the internet. If the <b>router</b> is slow or silent, the problem is your Wi-Fi. If the router is fine but the <b>internet</b> isn't, it's your internet provider (or the modem).</p>
+        <p class="note pix" id="healthNote" hidden></p>
+        <div class="netpath">
+          <div class="hop" id="hopNova"><span id="hopNovaIco"></span><b>Pocket Nova</b><span class="sub" id="hopNovaSub">-</span></div>
+          <i class="wire" id="wireRouter"></i>
+          <div class="hop" id="hopRouter"><span id="hopRouterIco"></span><b>Router</b><span class="ms" id="hopRouterMs">-</span><span class="sub" id="hopRouterSub">-</span></div>
+          <i class="wire" id="wireNet"></i>
+          <div class="hop" id="hopNet"><span id="hopNetIco"></span><b>Internet</b><span class="ms" id="hopNetMs">-</span><span class="sub" id="hopNetSub">-</span></div>
+        </div>
+        <div class="verdict pix" id="netVerdict"><span>Waiting for the first pings…</span></div>
+        <div class="chartbox pix">
+          <div class="charthead"><span class="legend"><span><i style="background:var(--cyan)"></i>Router</span><span><i style="background:var(--nova-hi)"></i>Internet</span><span><i style="background:var(--warn)"></i>Slow line</span><span><i style="background:var(--bad)"></i>No answer</span></span>
+            <div class="seg" id="netRange"></div></div>
+          <svg class="chart" id="netChart" role="img" aria-label="Latency over time"></svg>
+        </div>
+        <div class="stats">
+          <div class="stat pix"><div class="v" id="netLossR">-</div><div class="k">router misses (2.5 min)</div></div>
+          <div class="stat pix"><div class="v" id="netLossN">-</div><div class="k">internet misses (2.5 min)</div></div>
+          <div class="stat pix"><div class="v" id="netOutCount">0</div><div class="k">outages (24 h)</div></div>
+          <div class="stat pix"><div class="v" id="netWorst">-</div><div class="k">slowest (chart)</div></div>
+        </div>
+        <h3 class="gsub">Outages</h3>
+        <div class="hist" id="outages"><div class="empty">No outages recorded. The panel logs them while it's running.</div></div>
+      </div>
+      <div class="section" id="secNetCfg">
+        <h2>Monitor settings</h2>
+        <div class="form">
+          <div class="row"><span class="label">Monitor</span><label class="toggle"><input type="checkbox" id="nmOn"><span class="muted">Ping the router and the internet every 5 s</span></label></div>
+          <div class="row"><label for="nmTarget">Internet test address</label><input type="text" id="nmTarget" class="pix" maxlength="63" placeholder="1.1.1.1" spellcheck="false"></div>
+          <p class="field-note">An address that's always up. 1.1.1.1 (Cloudflare) and 8.8.8.8 (Google) are good picks; a name like google.com works too.</p>
+          <div class="row"><label for="nmSlow">Slow above</label><div class="inline"><input type="number" id="nmSlow" min="20" max="2000" step="10"><span class="muted">milliseconds</span></div></div>
+          <div class="row"><span class="label">Alert</span><label class="toggle"><input type="checkbox" id="nmAlert"><span class="muted">Pop "INTERNET DOWN" and "INTERNET BACK" up on the LEDs</span></label></div>
+          <div class="inline"><button class="btn primary pix" id="nmSave">Save</button><span class="msg" id="nmMsg"></span></div>
+        </div>
+      </div>
+      <div class="section" id="secChan">
+        <h2>Wi-Fi channels</h2>
+        <p class="hint">2.4 GHz Wi-Fi has 13 channels, but each network is wide enough to spill over about two channels on each side. Channels <b>1, 6 and 11</b> don't overlap, so pick the quietest of those for your router. Bars show how crowded each channel is, counting how loud each neighbour is and its spill-over.</p>
+        <div class="inline"><button class="btn primary pix" id="chanScan">Scan channels</button><button class="btn pix" id="chanShow">Show on Pocket Nova</button><span class="muted" id="chanAge"></span></div>
+        <div class="verdict pix" id="chanVerdict"><span>Press Scan channels. It takes about 3 seconds.</span></div>
+        <div class="chartbox pix"><svg class="chart" id="chanChart" role="img" aria-label="How crowded each Wi-Fi channel is"></svg></div>
+        <div class="table-wrap"><table class="nets" id="chanTable"></table></div>
+      </div>
+    </section>
+
     <!-- KEYS -->
     <section class="pane" id="pane-keys" hidden>
       <div class="section">
@@ -676,6 +815,57 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
           <tr><td>Night (10 pm–7 am)</td><td>Sleepy eyes, dozes after 30 s. The clock comes from this PC.</td></tr>
           <tr><td>50+ affection</td><td>Floats a little heart now and then</td></tr>
         </table></div>
+      </div>
+    </section>
+
+    <!-- HOME -->
+    <section class="pane" id="pane-home" hidden>
+      <div class="section" id="secMqtt">
+        <h2>Smart home</h2>
+        <p class="hint">Pocket Nova talks to Home Assistant (or Node-RED, openHAB…) over <b>MQTT</b>: a small message service where devices post to named "topics". In Home Assistant, install the <b>Mosquitto broker</b> add-on and make a user for Pocket Nova, then fill this in. With discovery on, Home Assistant adds Pocket Nova by itself.</p>
+        <p class="note pix" id="mqttNote" hidden></p>
+        <div class="bt-now pix" id="mqttNow"><span class="sig"><i></i><i></i><i></i><i></i></span><div class="txt"><b id="mqttState">Off</b><span class="muted" id="mqttSub">Not set up</span></div></div>
+        <div class="form">
+          <div class="row"><span class="label">Smart home</span><label class="toggle"><input type="checkbox" id="mqOn"><span class="muted">Connect to the broker</span></label></div>
+          <div class="row"><label for="mqHost">Broker address</label><input type="text" id="mqHost" class="pix" maxlength="63" placeholder="homeassistant.local or 192.168.1.10" spellcheck="false"></div>
+          <div class="row"><label for="mqPort">Port</label><input type="number" id="mqPort" min="1" max="65535" value="1883"></div>
+          <div class="row"><label for="mqUser">Username</label><input type="text" id="mqUser" class="pix" maxlength="31" autocomplete="off" spellcheck="false"></div>
+          <div class="row"><label for="mqPass">Password</label><input type="password" id="mqPass" class="pix" maxlength="63" autocomplete="new-password"></div>
+          <p class="field-note" id="mqPassNote">Leave empty to keep the saved one. It's stored on Pocket Nova and never sent back to this panel.</p>
+          <div class="row"><label for="mqBase">Topic</label><input type="text" id="mqBase" class="pix" maxlength="47" spellcheck="false"></div>
+          <div class="row"><span class="label">Discovery</span><label class="toggle"><input type="checkbox" id="mqDisc"><span class="muted">Let Home Assistant add Pocket Nova by itself</span></label></div>
+          <div class="inline"><button class="btn primary pix" id="mqSave">Save and connect</button><span class="msg" id="mqMsg"></span></div>
+        </div>
+        <details class="howto"><summary>Topics Pocket Nova uses</summary>
+          <div class="topics" id="mqTopics"></div>
+          <p class="hint">MQTT on port 1883 isn't encrypted. Keep it on your home network.</p>
+        </details>
+      </div>
+      <div class="section" id="secScenes">
+        <h2>Scenes</h2>
+        <p class="hint">Up to 6 buttons for the HOME app: tilt to pick one on the Atom and tap to send it. In Home Assistant, each scene is a "button pressed" trigger on the Pocket Nova device: use it in an automation to switch lights, start a playlist, lock up… The first letter is what the Atom shows.</p>
+        <div class="klist" id="sceneList"></div>
+        <div class="inline"><button class="btn pix" id="sceneAdd">Add scene</button><button class="btn primary pix" id="sceneSave" disabled>Save scenes</button><span class="msg" id="sceneMsg"></span></div>
+      </div>
+      <div class="section" id="secSensor">
+        <h2>Room sensor</h2>
+        <p class="hint">Plug an M5Stack <b>ENV II, III or IV</b> unit into the Grove socket on the bottom of the Atom. Pocket Nova finds it within 10 seconds, shows it in the CLIMATE app, and sends it to your smart home every minute.</p>
+        <div class="empty-state pix" id="senEmpty"><span id="senEmptyIco"></span><div><b>No sensor plugged in</b><div class="muted">Plug an ENV unit into the Grove socket. Nothing else to set up.</div></div></div>
+        <div class="stats" id="senStats">
+          <div class="stat pix"><div class="v" id="senTemp">-</div><div class="k" id="senTempK">temperature</div></div>
+          <div class="stat pix"><div class="v" id="senHum">-</div><div class="k" id="senHumK">humidity</div></div>
+          <div class="stat pix"><div class="v" id="senKind" style="font-size:1rem">-</div><div class="k">sensor</div></div>
+        </div>
+        <div class="chartbox pix" id="senCharts">
+          <div class="charthead"><span class="legend"><span><i style="background:var(--warn)"></i>Temperature</span><span><i style="background:var(--cyan)"></i>Humidity</span></span><div class="seg" id="senRange"></div></div>
+          <svg class="chart small" id="senTempChart" role="img" aria-label="Temperature over time"></svg>
+          <svg class="chart small" id="senHumChart" role="img" aria-label="Humidity over time"></svg>
+        </div>
+        <div class="form">
+          <div class="row"><span class="label">Unit</span><div class="seg" id="senUnit"></div></div>
+          <div class="row"><label for="senOffset">Correction</label><div class="inline"><input type="number" id="senOffset" min="-10" max="10" step="0.1"><span class="muted">°C added to every reading</span><button class="btn pix" id="senOffsetSave">Save</button></div></div>
+          <p class="field-note">The Atom warms its own corner a little. Compare with a thermometer you trust and correct the difference here.</p>
+        </div>
       </div>
     </section>
 
@@ -919,6 +1109,9 @@ const ICONS = {
   router: [".w....w.", ".w....w.", ".w....w.", "wwwwwwww", "wKKKKKKw", "wKGKGKBw", "wwwwwwww", "........"],
   phone:  ["..wwww..", "..wBBw..", "..wBBw..", "..wBBw..", "..wBBw..", "..wBBw..", "..wwww..", "..wwww.."],
   nova:   ["...Y....", "..PPPP..", ".PDDDDP.", ".PWDDWP.", ".PDDDDP.", ".PDMMDP.", "..PPPP..", "........"],
+  home:   ["...YY...", "..YYYY..", ".YYYYYY.", "YYYYYYYY", ".Ywwwww.", ".YwKKwY.", ".YwKKwY.", ".YYKKYY."],
+  globe:  ["..BBBB..", ".BGBBGB.", "BGGBBBGB", "BGGGBBBB", "BBGGBGGB", "BBBGBGGB", ".BBGBBB.", "..BBBB.."],
+  plug:   ["..w..w..", "..w..w..", ".wwwwww.", ".wwwwww.", "..wwww..", "...ww...", "...Y....", "...Y...."],
 };
 function iconSvg(name, cls) {
   const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -1948,7 +2141,7 @@ function renderBt() {
   });
   renderDevices();
 }
-const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 let devicesKey = "";
 function renderDevices() {
@@ -2002,6 +2195,444 @@ function chip(el, cls, text, textEl) {
   el.classList.remove("good", "warn", "bad");
   if (cls) el.classList.add(cls);
   textEl.textContent = text;
+}
+
+
+// ======================================================================
+//  Firmware 2.14 tools: the apps menu, network health, Wi-Fi channels,
+//  the Bluetooth finder, smart home (MQTT) and the room sensor.
+// ======================================================================
+function fwAtLeast(v) {
+  const h = S.hello;
+  if (!h || !h.fw) return false;
+  const a = h.fw.split(".").map(Number), b = v.split(".").map(Number);
+  for (let i = 0; i < 3; i++) if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0);
+  return true;
+}
+// Greys a section out (and says why) when the firmware is too old for it.
+function gate(id, ok, why) {
+  const sec = $(id);
+  sec.classList.toggle("locked", !ok);
+  let n = sec.querySelector(":scope > .needs");
+  if (!ok) {
+    if (!n) { n = document.createElement("p"); n.className = "needs pix"; sec.insertBefore(n, sec.children[1] || null); }
+    if (n.textContent !== why) n.textContent = why;
+  } else if (n) n.remove();
+  return ok;
+}
+const OLD_FW = "Needs firmware 2.14 or newer on Pocket Nova. Update it in the System tab.";
+function note(el, text, bad) { el.hidden = !text; if (text) { el.textContent = text; el.classList.toggle("bad", !!bad); } }
+const setVal = (el, v) => { if (document.activeElement !== el && !el.dataset.dirty) el.value = v; };
+const setChk = (el, v) => { if (document.activeElement !== el && !el.dataset.dirty) el.checked = !!v; };
+document.addEventListener("input", (e) => { if (e.target.closest && e.target.closest(".form")) e.target.dataset.dirty = "1"; });
+function clean(...els) { els.forEach((el) => delete el.dataset.dirty); }
+const paneShown = (id) => !$("pane-" + id).hidden;
+function sigBars(rssi) {
+  const n = rssi >= -55 ? 4 : rssi >= -67 ? 3 : rssi >= -78 ? 2 : 1;
+  return `<span class="sigbars" aria-hidden="true">${[1, 2, 3, 4].map((i) => `<i class="${i <= n ? "on" : ""}"></i>`).join("")}</span>`;
+}
+const hhmm = (t) => new Date(t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+const dur = (s) => s < 60 ? `${s} s` : s < 3600 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${Math.floor(s / 3600)} h ${Math.floor(s % 3600 / 60)} min`;
+
+// ---- a small line chart: rows [[t, a, b], ...]
+function lineChart(svg, rows, o) {
+  const W = 600, H = o.small ? 120 : 170, L = 40, R = 10, T = 10, B = 20;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const vals = rows.flatMap((r) => o.series.map((x) => r[x.i])).filter((v) => v != null && v >= (o.min0 ? 0 : -1e9) && v > -1.5);
+  if (rows.length < 2 || !vals.length) {
+    svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">${esc(o.empty || "No readings yet")}</text>`;
+    return;
+  }
+  let lo = o.min0 ? 0 : Math.min(...vals), hi = Math.max(...vals, o.guide || -Infinity);
+  if (!o.min0) { const pad = Math.max(1, (hi - lo) * 0.15); lo -= pad; hi += pad; } else hi = Math.max(hi * 1.15, 10);
+  const t0 = o.from || rows[0][0], t1 = o.to || rows[rows.length - 1][0];
+  const x = (t) => L + (t - t0) / Math.max(1, t1 - t0) * (W - L - R);
+  const y = (v) => T + (1 - (v - lo) / (hi - lo || 1)) * (H - T - B);
+  let g = "";
+  for (let k = 0; k <= 3; k++) {                                   // grid + y labels
+    const v = lo + (hi - lo) * k / 3, yy = y(v);
+    g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="#241d36" stroke-dasharray="2 4"/>`;
+    g += `<text x="${L - 6}" y="${yy + 3}" text-anchor="end">${v.toFixed(o.dec || 0)}${k === 3 ? esc(o.unit || "") : ""}</text>`;
+  }
+  for (let k = 0; k <= 3; k++) {                                   // time labels
+    const t = t0 + (t1 - t0) * k / 3;
+    const lbl = t1 - t0 > 2 * 86400 ? new Date(t * 1000).toLocaleDateString([], { weekday: "short" }) + " " + hhmm(t) : hhmm(t);
+    g += `<text x="${x(t)}" y="${H - 4}" text-anchor="${k === 0 ? "start" : k === 3 ? "end" : "middle"}">${lbl}</text>`;
+  }
+  if (o.guide) g += `<line x1="${L}" x2="${W - R}" y1="${y(o.guide)}" y2="${y(o.guide)}" stroke="var(--warn)" stroke-dasharray="6 4" opacity=".8"/>`;
+  for (const s of o.series) {                                      // the lines, broken at gaps
+    let d = "", prev = null;
+    for (const r of rows) {
+      const v = r[s.i];
+      const gap = prev && r[0] - prev > (o.gap || 60);
+      if (v == null || v < 0) { prev = null; if (v === -1 && o.lost) g += `<rect x="${x(r[0]) - 1}" y="${T}" width="2.5" height="${H - T - B}" fill="var(--bad)" opacity=".55"/>`; continue; }
+      d += (!prev || gap ? "M" : "L") + x(r[0]).toFixed(1) + " " + y(v).toFixed(1) + " ";
+      prev = r[0];
+    }
+    if (d) g += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round"/>`;
+  }
+  svg.innerHTML = g;
+}
+
+// ---- Apps on the menu
+let appDraft = null, appKey = "";
+function renderAppsMenu() {
+  const h = S.hello;
+  if (!gate("secApps", h && h.menu, OLD_FW)) return;
+  const key = JSON.stringify([h.apps, h.menu]);
+  if (!appDraft || (key !== appKey && $("appSave").disabled)) {     // fresh from the device, unless you're editing
+    appKey = key;
+    appDraft = h.menu.map((n) => ({ name: n, on: true })).concat(h.apps.filter((n) => !h.menu.includes(n)).map((n) => ({ name: n, on: false })));
+    drawAppList();
+  }
+}
+function drawAppList() {
+  const box = $("appList");
+  box.innerHTML = "";
+  let shown = 0;
+  appDraft.forEach((a, i) => {
+    const locked = a.name === "SETTINGS";
+    if (a.on) shown++;
+    const row = document.createElement("div");
+    row.className = "krow pix" + (a.on ? "" : " off");
+    row.innerHTML = `<div class="kwho"><span class="num">${a.on ? shown : ""}</span><label class="toggle"><input type="checkbox" ${a.on ? "checked" : ""} ${locked ? "disabled" : ""} aria-label="Show ${esc(a.name)}"></label><div class="t"><b>${esc(a.name.length <= 2 ? a.name : a.name[0] + a.name.slice(1).toLowerCase())}</b>${locked ? '<span class="lock">always on the menu</span>' : ""}</div></div>
+      <div class="kbtns"><button class="btn pix" data-m="-1" ${i === 0 ? "disabled" : ""} aria-label="Move up">▲</button><button class="btn pix" data-m="1" ${i === appDraft.length - 1 ? "disabled" : ""} aria-label="Move down">▼</button><button class="btn pix" data-open>Open</button></div>`;
+    row.querySelector("input").onchange = (e) => { a.on = e.target.checked; appDirty(); };
+    row.querySelectorAll("[data-m]").forEach((b) => (b.onclick = () => {
+      const j = i + +b.dataset.m;
+      [appDraft[i], appDraft[j]] = [appDraft[j], appDraft[i]];
+      appDirty();
+    }));
+    row.querySelector("[data-open]").onclick = () => { cmd({ cmd: "app", name: a.name }); toast(`Opening ${a.name} on Pocket Nova`); };
+    box.appendChild(row);
+  });
+  $("appCount").textContent = `${shown} of ${appDraft.length} on the menu`;
+}
+function appDirty() { $("appSave").disabled = false; drawAppList(); }
+$("appSave").onclick = () => {
+  cmd({ cmd: "menu", list: appDraft.filter((a) => a.on).map((a) => a.name) });
+  $("appSave").disabled = true;
+  appDraft = null;
+  toast("Menu saved on Pocket Nova");
+};
+$("appAll").onclick = () => { appDraft.forEach((a) => (a.on = true)); appDirty(); };
+
+// ---- Network health
+const NET_RANGES = [["15 min", 0.25], ["2 h", 2], ["24 h", 24]];
+let netHours = 2, netSeries = null, netFetchedAt = 0;
+seg($("netRange"), NET_RANGES.map((r) => r[0]), (i) => { netHours = NET_RANGES[i][1]; setSeg($("netRange"), i); fetchNet(); });
+setSeg($("netRange"), 1);
+async function fetchNet() {
+  netFetchedAt = Date.now();
+  const r = await api(`/api/series?name=net&hours=${netHours}`);
+  if (r.rows) { netSeries = r; drawNetChart(); }
+}
+function drawNetChart() {
+  if (!netSeries) return;
+  const c = S.config && S.config.net, now = Date.now() / 1000;
+  lineChart($("netChart"), netSeries.rows, { series: [{ i: 1, color: "var(--cyan)" }, { i: 2, color: "var(--nova-hi)" }], min0: true, unit: " ms",
+    guide: c ? c.slow : 150, lost: true, gap: 60, from: now - netHours * 3600, to: now, empty: "No pings recorded yet. The chart fills in while the panel runs." });
+  const ok = netSeries.rows.flatMap((r) => [r[1], r[2]]).filter((v) => v >= 0);
+  $("netWorst").textContent = ok.length ? Math.max(...ok) + " ms" : "-";
+  const day = netSeries.events.filter((e) => e.end > now - 86400);
+  $("netOutCount").textContent = day.length + (netSeries.downSince ? 1 : 0);
+  const box = $("outages");
+  const list = [...netSeries.events].reverse();
+  if (netSeries.downSince) list.unshift({ start: netSeries.downSince, end: 0 });
+  box.innerHTML = list.length ? "" : '<div class="empty">No outages recorded. The panel logs them while it\'s running.</div>';
+  list.slice(0, 20).forEach((e) => {
+    const row = document.createElement("div");
+    row.className = "hrow bad";
+    row.innerHTML = `<time>${new Date(e.start * 1000).toLocaleDateString([], { month: "short", day: "numeric" })} ${hhmm(e.start)}</time><span class="what">${e.end ? "Internet down for " + dur(e.end - e.start) : "Internet down right now"}</span><span class="who">${e.end ? "back at " + hhmm(e.end) : "ongoing"}</span>`;
+    box.appendChild(row);
+  });
+}
+function hopState(word) { return { good: "good", slow: "warn", down: "bad" }[word] || ""; }
+function renderHealth() {
+  if (!gate("secHealth", fwAtLeast("2.14.0"), OLD_FW) | !gate("secNetCfg", fwAtLeast("2.14.0"), OLD_FW)) return;
+  const st = S.status || {}, c = S.config || {}, n = st.net || {}, cfgN = c.net || {}, wf = st.wifi || {};
+  const online = wf.state === "online";
+  note($("healthNote"), !online ? "Pocket Nova isn't on your Wi-Fi, so there's nothing to ping. Join a network in the Wi-Fi tab." :
+                        !cfgN.on ? "The monitor is off. Turn it on in Monitor settings below." : "", false);
+  $("hopNovaSub").textContent = online ? (wf.ssid || "on Wi-Fi") : "not on Wi-Fi";
+  $("hopNova").className = "hop " + (online ? "good" : "bad");
+  const ms = (v) => v >= 0 ? v + " ms" : v === -1 ? "no answer" : "-";
+  $("hopRouterMs").textContent = ms(n.r);
+  $("hopNetMs").textContent = ms(n.n);
+  $("hopRouterSub").textContent = n.router || "-";
+  $("hopNetSub").textContent = cfgN.target || "-";
+  $("hopRouter").className = "hop " + hopState(n.router);
+  $("hopNet").className = "hop " + hopState(n.internet);
+  $("wireRouter").className = "wire " + (online ? hopState(n.router) || "" : "bad");
+  $("wireNet").className = "wire " + hopState(n.internet);
+  $("netLossR").textContent = n.count ? `${n.lossR} / ${n.count}` : "-";
+  $("netLossN").textContent = n.count ? `${n.lossN} / ${n.count}` : "-";
+  const v = $("netVerdict");
+  let cls = "", text = "Waiting for the first pings…";
+  if (!online) { cls = "bad"; text = "<b>No Wi-Fi.</b> Pocket Nova isn't connected to your network."; }
+  else if (!cfgN.on || n.internet === "off") { text = "Monitoring is off."; }
+  else if (n.router === "down") { cls = "bad"; text = "<b>Wi-Fi trouble.</b> Your router isn't answering. It may be restarting, or Pocket Nova is too far from it."; }
+  else if (n.internet === "down") { cls = "bad"; text = `<b>The internet is down.</b> Your Wi-Fi is fine (router ${ms(n.r)}), but nothing comes back from ${esc(cfgN.target)}. It's your internet provider or the modem.`; }
+  else if (n.router === "slow") { cls = "warn"; text = `<b>Wi-Fi is slow.</b> The router takes ${ms(n.r)} or misses pings. Move closer, or try another channel below.`; }
+  else if (n.internet === "slow") { cls = "warn"; text = `<b>The internet is slow.</b> ${ms(n.n)} (your limit is ${cfgN.slow} ms), while the Wi-Fi is fine.`; }
+  else if (n.internet === "good") { cls = "good"; text = `<b>All good.</b> Router ${ms(n.r)}, internet ${ms(n.n)}.`; }
+  const html = `<span>${text}</span>`;
+  if (v.dataset.html !== html) { v.dataset.html = html; v.innerHTML = html; }
+  v.className = "verdict pix " + cls;
+  setChk($("nmOn"), cfgN.on);
+  setVal($("nmTarget"), cfgN.target || "");
+  setVal($("nmSlow"), cfgN.slow || 150);
+  setChk($("nmAlert"), cfgN.alert);
+  if (paneShown("net") && Date.now() - netFetchedAt > 15000) fetchNet();
+}
+$("nmSave").onclick = () => {
+  const slow = +$("nmSlow").value;
+  if (!$("nmTarget").value.trim()) return note2($("nmMsg"), "Type an address to test the internet with", true);
+  if (!(slow >= 20 && slow <= 2000)) return note2($("nmMsg"), "Slow: 20 to 2000 ms", true);
+  cmd({ cmd: "netcfg", on: $("nmOn").checked, target: $("nmTarget").value.trim(), slow, alert: $("nmAlert").checked });
+  clean($("nmOn"), $("nmTarget"), $("nmSlow"), $("nmAlert"));
+  note2($("nmMsg"), "Saved", false);
+};
+function note2(el, text, bad) { el.textContent = text; el.className = "msg " + (bad ? "bad" : "good"); clearTimeout(el._t); el._t = setTimeout(() => (el.textContent = ""), 4000); }
+
+// ---- Wi-Fi channels
+let chanWaitUntil = 0, chanAsked = 0;
+$("chanScan").onclick = async () => {
+  chanAsked = Date.now() / 1000;
+  chanWaitUntil = Date.now() + 20000;
+  await cmd({ cmd: "chanscan", start: true });
+  renderChannels();
+  pollChans();
+};
+$("chanShow").onclick = () => { cmd({ cmd: "app", name: "CHANNELS" }); toast("CHANNELS is open on Pocket Nova. Tilt to see more channels, tap to scan."); };
+function pollChans() {
+  if (Date.now() > chanWaitUntil) { chanWaitUntil = 0; renderChannels(); return; }
+  setTimeout(async () => {
+    await cmd({ cmd: "chanscan" });
+    const c = S.chans;
+    if (c && !c.busy && c.at > chanAsked) { chanWaitUntil = 0; renderChannels(); return; }
+    pollChans();
+  }, 1000);
+}
+function renderChannels() {
+  if (!gate("secChan", fwAtLeast("2.14.0"), OLD_FW)) return;
+  const busy = !!chanWaitUntil;
+  $("chanScan").disabled = busy;
+  $("chanScan").innerHTML = busy ? '<span class="orbit"></span>Scanning…' : "Scan channels";
+  const c = S.chans;
+  if (!c || !c.chans) return;
+  $("chanAge").textContent = c.at ? `Scanned at ${hhmm(c.at)} · ${c.total} networks on 2.4 GHz` : "";
+  const key = JSON.stringify([c.at, c.mine]);
+  if ($("chanChart").dataset.key === key) return;
+  $("chanChart").dataset.key = key;
+  const v = $("chanVerdict"), mine = c.mine, loadOf = (ch) => +c.chans[ch - 1].load;
+  if (!mine) { v.className = "verdict pix good"; v.innerHTML = `<span><b>Best: channel ${c.best}.</b> The quietest of 1, 6 and 11 here.</span>`; }
+  else if (mine === c.best || loadOf(mine) <= loadOf(c.best) * 1.15) { v.className = "verdict pix good"; v.innerHTML = `<span><b>Your router is on channel ${mine}: a good pick.</b> Nothing to change.</span>`; }
+  else { v.className = "verdict pix warn"; v.innerHTML = `<span><b>Try channel ${c.best}.</b> Your router is on channel ${mine}, which is busier. Change it in your router's Wi-Fi settings (2.4 GHz).</span>`; }
+  // The bar chart: 13 channels, bar = how crowded.
+  const W = 600, H = 170, L = 12, B = 26, T = 22, bw = (W - 2 * L) / 13;
+  const top = Math.max(0.5, ...c.chans.map((x) => +x.load));
+  let g = "";
+  c.chans.forEach((x, i) => {
+    const ch = i + 1, load = +x.load, h = load / top * (H - T - B), bx = L + i * bw + 6, by = H - B - h;
+    const f = load / top, col = f < .34 ? "var(--good)" : f < .67 ? "var(--warn)" : "var(--bad)";
+    const key3 = ch === 1 || ch === 6 || ch === 11;
+    g += `<rect x="${bx}" y="${T}" width="${bw - 12}" height="${H - T - B}" fill="${key3 ? "#1a1530" : "#120f1c"}"/>`;
+    if (h > 0) g += `<rect x="${bx}" y="${by}" width="${bw - 12}" height="${h}" fill="${col}" opacity=".85"/>`;
+    if (x.nets) g += `<text x="${bx + (bw - 12) / 2}" y="${by - 4}" text-anchor="middle">${x.nets}</text>`;
+    g += `<text x="${bx + (bw - 12) / 2}" y="${H - 10}" text-anchor="middle" style="${key3 ? "fill:var(--fg);font-weight:700" : ""}">${ch}</text>`;
+    if (ch === c.best) g += `<text x="${bx + (bw - 12) / 2}" y="${T - 6}" text-anchor="middle" style="fill:var(--star);font-weight:700">BEST</text>`;
+    if (ch === mine) g += `<rect x="${bx - 3}" y="${T - 2}" width="${bw - 6}" height="${H - T - B + 4}" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-dasharray="4 3"/>`;
+  });
+  $("chanChart").setAttribute("viewBox", `0 0 ${W} ${H}`);
+  $("chanChart").innerHTML = g;
+  const rows = (c.list || []).slice().sort((a, b) => a.ch - b.ch || b.rssi - a.rssi);
+  $("chanTable").innerHTML = `<tr><th>Network</th><th>Channel</th><th>Signal</th><th>Security</th></tr>` + rows.map((n) =>
+    `<tr class="${n.ch === mine && n.ssid === ((S.status || {}).wifi || {}).ssid ? "mine" : ""}"><td>${esc(n.ssid)}</td><td>${n.ch}</td><td>${sigBars(n.rssi)}<span class="mono">${n.rssi} dBm</span></td><td>${n.open ? "open" : "password"}</td></tr>`).join("");
+}
+
+// ---- Bluetooth finder
+let findPollUntil = 0;
+$("findScan").onclick = () => { cmd({ cmd: "findscan", secs: 12 }); findPollUntil = Date.now() + 14000; pollFind(); };
+function pollFind() {
+  if (Date.now() > findPollUntil) { renderFinder(); return; }
+  cmd({ cmd: "findlist" });
+  setTimeout(pollFind, 1500);
+}
+$("findOpen").onclick = () => { cmd({ cmd: "app", name: "FINDER" }); toast("FINDER is open on Pocket Nova. Walk around and watch it warm up."); };
+$("findForget").onclick = () => { cmd({ cmd: "findtarget", clear: true }); toast("Stopped tracking"); };
+function renderFinder() {
+  if (!gate("secFind", fwAtLeast("2.14.0"), OLD_FW)) return;
+  const c = (S.config || {}).find || {}, f = (S.status || {}).find || {};
+  const have = !!c.addr;
+  $("findName").textContent = have ? (c.name || "Unnamed device") : "Nothing picked yet";
+  $("findAddr").textContent = have ? c.addr : "Scan below and press Track, or use the FINDER app.";
+  const heard = have && f.rssi != null && f.ago < 5000;
+  $("findDb").textContent = heard ? `${f.rssi} dBm` : have ? (f.scanning ? "not heard" : "-") : "";
+  $("findHeat").classList.toggle("off", !heard);
+  const heat = heard ? Math.min(1, Math.max(0, (f.rssi + 90) / 50)) : 0;
+  $("findMark").style.left = (heat * 100).toFixed(1) + "%";
+  const tr = +f.trend || 0;
+  $("findTrend").textContent = !have ? "" : !f.scanning ? "Open FINDER to start listening" : !heard ? "Not heard right now" : tr > .3 ? "▲ warmer" : tr < -.3 ? "▼ colder" : "steady";
+  $("findForget").disabled = !have;
+  $("findOpen").disabled = !have;
+  const scanning = Date.now() < findPollUntil;
+  $("findScan").disabled = scanning;
+  $("findScan").innerHTML = scanning ? '<span class="orbit"></span>Listening…' : "Scan nearby";
+  const list = (S.findlist || {}).list;
+  const box = $("findList");
+  const key = JSON.stringify([list, c.addr]);
+  if (!list || box.dataset.key === key) return;
+  box.dataset.key = key;
+  box.innerHTML = list.length ? "" : '<div class="empty">Nothing heard. Is the device on and not connected to something else?</div>';
+  list.forEach((d) => {
+    const row = document.createElement("div");
+    row.className = "device pix" + (d.addr === c.addr ? " connected" : "");
+    row.appendChild(iconSvg("bt", "ico"));
+    const who = document.createElement("div"); who.className = "who";
+    who.innerHTML = `<b>${esc(d.name || "Unnamed device")}</b><div class="meta">${sigBars(d.rssi)}<span class="mono">${d.rssi} dBm</span><span class="macsmall">${d.addr}</span></div>`;
+    const b = document.createElement("button");
+    b.className = "btn pix"; b.textContent = d.addr === c.addr ? "Tracking" : "Track";
+    b.disabled = d.addr === c.addr;
+    b.onclick = () => { cmd({ cmd: "findtarget", addr: d.addr, name: d.name || "" }); toast(`Tracking ${d.name || d.addr}`); };
+    row.append(who, b);
+    box.appendChild(row);
+  });
+}
+
+// ---- Smart home
+let sceneDraft = null, sceneKey = "";
+const SCENE_COLORS = ["#ffd34d", "#a46bff", "#4da3ff", "#3ddc84", "#ff6fb5", "#2affd2"];
+function renderHome() {
+  const ok = gate("secMqtt", fwAtLeast("2.14.0"), OLD_FW) & gate("secScenes", fwAtLeast("2.14.0"), OLD_FW);
+  if (!ok) return;
+  const hc = (S.config || {}).home || {}, hs = (S.status || {}).home || {}, wf = (S.status || {}).wifi || {};
+  note($("mqttNote"), hc.on && wf.state !== "online" ? "Pocket Nova isn't on your Wi-Fi yet, so it can't reach the broker. Join a network in the Wi-Fi tab." : "", false);
+  const conn = !!hs.connected;
+  $("mqttNow").className = "bt-now pix " + (conn ? "live" : hc.on && hc.host ? "wait" : "");
+  $("mqttState").textContent = conn ? "Connected" : !hc.on ? "Off" : !hc.host ? "Not set up" : "Not connected";
+  $("mqttSub").textContent = conn ? `${hc.host}:${hc.port} · ${hs.sent || 0} sent · ${hs.got || 0} received` : hs.state ? hs.state[0].toUpperCase() + hs.state.slice(1) : "";
+  setChk($("mqOn"), hc.on);
+  setVal($("mqHost"), hc.host || "");
+  setVal($("mqPort"), hc.port || 1883);
+  setVal($("mqUser"), hc.user || "");
+  setVal($("mqBase"), hc.base || "");
+  $("mqBase").placeholder = hc.topic || "pocketnova/your-device";
+  $("mqPass").placeholder = hc.passSet ? "•••••••• (saved)" : "none";
+  setChk($("mqDisc"), hc.disc !== false);
+  const t = hc.topic || "pocketnova/…";
+  const tk = JSON.stringify(t);
+  if ($("mqTopics").dataset.key !== tk) {
+    $("mqTopics").dataset.key = tk;
+    $("mqTopics").innerHTML = [[`${t}/scene`, "the scene you picked (sent)"], [`${t}/alert`, "post text here: it pops up on the LEDs (received)"],
+      [`${t}/sensor`, "temperature and humidity, every minute"], [`${t}/net`, "router and internet ping, every minute"], [`${t}/status`, "online / offline"]]
+      .map(([a, b]) => `<code>${esc(a)}</code><span class="muted">${esc(b)}</span>`).join("");
+  }
+  const key = JSON.stringify(hc.scenes || []);
+  if (!sceneDraft || (key !== sceneKey && $("sceneSave").disabled)) { sceneKey = key; sceneDraft = [...(hc.scenes || [])]; drawScenes(); }
+}
+function drawScenes() {
+  const box = $("sceneList");
+  box.innerHTML = "";
+  sceneDraft.forEach((n, i) => {
+    const row = document.createElement("div");
+    row.className = "krow pix";
+    row.innerHTML = `<div class="kwho"><span class="letter pix" style="background:${SCENE_COLORS[i]}">${esc((n || "?")[0])}</span><input type="text" class="pix" maxlength="15" value="${esc(n)}" aria-label="Scene ${i + 1} name" style="flex:1"></div>
+      <div class="kbtns"><button class="btn pix" data-test>Send now</button><button class="btn pix" data-del aria-label="Remove">Remove</button></div>`;
+    const inp = row.querySelector("input");
+    inp.oninput = () => { sceneDraft[i] = inp.value.toUpperCase().replace(/[^A-Z0-9 +\-.:/?!]/g, ""); row.querySelector(".letter").textContent = (sceneDraft[i] || "?")[0]; $("sceneSave").disabled = false; };
+    inp.onblur = () => (inp.value = sceneDraft[i]);
+    row.querySelector("[data-test]").onclick = () => { cmd({ cmd: "homescene", n: i }); toast(`Sent "${n}"`); };
+    row.querySelector("[data-test]").disabled = !$("sceneSave").disabled;
+    row.querySelector("[data-del]").onclick = () => { sceneDraft.splice(i, 1); $("sceneSave").disabled = false; drawScenes(); };
+    box.appendChild(row);
+  });
+  $("sceneAdd").disabled = sceneDraft.length >= 6;
+}
+$("sceneAdd").onclick = () => { sceneDraft.push("SCENE " + (sceneDraft.length + 1)); $("sceneSave").disabled = false; drawScenes(); };
+$("sceneSave").onclick = () => {
+  const list = sceneDraft.map((x) => x.trim()).filter(Boolean);
+  if (!list.length) return note2($("sceneMsg"), "Keep at least one scene", true);
+  cmd({ cmd: "homecfg", scenes: list });
+  $("sceneSave").disabled = true;
+  sceneDraft = null;
+  note2($("sceneMsg"), "Saved. Home Assistant gets the new triggers when Pocket Nova reconnects.", false);
+};
+$("mqSave").onclick = () => {
+  const host = $("mqHost").value.trim(), port = +$("mqPort").value;
+  if ($("mqOn").checked && !host) return note2($("mqMsg"), "Type the broker's address", true);
+  if (!(port >= 1 && port <= 65535)) return note2($("mqMsg"), "Port: 1 to 65535", true);
+  const body = { cmd: "homecfg", on: $("mqOn").checked, host, port, user: $("mqUser").value.trim(), base: $("mqBase").value.trim(), disc: $("mqDisc").checked };
+  if ($("mqPass").value) body.pass = $("mqPass").value;
+  cmd(body);
+  $("mqPass").value = "";
+  clean($("mqOn"), $("mqHost"), $("mqPort"), $("mqUser"), $("mqBase"), $("mqDisc"), $("mqPass"));
+  note2($("mqMsg"), body.on ? "Saved. Connecting…" : "Saved", false);
+};
+
+// ---- Room sensor
+const SEN_RANGES = [["24 h", 24], ["7 days", 168]];
+let senHours = 24, senSeries = null, senFetchedAt = 0;
+seg($("senRange"), SEN_RANGES.map((r) => r[0]), (i) => { senHours = SEN_RANGES[i][1]; setSeg($("senRange"), i); fetchSen(); });
+setSeg($("senRange"), 0);
+seg($("senUnit"), ["°C", "°F"], (i) => cmd({ cmd: "set", cfg: { tempF: i === 1 } }));
+$("senOffsetSave").onclick = () => {
+  const v = Math.round(+$("senOffset").value * 10);
+  if (!(v >= -100 && v <= 100)) return toast("Correction: -10 to +10 °C", true);
+  cmd({ cmd: "set", cfg: { tempOffset: v } });
+  clean($("senOffset"));
+  toast("Correction saved");
+};
+async function fetchSen() {
+  senFetchedAt = Date.now();
+  const r = await api(`/api/series?name=sensor&hours=${senHours}`);
+  if (r.rows) { senSeries = r; drawSen(); }
+}
+function drawSen() {
+  if (!senSeries) return;
+  const F = !!(S.config || {}).tempF, now = Date.now() / 1000;
+  const rows = senSeries.rows.map((r) => [r[0], F ? r[1] * 9 / 5 + 32 : r[1], r[2]]);
+  lineChart($("senTempChart"), rows, { series: [{ i: 1, color: "var(--warn)" }], unit: F ? "°F" : "°C", dec: 1, gap: 300, small: true, from: now - senHours * 3600, to: now, empty: "No readings yet" });
+  lineChart($("senHumChart"), rows, { series: [{ i: 2, color: "var(--cyan)" }], unit: "%", gap: 300, small: true, from: now - senHours * 3600, to: now, empty: "No readings yet" });
+}
+function renderSensor() {
+  if (!gate("secSensor", fwAtLeast("2.14.0"), OLD_FW)) return;
+  const se = (S.status || {}).sensor || {}, c = S.config || {};
+  const has = se.t != null;
+  $("senEmpty").hidden = has;
+  $("senStats").hidden = !has;
+  $("senCharts").hidden = !has && !(senSeries && senSeries.rows.length);
+  setSeg($("senUnit"), c.tempF ? 1 : 0);
+  setVal($("senOffset"), ((c.tempOffset || 0) / 10).toFixed(1));
+  if (has) {
+    const t = +se.t, h = +se.h, shown = c.tempF ? t * 9 / 5 + 32 : t;
+    $("senTemp").textContent = shown.toFixed(1) + (c.tempF ? " °F" : " °C");
+    $("senTemp").className = "v " + (t < 18 ? "cool" : t <= 25 ? "ok" : "hot");
+    $("senTempK").textContent = "temperature · " + (t < 18 ? "cool" : t <= 25 ? "comfortable" : "warm");
+    $("senHum").textContent = h + " %";
+    $("senHum").className = "v " + (h < 30 ? "hot" : h <= 60 ? "ok" : "cool");
+    $("senHumK").textContent = "humidity · " + (h < 30 ? "dry" : h <= 60 ? "comfortable" : "humid");
+    $("senKind").textContent = se.kind;
+  }
+  if (paneShown("home") && Date.now() - senFetchedAt > 60000) fetchSen();
+}
+$("hopNovaIco").appendChild(iconSvg("nova"));
+$("hopRouterIco").appendChild(iconSvg("router"));
+$("hopNetIco").appendChild(iconSvg("globe"));
+$("senEmptyIco").appendChild(iconSvg("plug"));
+document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
+  if (t.dataset.tab === "net") fetchNet();
+  if (t.dataset.tab === "home") fetchSen();
+}));
+
+function renderTools() {
+  if (!S.hello) return;
+  renderAppsMenu();
+  renderHealth();
+  renderChannels();
+  renderFinder();
+  renderHome();
+  renderSensor();
 }
 
 function render() {
@@ -2109,6 +2740,7 @@ function render() {
   renderRoster();
   renderHistory();
   renderNamePreview();
+  renderTools();
 
   const up = S.update || {};
   $("updateBtn").disabled = !!up.running || viaBt;

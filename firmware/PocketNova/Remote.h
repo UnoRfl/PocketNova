@@ -43,8 +43,18 @@
 //    mirror {"on":true}           stream the screen (@{"t":"fb",...} 10x/s)
 //    tutorial                     play the tutorial
 //    pet   {"mood":"happy"|"love"|"dizzy"|"sleep"|"wake"}
-//    alert {"kind":"download"|"cpu"|"battery"|"note","text":".."}
+//    alert {"kind":"download"|"cpu"|"battery"|"netdown"|"netup"|"note","text":".."}
 //                                 pop a message up over any screen
+//    menu  {"list":["MEDIA",..]}  which apps the menu shows, in order
+//    app   {"name":"FINDER"}      open an app
+//    chanscan {"start":true}      Wi-Fi channel scan (answers "chans"; "busy" while scanning)
+//    netcfg {"on":..,"target":"1.1.1.1","slow":150,"alert":true}   health monitor
+//    nethist                      the last 30 ping pairs
+//    findscan {"secs":10}         listen for Bluetooth devices
+//    findlist                     what was heard (strongest first)
+//    findtarget {"addr":"..","name":".."} | {"clear":true}   the FINDER target
+//    homecfg {"on","host","port","user","pass","base","disc","scenes":[..]}   MQTT
+//    homescene {"n":0}            send a scene now (a test)
 // =====================================================================
 
 #include <ArduinoJson.h>
@@ -94,6 +104,8 @@ void sendHello() {
   d["brightLevels"] = BRIGHT_COUNT;
   JsonArray a = d["apps"].to<JsonArray>();
   for (int i = 0; i < APP_COUNT; i++) a.add(apps[i].name);
+  JsonArray mo = d["menu"].to<JsonArray>();
+  for (int i = 0; i < menuLen; i++) mo.add(apps[menuOrder[i]].name);
   JsonArray b = d["brands"].to<JsonArray>();
   for (int i = 0; i < BRAND_COUNT; i++) b.add(BRANDS[i].name);
   JsonArray c = d["tvCmds"].to<JsonArray>();
@@ -131,6 +143,27 @@ void sendConfig() {
   d["reactBest"] = cfg.reactBest;
   d["simonBest"] = cfg.simonBest;
   d["otaPort"] = OTA_PORT;
+  d["tempF"] = cfg.tempF;
+  d["tempOffset"] = cfg.tempOffset;
+  JsonObject n = d["net"].to<JsonObject>();
+  n["on"] = nmOn;
+  n["target"] = nmTarget;
+  n["slow"] = nmSlowMs;
+  n["alert"] = nmAlert;
+  JsonObject h = d["home"].to<JsonObject>();
+  h["on"] = hmOn;
+  h["host"] = hmHost;
+  h["port"] = hmPort;
+  h["user"] = hmUser;
+  h["passSet"] = hmPass[0] != 0;                  // never the password itself
+  h["base"] = hmBase;
+  hmMakeTopics();
+  h["topic"] = hmTopic;
+  h["disc"] = hmDiscovery;
+  JsonArray sc = h["scenes"].to<JsonArray>();
+  for (int i = 0; i < hmSceneCount; i++) sc.add(hmScenes[i]);
+  JsonObject f = d["find"].to<JsonObject>();
+  if (findHave) { f["addr"] = macToString(findAddr); f["name"] = findName; }
   if (!replyBle) d["otaKey"] = otaKey;            // Wi-Fi update key: the PC (USB) only
   d["pX"]["axis"] = cfg.pX.axis;   d["pX"]["sign"] = cfg.pX.sign;
   d["pUp"]["axis"] = cfg.pUp.axis; d["pUp"]["sign"] = cfg.pUp.sign;
@@ -238,6 +271,27 @@ void sendStatus() {
   d["pet"] = PET_MOOD_NAMES[petMood];
   d["love"] = cfg.petLove;
   d["night"] = isNight();
+  JsonObject se = d["sensor"].to<JsonObject>();
+  se["kind"] = SENSOR_NAMES[senKind];
+  if (sensorOk()) { se["t"] = serialized(String(senTemp, 1)); se["h"] = serialized(String(senHum, 0)); }
+  JsonObject nm = d["net"].to<JsonObject>();
+  nm["router"] = nmState(nmRouter);
+  nm["internet"] = nmState(nmNet);
+  nm["r"] = nmLast(nmRouter);
+  nm["n"] = nmLast(nmNet);
+  nm["lossR"] = nmLost(nmRouter, NET_HIST);
+  nm["lossN"] = nmLost(nmNet, NET_HIST);
+  nm["count"] = nmCount;
+  JsonObject hm = d["home"].to<JsonObject>();
+  hm["state"] = hmStateName();
+  hm["connected"] = mqtt.connected();
+  hm["sent"] = hmSent;
+  hm["got"] = hmGot;
+  JsonObject fd = d["find"].to<JsonObject>();
+  fd["scanning"] = scanOn;
+  fd["have"] = findHave;
+  if (findHave && findSeenAt) { fd["rssi"] = (int)findRssi; fd["ago"] = millis() - findSeenAt; fd["trend"] = serialized(String(findTrend, 1)); }
+  d["chanScanning"] = chScanning;
   d["clock"] = clockValid();
   d["uptime"] = millis() / 1000;
   d["heap"] = ESP.getFreeHeap();
@@ -343,6 +397,8 @@ void applySettings(JsonObject c) {
   if (c["swiftPair"].is<bool>()) cfg.swiftPair = c["swiftPair"].as<bool>();
   if (c["mouseSpeed"].is<int>()) cfg.mouseSpeed = constrain(c["mouseSpeed"].as<int>(), 0, 4);
   if (c["mouseFlip"].is<int>()) cfg.mouseFlip = c["mouseFlip"].as<int>() & 3;
+  if (c["tempF"].is<bool>()) cfg.tempF = c["tempF"].as<bool>();
+  if (c["tempOffset"].is<int>()) cfg.tempOffset = constrain(c["tempOffset"].as<int>(), -100, 100);
   if (c["lastApp"].is<int>()) cfg.lastApp = constrain(c["lastApp"].as<int>(), 0, APP_COUNT - 1);
   if (c["name"].is<const char*>()) {
     const char* n = c["name"];
@@ -574,6 +630,142 @@ void handleRemoteLine(const char* line) {
   }
   if (!strcmp(cmd, "alert")) {
     alertShow(in["kind"] | "note", in["text"] | "");
+    replyOk(cmd);
+    return;
+  }
+  if (!strcmp(cmd, "menu")) {
+    if (!in["list"].is<JsonArray>()) { replyError("list missing"); return; }
+    menuLen = 0;
+    for (JsonVariant v : in["list"].as<JsonArray>()) menuAdd(appByName(v | ""));
+    menuAdd(APP_COUNT - 1);                       // SETTINGS stays
+    menuSave();
+    menu.reset(menuLen, max(0, menuPos(currentApp >= 0 ? currentApp : cfg.lastApp)));
+    sendHello();
+    return;
+  }
+  if (!strcmp(cmd, "app")) {
+    int i = appByName(in["name"] | "");
+    if (i < 0) { replyError("no such app"); return; }
+    if (screen == SCR_APP && currentApp >= 0 && currentApp != i && apps[currentApp].leave) apps[currentApp].leave();
+    openApp(i);
+    replyOk(cmd, apps[i].name);
+    return;
+  }
+  if (!strcmp(cmd, "chanscan")) {
+    if (in["start"] | false) {
+      if (!chanScanStart()) { replyError("couldn't start a scan"); return; }
+    }
+    JsonDocument d;
+    d["t"] = "chans";
+    d["busy"] = chScanning;
+    d["have"] = chHave;
+    if (chHave && !chScanning) {
+      JsonArray c = d["chans"].to<JsonArray>();
+      for (int i = 1; i <= 13; i++) {
+        JsonObject o = c.add<JsonObject>();
+        o["ch"] = i;
+        o["nets"] = chans[i].nets;
+        o["load"] = serialized(String(chans[i].load, 2));
+      }
+      d["best"] = chBest;
+      d["bestAny"] = chBestAny;
+      d["total"] = chTotal;
+      d["mine"] = wifiState == WF_ONLINE ? WiFi.channel() : 0;
+      chanList(d["list"].to<JsonArray>());
+    }
+    sendJson(d);
+    return;
+  }
+  if (!strcmp(cmd, "netcfg")) {
+    if (in["on"].is<bool>()) nmOn = in["on"];
+    if (in["alert"].is<bool>()) nmAlert = in["alert"];
+    if (in["slow"].is<int>()) nmSlowMs = constrain(in["slow"].as<int>(), 20, 2000);
+    if (in["target"].is<const char*>()) {
+      const char* t = in["target"];
+      if (!*t || strlen(t) >= sizeof(nmTarget)) { replyError("target: an address or name, up to 63 characters"); return; }
+      strcpy(nmTarget, t);
+      nmCount = 0;                                // new target: start the graph over
+      nmNetIpOk = false;
+      nmLookup.state = 0;
+    }
+    nmSave();
+    sendConfig();
+    return;
+  }
+  if (!strcmp(cmd, "nethist")) {
+    JsonDocument d;
+    d["t"] = "nethist";
+    d["slow"] = nmSlowMs;
+    netHistory(d.as<JsonObject>());
+    sendJson(d);
+    return;
+  }
+  if (!strcmp(cmd, "findscan")) {
+    scanStart(constrain((int)(in["secs"] | 10), 3, 60) * 1000UL);
+    replyOk(cmd);
+    return;
+  }
+  if (!strcmp(cmd, "findlist")) {
+    JsonDocument d;
+    d["t"] = "findlist";
+    d["scanning"] = scanOn;
+    finderList(d["list"].to<JsonArray>());
+    sendJson(d);
+    return;
+  }
+  if (!strcmp(cmd, "findtarget")) {
+    if (in["clear"] | false) finderClear();
+    else {
+      uint8_t m[6];
+      if (sscanf(in["addr"] | "", "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &m[0], &m[1], &m[2], &m[3], &m[4], &m[5]) != 6) {
+        replyError("bad address"); return;
+      }
+      finderSetTarget(m, in["name"] | "");
+    }
+    sendConfig();
+    return;
+  }
+  if (!strcmp(cmd, "homecfg")) {
+    auto copyIn = [&](const char* key, char* dst, size_t n) -> bool {
+      if (!in[key].is<const char*>()) return true;
+      const char* v = in[key];
+      if (strlen(v) >= n) return false;
+      strcpy(dst, v);
+      return true;
+    };
+    if (!copyIn("host", hmHost, sizeof(hmHost)) || !copyIn("user", hmUser, sizeof(hmUser)) ||
+        !copyIn("pass", hmPass, sizeof(hmPass)) || !copyIn("base", hmBase, sizeof(hmBase))) {
+      replyError("one of the fields is too long"); return;
+    }
+    size_t bl = strlen(hmBase);                   // a topic base can't end in '/' or use wildcards
+    while (bl && hmBase[bl - 1] == '/') hmBase[--bl] = 0;
+    if (strpbrk(hmBase, "#+")) { replyError("topic: no # or + please"); return; }
+    if (in["port"].is<int>()) hmPort = constrain(in["port"].as<int>(), 1, 65535);
+    if (in["on"].is<bool>()) hmOn = in["on"];
+    if (in["disc"].is<bool>()) hmDiscovery = in["disc"];
+    if (in["scenes"].is<JsonArray>()) {
+      hmSceneCount = 0;
+      for (JsonVariant v : in["scenes"].as<JsonArray>()) {
+        if (hmSceneCount >= SCENES_MAX) break;
+        const char* n = v | "";
+        size_t k = 0;                             // what the 3x5 font can show
+        for (const char* q = n; *q && k < sizeof(hmScenes[0]) - 1; q++)
+          if (isalnum((unsigned char)*q) || strchr(" +-.:/?!", *q)) hmScenes[hmSceneCount][k++] = toupper((unsigned char)*q);
+        hmScenes[hmSceneCount][k] = 0;
+        if (k) hmSceneCount++;
+      }
+    }
+    hmSave();
+    if (mqtt.connected()) { hmPublish("status", "offline", true); mqtt.disconnect(); }   // reconnect with the new settings
+    hmNextTry = 0;
+    hmRetryMs = 5000;
+    hmLookup.state = 0;                           // the address may have changed
+    sendConfig();
+    return;
+  }
+  if (!strcmp(cmd, "homescene")) {
+    if (!mqtt.connected()) { replyError(hmStateName()); return; }
+    if (!hmScene(in["n"] | 0)) { replyError("couldn't send it"); return; }
     replyOk(cmd);
     return;
   }

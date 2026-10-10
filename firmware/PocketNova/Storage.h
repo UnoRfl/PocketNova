@@ -36,6 +36,8 @@ struct Config {
   uint8_t  mouseFlip    = 0;          // air mouse: bit 0 = swap left/right, bit 1 = swap up/down
   uint16_t reactBest    = 0;          // REFLEX best time in ms (0 = none yet)
   uint8_t  simonBest    = 0;          // SIMON longest sequence
+  bool     tempF        = false;      // room sensor: show Fahrenheit
+  int8_t   tempOffset   = 0;          // room sensor correction, tenths of a degree C
   char     name[25]     = "Pocket Nova";
 } cfg;
 
@@ -73,6 +75,8 @@ void saveConfig() {
   prefs.putUChar("mflip", cfg.mouseFlip);
   prefs.putUShort("react", cfg.reactBest);
   prefs.putUChar("simon", cfg.simonBest);
+  prefs.putBool("tempF", cfg.tempF);
+  prefs.putChar("tempOff", cfg.tempOffset);
   prefs.putString("name", cfg.name);
   prefs.putUChar("ver", CONFIG_VERSION);
   prefs.end();
@@ -103,6 +107,8 @@ void loadConfig() {
   cfg.mouseFlip    = prefs.getUChar("mflip", 0);
   cfg.reactBest    = prefs.getUShort("react", 0);
   cfg.simonBest    = prefs.getUChar("simon", 0);
+  cfg.tempF        = prefs.getBool("tempF", false);
+  cfg.tempOffset   = prefs.getChar("tempOff", 0);
   if (prefs.isKey("name")) prefs.getString("name", cfg.name, sizeof(cfg.name));
   uint8_t ver      = prefs.getUChar("ver", 0);
   bool    hadOld   = prefs.isKey("pxS");   // anything saved before?

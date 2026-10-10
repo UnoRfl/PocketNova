@@ -55,6 +55,8 @@ LOG_PATH = os.path.join(DATA_DIR, "panel.log")
 HISTORY_PATH = os.path.join(DATA_DIR, "history.json")
 VENDORS_PATH = os.path.join(DATA_DIR, "vendors.json")
 MODELS_PATH = os.path.join(DATA_DIR, "models.json")
+NETLOG_PATH = os.path.join(DATA_DIR, "netlog.json")
+SENSORLOG_PATH = os.path.join(DATA_DIR, "sensorlog.json")
 HTTP_PORT = 47800
 BAUD = 115200
 
@@ -66,6 +68,7 @@ ALLOWED_CMDS = {
     "hello", "get", "status", "bonds", "set", "flip", "unbond", "unbond_all", "slot",
     "factory_reset", "reboot", "input", "tilt", "ir", "time", "mirror", "tutorial", "pet",
     "tvbrands", "findtv", "wifi", "keys", "keytest", "netscan", "block", "wifiscan", "alert",
+    "menu", "app", "chanscan", "netcfg", "nethist", "findscan", "findlist", "findtarget", "homecfg", "homescene",
 }
 
 STARTUP_LNK = os.path.join(os.environ.get("APPDATA", ""), r"Microsoft\Windows\Start Menu\Programs\Startup",
@@ -120,6 +123,78 @@ def save_settings(s):
 
 settings = load_settings()
 settings_lock = threading.Lock()
+
+
+# ---------------------------------------------------------------- charts
+
+class Series:
+    """A small time series on disk for the panel's charts: rows of
+    [unix time, a, b], one every `every` seconds, the last `keep` seconds."""
+
+    def __init__(self, path, every, keep):
+        self.path, self.every, self.keep = path, every, keep
+        self.lock = threading.Lock()
+        self.rows, self.events, self.saved_at = [], [], time.time()
+        try:
+            with open(path, encoding="utf-8") as f:
+                d = json.load(f)
+            self.rows, self.events = d.get("rows", []), d.get("events", [])
+        except (OSError, ValueError, AttributeError):
+            pass
+
+    def add(self, a, b):
+        now = time.time()
+        with self.lock:
+            if self.rows and now - self.rows[-1][0] < self.every:
+                return
+            self.rows.append([int(now), a, b])
+            cut = now - self.keep
+            while self.rows and self.rows[0][0] < cut:
+                self.rows.pop(0)
+            if now - self.saved_at > 300:
+                self._save()
+
+    def event(self, item):
+        with self.lock:
+            self.events.append(item)
+            del self.events[:-100]
+            self._save()
+
+    def _save(self):
+        self.saved_at = time.time()
+        tmp = self.path + ".tmp"
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump({"rows": self.rows, "events": self.events}, f)
+            os.replace(tmp, self.path)
+        except OSError:
+            pass
+
+    def since(self, seconds):
+        cut = time.time() - seconds
+        with self.lock:
+            return [r for r in self.rows if r[0] >= cut], list(self.events)
+
+
+netlog = Series(NETLOG_PATH, 15, 86400)          # router ms, internet ms (-1 = no answer), 24 h
+sensorlog = Series(SENSORLOG_PATH, 60, 7 * 86400)   # temperature C, humidity %, a week
+_net_down_since = [0.0]
+
+
+def note_status(msg):
+    """Feeds the charts from each status reply."""
+    net = msg.get("net") or {}
+    if net.get("internet") not in (None, "off") and net.get("count"):
+        netlog.add(net.get("r", -2), net.get("n", -2))
+        now = time.time()
+        if net["internet"] == "down" and not _net_down_since[0]:
+            _net_down_since[0] = now
+        elif net["internet"] != "down" and _net_down_since[0]:
+            netlog.event({"start": int(_net_down_since[0]), "end": int(now)})
+            _net_down_since[0] = 0.0
+    sen = msg.get("sensor") or {}
+    if "t" in sen:
+        sensorlog.add(float(sen["t"]), float(sen.get("h", 0)))
 
 
 # ---------------------------------------------------------------- history
@@ -958,12 +1033,16 @@ class DeviceLink:
                 return
             t = msg.get("t")
             with self.lock:
-                if t in ("hello", "config", "status", "bonds", "tvbrands", "keys", "wifiscan"):
+                if t in ("hello", "config", "status", "bonds", "tvbrands", "keys", "wifiscan", "chans", "nethist", "findlist"):
                     if t == "config" and "otaKey" in msg:
                         msg = dict(msg)
                         self._remember(otaKey=msg.pop("otaKey"), otaPort=msg.get("otaPort", 3232))
                     if t == "status" and (msg.get("wifi") or {}).get("ip"):
                         self._remember(otaIp=msg["wifi"]["ip"])
+                    if t == "status":
+                        note_status(msg)
+                    if t in ("chans", "findlist"):
+                        msg = dict(msg, at=time.time())
                     self.state[t] = msg
                     if t == "hello":
                         self.state["helloAt"] = time.time()
@@ -1507,6 +1586,14 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(200, f.read(), "image/png" if name.endswith("png") else "image/x-icon")
             except OSError:
                 return self._send(404, {"error": "no icon"})
+        if u.path == "/api/series":
+            q = parse_qs(u.query)
+            which = netlog if q.get("name", ["net"])[0] == "net" else sensorlog
+            hours = min(168.0, float(q.get("hours", ["2"])[0] or 2))
+            rows, events = which.since(hours * 3600)
+            step = max(1, len(rows) // 400)        # at most ~400 points per chart
+            return self._send(200, {"rows": rows[::step], "events": events[-20:],
+                                    "downSince": int(_net_down_since[0]) if which is netlog else 0})
         if u.path == "/api/state":
             q = parse_qs(u.query)
             since = int(q.get("since", ["0"])[0] or 0)
