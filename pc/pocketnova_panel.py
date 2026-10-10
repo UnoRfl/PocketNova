@@ -214,15 +214,52 @@ SAMSUNG = {"S901": "S22", "S906": "S22+", "S908": "S22 Ultra", "S911": "S23", "S
            "S921": "S24", "S926": "S24+", "S928": "S24 Ultra", "S931": "S25", "S936": "S25+", "S938": "S25 Ultra"}
 
 
-def model_from_ua(ua):
+# iPhones never say which model they are, but every generation has its own
+# screen (in points) and sharpness, and each model runs a range of iOS
+# versions. (screen, dpr) -> [(model, first iOS, last iOS)]. Phones sharing a
+# screen can't be told apart: that's as precise as anything over Wi-Fi gets.
+IPHONES = {
+    ("320x568", 2): [("iPhone SE (1st gen)", 9, 15), ("iPhone 5s", 7, 12)],
+    ("375x667", 2): [("iPhone 6s", 9, 15), ("iPhone 7", 10, 15), ("iPhone 8", 11, 16), ("iPhone SE (2nd gen)", 13, 99), ("iPhone SE (3rd gen)", 15, 99)],
+    ("414x736", 3): [("iPhone 6s Plus", 9, 15), ("iPhone 7 Plus", 10, 15), ("iPhone 8 Plus", 11, 16)],
+    ("375x812", 3): [("iPhone X", 11, 16), ("iPhone XS", 12, 18), ("iPhone 11 Pro", 13, 99), ("iPhone 12 mini", 14, 99), ("iPhone 13 mini", 15, 99)],
+    ("414x896", 2): [("iPhone XR", 12, 18), ("iPhone 11", 13, 99)],
+    ("414x896", 3): [("iPhone XS Max", 12, 18), ("iPhone 11 Pro Max", 13, 99)],
+    ("390x844", 3): [("iPhone 12", 14, 99), ("iPhone 12 Pro", 14, 99), ("iPhone 13", 15, 99), ("iPhone 13 Pro", 15, 99), ("iPhone 14", 16, 99), ("iPhone 16e", 18, 99)],
+    ("428x926", 3): [("iPhone 12 Pro Max", 14, 99), ("iPhone 13 Pro Max", 15, 99), ("iPhone 14 Plus", 16, 99)],
+    ("393x852", 3): [("iPhone 14 Pro", 16, 99), ("iPhone 15", 17, 99), ("iPhone 15 Pro", 17, 99), ("iPhone 16", 18, 99)],
+    ("430x932", 3): [("iPhone 14 Pro Max", 16, 99), ("iPhone 15 Plus", 17, 99), ("iPhone 15 Pro Max", 17, 99), ("iPhone 16 Plus", 18, 99)],
+    ("402x874", 3): [("iPhone 16 Pro", 18, 99), ("iPhone 17", 26, 99), ("iPhone 17 Pro", 26, 99)],
+    ("440x956", 3): [("iPhone 16 Pro Max", 18, 99), ("iPhone 17 Pro Max", 26, 99)],
+    ("420x912", 3): [("iPhone Air", 26, 99)],
+}
+
+
+def iphone_from_screen(scr, ios_major):
+    """"390x844@3", 17 -> "iPhone 12, 13 or 14" (narrowed by what runs iOS 17)."""
+    import re
+    m = re.match(r"(\d+)x(\d+)@([\d.]+)", scr or "")
+    if not m:
+        return ""
+    fits = [n for n, lo, hi in IPHONES.get((f"{m.group(1)}x{m.group(2)}", round(float(m.group(3)))), [])
+            if not ios_major or lo <= ios_major <= hi]
+    if not fits:
+        return ""
+    # "iPhone 12", "iPhone 12 Pro", "iPhone 13" -> "iPhone 12, 12 Pro or 13"
+    short = [fits[0]] + [f.replace("iPhone ", "") for f in fits[1:]]
+    return short[0] if len(short) == 1 else ", ".join(short[:-1]) + " or " + short[-1]
+
+
+def model_from_ua(ua, scr=""):
     """Turns a browser's self-description into something like
-    "Samsung Galaxy S23 Ultra (Android 14)" or "iPhone (iOS 17.5)"."""
+    "Samsung Galaxy S23 Ultra (Android 14)" or "iPhone 13 or 14 (iOS 17.5)"."""
     import re
     if not ua:
         return ""
     m = re.search(r"(iPhone|iPad|iPod)[^)]*?OS (\d+)[_.](\d+)", ua)
     if m:
-        return f"{m.group(1)} (iOS {m.group(2)}.{m.group(3)})"
+        name = iphone_from_screen(scr, int(m.group(2))) if m.group(1) == "iPhone" else ""
+        return f"{name or m.group(1)} (iOS {m.group(2)}.{m.group(3)})"
     if "iPhone" in ua or "iPad" in ua:
         return "iPhone" if "iPhone" in ua else "iPad"
     if "CaptiveNetworkSupport" in ua or "wispr" in ua:
@@ -394,8 +431,58 @@ def device_names(macs):
             if not m:
                 continue
             e, i = book.get(m, {}), info.get(m, {})
-            out[m] = {"label": e.get("label") or bt.get(m, ""), "model": model_from_ua(i.get("ua", "")) or i.get("model", ""),
+            out[m] = {"label": e.get("label") or bt.get(m, ""), "model": model_from_ua(i.get("ua", ""), i.get("scr", "")) or i.get("model", ""),
                       "name": e.get("name", ""), "vendor": vendors.of(m)}
+    return out
+
+
+# ---------------------------------------------------------------- the roster (Watch tab)
+
+_roster_cache = {"at": 0, "data": []}
+
+
+def roster(state):
+    """Every device ever seen, on your home Wi-Fi or Pocket Nova's setup
+    network, with what's known about it and whether it's around right now.
+    Built at most every 2 s (the page asks several times a second)."""
+    now = time.time()
+    if now - _roster_cache["at"] < 2:
+        return _roster_cache["data"]
+    scan = state.get("netscan") or {}
+    online = {d["mac"].upper(): d for d in scan.get("list", [])}
+    ap_now = {c["mac"].upper(): c for c in ((state.get("status") or {}).get("wifi") or {}).get("apClients", [])}
+    seen = {}                                  # per address: first/last time, counts, from the history
+    for e in history.recent(2000):
+        m = (e.get("mac") or "").upper()
+        if not m or e.get("k") in ("code_bad", "code_ok"):     # Bluetooth addresses: a different list
+            continue
+        s = seen.setdefault(m, {"first": e["t"], "last": e["t"], "joins": 0, "tries": 0, "setup": False})
+        s["first"], s["last"] = min(s["first"], e["t"]), max(s["last"], e["t"])
+        s["joins"] += e["k"] == "join"
+        s["tries"] += e["k"] == "try"
+        s["setup"] = s["setup"] or e["k"] in ("join", "leave", "try", "joined", "failed", "limited", "blocked", "flood", "kick")
+    with settings_lock:
+        book = {m.upper(): dict(e) for m, e in settings.get("netDevices", {}).items()}
+        info = {m.upper(): dict(i) for m, i in settings.get("deviceInfo", {}).items()}
+    blocked = set(((state.get("config") or {}).get("blocked")) or [])
+    out = []
+    for m in set(book) | set(info) | set(seen) | set(online) | set(ap_now):
+        e, i, s = book.get(m, {}), info.get(m, {}), seen.get(m, {})
+        group = e.get("group") or ("mine" if e.get("mine") or e.get("label") else "")
+        firsts = [t for t in (e.get("first"), s.get("first"), i.get("seen")) if t]
+        lasts = [t for t in (e.get("last"), s.get("last"), i.get("seen")) if t]
+        d = online.get(m, {})
+        out.append({
+            "mac": m, "label": e.get("label", ""), "group": group,
+            "model": model_from_ua(i.get("ua", ""), i.get("scr", "")) or i.get("model", ""),
+            "name": e.get("name", ""), "vendor": vendors.of(m),
+            "home": bool(e.get("last")), "homeIp": d.get("ip") or e.get("ip", ""), "online": m in online,
+            "setup": bool(s.get("setup") or i), "apNow": m in ap_now, "apIp": (ap_now.get(m) or {}).get("ip", ""),
+            "router": bool(d.get("router")), "pc": bool(d.get("pc")), "nova": bool(d.get("nova")),
+            "first": min(firsts) if firsts else 0, "last": max(lasts) if lasts else 0,
+            "joins": s.get("joins", 0), "tries": s.get("tries", 0), "blocked": m in blocked,
+        })
+    _roster_cache.update(at=now, data=out)
     return out
 
 
@@ -874,10 +961,10 @@ class DeviceLink:
                         info = settings.setdefault("deviceInfo", {})
                         changed = False
                         for d in msg.get("list", []):
-                            model = model_from_ua(d.get("ua", ""))
+                            model = model_from_ua(d.get("ua", ""), d.get("scr", ""))
                             old = info.get(d["mac"], {})
-                            if d.get("ua") and (old.get("ua") != d["ua"]) and (model or not old.get("model")):
-                                info[d["mac"]] = {"ua": d["ua"], "model": model}
+                            if d.get("ua") and (old.get("ua") != d["ua"] or old.get("scr") != d.get("scr")) and (model or not old.get("model")):
+                                info[d["mac"]] = {"ua": d["ua"], "scr": d.get("scr", ""), "model": model, "seen": int(time.time())}
                                 changed = True
                         if changed:
                             save_settings(settings)
@@ -1234,6 +1321,7 @@ class Handler(BaseHTTPRequestHandler):
                 "history": history.recent(),
                 "netLabels": {m: e.get("label") or e.get("name", "") for m, e in settings.get("netDevices", {}).items()
                               if e.get("label") or e.get("name")},
+                "roster": roster(st),
                 "deviceNames": device_names({e.get("mac") for e in history.recent()}
                                             | {d["mac"] for d in (st.get("netscan") or {}).get("list", [])}
                                             | {c["mac"] for c in ((st.get("status") or {}).get("wifi") or {}).get("apClients", [])}),
@@ -1271,18 +1359,37 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/netlabel":
             mac, label = str(body.get("mac", ""))[:17].upper(), str(body.get("label", ""))[:40].strip()
             with settings_lock:
-                entry = settings.setdefault("netDevices", {}).get(mac)
-                if entry is None:
-                    return self._send(404, {"error": "unknown device"})
+                if len(mac) != 17:
+                    return self._send(400, {"error": "bad address"})
+                # setup-network visitors may not be in the home list yet: add them
+                entry = settings.setdefault("netDevices", {}).setdefault(mac, {"label": "", "first": int(time.time())})
                 entry["label"] = label
-                if label:
-                    entry["mine"] = True            # naming a device = it's yours
+                if label and not entry.get("group"):
+                    entry["mine"] = True            # naming a device = it's yours (unless you said "friend")
+                    entry["group"] = "mine"
                 save_settings(settings)
             with link.lock:                     # show it at once, without a new scan
                 for d in (link.state.get("netscan") or {}).get("list", []):
                     if d["mac"].upper() == mac:
                         d["label"] = label
                         d["mine"] = d.get("mine") or bool(label)
+            _roster_cache["at"] = 0
+            return self._send(200, {"ok": True})
+        if path == "/api/netgroup":
+            # {"mac": "..", "group": "mine" | "friend" | ""}: whose device is it?
+            mac, group = str(body.get("mac", ""))[:17].upper(), str(body.get("group", ""))
+            if group not in ("mine", "friend", ""):
+                return self._send(400, {"error": "bad group"})
+            with settings_lock:
+                e = settings.setdefault("netDevices", {}).setdefault(mac, {"label": "", "first": int(time.time())})
+                e["group"] = group
+                e["mine"] = group in ("mine", "friend")     # approved: no "new" alerts
+                save_settings(settings)
+            with link.lock:
+                for d in (link.state.get("netscan") or {}).get("list", []):
+                    if d["mac"].upper() == mac:
+                        d["mine"], d["new"] = e["mine"], False
+            _roster_cache["at"] = 0
             return self._send(200, {"ok": True})
         if path == "/api/netmine":
             # {"mac": "..", "mine": true} for one device, {"all": true} for everything in the last scan
@@ -1299,7 +1406,9 @@ class Handler(BaseHTTPRequestHandler):
                 for m in macs:
                     if m in book:
                         book[m]["mine"] = mine
+                        book[m]["group"] = "mine" if mine else ""
                 save_settings(settings)
+            _roster_cache["at"] = 0
             return self._send(200, {"ok": True})
         if path == "/api/history/clear":
             days = body.get("olderThanDays")

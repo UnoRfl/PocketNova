@@ -491,6 +491,7 @@ void handleRemoteLine(const char* line) {
       JsonObject o = a.add<JsonObject>();
       o["mac"] = macToString(g.mac);
       o["ua"] = g.ua;
+      if (g.scr[0]) o["scr"] = g.scr;
     }
     sendJson(d);
     return;

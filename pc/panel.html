@@ -225,6 +225,27 @@ input[type=text]:focus, input[type=password]:focus, select:focus { box-shadow: i
 .danger-zone { margin-top: 6px; padding-top: 12px; border-top: 2px dashed var(--line); }
 #wfTryNote.bad { color: var(--bad); } #wfTryNote.good { color: var(--good); }
 #wfJoinMsg.bad, #wfNamesMsg2.bad { color: var(--bad); }
+.roster { display: grid; gap: 6px; }
+.rrow { background: var(--panel-2); box-shadow: inset 4px 0 0 var(--line); --px: 5px; }
+.rrow.on { box-shadow: inset 4px 0 0 var(--good); }
+.rrow.stranger { box-shadow: inset 4px 0 0 var(--bad), inset 0 0 0 1px rgba(255, 93, 108, .35); }
+.rrow .top { display: grid; grid-template-columns: 30px 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; cursor: pointer; }
+.rrow .ico { width: 28px; height: 28px; image-rendering: pixelated; }
+.rrow .t b { font-family: var(--font-pixel); font-weight: 600; font-size: 1.02rem; }
+.rrow .sub { color: var(--muted); font-size: .82rem; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; margin-top: 2px; }
+.rrow .act { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+.gseg { display: inline-flex; }
+.gseg button { background: #120f1c; border: 0; box-shadow: inset 0 0 0 1px var(--line); color: var(--muted); padding: 4px 8px; font-size: .76rem; cursor: pointer; }
+.gseg button[aria-pressed="true"] { color: #140b24; font-weight: 700; }
+.gseg button[data-g="mine"][aria-pressed="true"] { background: var(--nova); }
+.gseg button[data-g="friend"][aria-pressed="true"] { background: var(--cyan); }
+.gseg button[data-g=""][aria-pressed="true"] { background: var(--warn); }
+.rrow .more { padding: 0 12px 12px 54px; display: grid; gap: 8px; }
+.rrow .tl { display: grid; gap: 2px; font-size: .82rem; max-height: 220px; overflow: auto; }
+.rrow .tl div { display: grid; grid-template-columns: 130px 1fr; gap: 8px; }
+.rrow .tl time { font-family: var(--font-mono); color: var(--muted); font-size: .76rem; }
+.stat.alert { box-shadow: inset 0 0 0 2px var(--bad); }
+.stat.alert .v { color: var(--bad); }
 .histtools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .histtools input[type=search] { flex: 1 1 200px; background: #120f1c; border: 0; box-shadow: inset 0 0 0 2px var(--line); padding: 8px 10px; min-width: 0; }
 .histtools input[type=search]:focus { box-shadow: inset 0 0 0 2px var(--nova); outline: 0; }
@@ -385,6 +406,7 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
       <button class="tab pix" role="tab" aria-selected="true" data-tab="device" data-icon="device">Device</button>
       <button class="tab pix" role="tab" aria-selected="false" data-tab="bt" data-icon="bt">Bluetooth</button>
       <button class="tab pix" role="tab" aria-selected="false" data-tab="wifi" data-icon="wifi">Wi-Fi</button>
+      <button class="tab pix" role="tab" aria-selected="false" data-tab="watch" data-icon="eye">Watch</button>
       <button class="tab pix" role="tab" aria-selected="false" data-tab="keys" data-icon="keys">Keys</button>
       <button class="tab pix" role="tab" aria-selected="false" data-tab="tv" data-icon="tv">TV remote</button>
       <button class="tab pix" role="tab" aria-selected="false" data-tab="pet" data-icon="pet">Nova</button>
@@ -509,18 +531,27 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
         <div class="inline"><button class="btn primary pix" id="wfNamesSave">Save</button><span class="hint" id="wfNamesMsg" role="status"></span></div>
       </div>
 
+    </section>
+
+    <!-- WATCH: everyone on your networks -->
+    <section class="pane" id="pane-watch" hidden>
       <div class="section">
-        <h2>Devices on your network <span class="count" id="netCount"></span></h2>
-        <p class="hint">Pocket Nova asks every address on your Wi-Fi "who are you?" and lists everyone that answers. Press <b>It's mine</b> on your own devices (naming one counts too). After that, only devices you haven't approved get a <span class="badge new">new</span> tag and an alert. Phones that change their private address are recognised by the name they answer with when Pocket Nova can get one.</p>
+        <h2>Everyone <span class="count" id="netCount"></span></h2>
+        <p class="hint">Every device Pocket Nova has seen on your home Wi-Fi or its own setup network: what it is, whether it's around right now, and who it belongs to. Tag yours as <b>Mine</b> and your friends' as <b>Friend</b>; anything left <b>Unknown</b> stands out in red when it's online. Click a device for its timeline. Pocket Nova isn't your router, so it sees <i>who</i> is on the network and when, not what they're doing on it.</p>
+        <div class="stats" id="rosStats"></div>
+        <div class="seg" id="rosFilter"></div>
+        <div class="histtools">
+          <input type="search" id="rosSearch" class="pix" placeholder="Search: name, model, maker, address…" aria-label="Search devices">
+        </div>
         <div class="inline">
           <button class="btn primary pix" id="netScanBtn">Scan now</button>
           <button class="btn pix" id="netAllMine" hidden>Mark all as mine</button>
-          <button class="btn danger pix" id="netForget" data-confirm="Click again: forget every device">Forget all devices</button>
-          <label class="toggle"><input type="checkbox" id="netWatch"><span class="muted">Watch for new devices (scans every 2 minutes while this panel is open)</span></label>
+          <label class="toggle"><input type="checkbox" id="netWatch"><span class="muted">Keep watching (scans every 2 minutes while this panel is open, and tells you when an unknown device shows up)</span></label>
         </div>
         <div class="progress" id="netProg" hidden><i></i></div>
-        <div class="devices" id="netList"></div>
+        <div class="roster" id="roster"></div>
         <p class="hint" id="netWhen"></p>
+        <div class="inline"><button class="btn danger pix" id="netForget" data-confirm="Click again: forget every device">Forget all devices</button></div>
       </div>
       <div class="section">
         <h2>History <span class="count" id="histCount"></span></h2>
@@ -863,6 +894,7 @@ const ICONS = {
   wifi:   ["........", ".CCCCCC.", "C......C", "..CCCC..", ".C....C.", "...CC...", "...CC...", "........"],
   tv:     ["..w..w..", "...ww...", "BBBBBBBB", "BCCCCCCB", "BCCCCCCB", "BCCCCCCB", "BBBBBBBB", "..w..w.."],
   pet:    ["...Y....", "..PPPP..", ".PDDDDP.", ".PWDDWP.", ".PDDDDP.", ".PDMMDP.", "..PPPP..", "..P..P.."],
+  eye:    ["........", "..wwww..", ".w....w.", "w..CC..w", "w..CC..w", ".w....w.", "..wwww..", "........"],
   gear:   ["...ww...", ".w.ww.w.", "..wwww..", "wwwKKwww", "wwwKKwww", "..wwww..", ".w.ww.w.", "...ww..."],
   pc:     ["........", "wwwwwwww", "wBBBBBBw", "wBBBBBBw", "wBBBBBBw", "wwwwwwww", "...ww...", "..wwww.."],
   keys:   ["........", "OOOOOOOO", "OwOwOwOO", "OOOOOOOO", "OwOwOwOO", "OOOOOOOO", "OwwwwwOO", "OOOOOOOO"],
@@ -1332,6 +1364,9 @@ function renderNet() {
   if (key === netKey) return;
   netKey = key;
   const box = $("netList");
+  $("netAllMine").hidden = !res || res.list.every((d) => d.mine);
+  $("netWhen").textContent = res ? `Last scan ${netAgo(res.at)}${res.ssid ? " on " + res.ssid : ""}. A "private address" is one a phone or laptop makes up for each network, so the same device can look different on another Wi-Fi.` : "";
+  if (!box) return;                     // the Watch tab's roster shows the devices now
   $("netCount").textContent = res ? res.list.length : "";
   $("netAllMine").hidden = !res || res.list.every((d) => d.mine);
   $("netWhen").textContent = res ? `Last scan ${netAgo(res.at)}${res.ssid ? " on " + res.ssid : ""}. A "private address" is one a phone or laptop makes up for each network, so the same device looks different on another Wi-Fi.` : "";
@@ -1377,6 +1412,121 @@ function renderNet() {
       act.onclick = () => { api("/api/netmine", { mac: d.mac, mine: true }); toast("Got it. No more alerts for this one."); };
     }
     row.append(iconSvg(icon, "ico"), who, act);
+    box.appendChild(row);
+  });
+}
+// ---- Watch tab: everyone
+const ROS_FILTERS = { all: () => true, online: (r) => r.online || r.apNow, unknown: (r) => !r.group && !r.router && !r.pc && !r.nova,
+  friend: (r) => r.group === "friend", mine: (r) => r.group === "mine" || r.router || r.pc || r.nova, blocked: (r) => r.blocked };
+let rosFilter = "all", rosKey = "", rosOpen = new Set(), rosStrangers = null;
+try { rosFilter = localStorage.getItem("pn-rosfilter") || "all"; } catch (e) {}
+seg($("rosFilter"), ["Everyone", "Online now", "Unknown", "Friends", "Mine", "Blocked"], (i) => {
+  rosFilter = Object.keys(ROS_FILTERS)[i]; rosKey = "";
+  try { localStorage.setItem("pn-rosfilter", rosFilter); } catch (e) {}
+  renderRoster();
+});
+$("rosSearch").oninput = () => { rosKey = ""; renderRoster(); };
+function rosName(r) {
+  const name = r.name && !/^android$/i.test(r.name) ? r.name : "";
+  const title = r.nova ? (S.config && S.config.name) || "Pocket Nova" : r.label || r.model || name || r.vendor || nickname(r.mac);
+  const extra = [r.label ? r.model || name : name && r.model ? name : "", r.vendor && title !== r.vendor ? r.vendor : ""].filter(Boolean);
+  return { title, extra };
+}
+function rosIcon(r) {
+  if (r.router) return "router";
+  if (r.nova) return "nova";
+  if (r.pc || /windows|mac$|linux|chromebook/i.test(r.model)) return "pc";
+  if (/iphone|android|galaxy|pixel|redmi|oneplus|phone/i.test(r.model) || /^.[26AE]/i.test(r.mac)) return "phone";
+  return "device";
+}
+function renderRoster() {
+  const all = S.roster || [];
+  const stranger = (r) => ROS_FILTERS.unknown(r) && (r.online || r.apNow);
+  // A stranger who wasn't online a moment ago: say so.
+  const now = new Set(all.filter(stranger).map((r) => r.mac));
+  if (rosStrangers) for (const m of now) if (!rosStrangers.has(m)) {
+    const r = all.find((x) => x.mac === m);
+    toast(`Unknown device online: ${rosName(r).title}${r.apNow ? " (on the setup network)" : ""}`, true);
+  }
+  rosStrangers = now;
+  const needle = $("rosSearch").value.trim().toLowerCase();
+  const key = JSON.stringify([all, rosFilter, needle, [...rosOpen], (S.history || []).length]);
+  if (key === rosKey) return;
+  rosKey = key;
+  $("netCount").textContent = all.length || "";
+  const count = (f) => all.filter(f).length;
+  $("rosStats").innerHTML = "";
+  [[count((r) => r.online || r.apNow), "online now", false], [now.size, "unknown online", now.size > 0],
+   [count(ROS_FILTERS.friend), "friends"], [count(ROS_FILTERS.mine), "yours"], [all.length, "seen in total"]].forEach(([v, k, alert]) => {
+    const d = document.createElement("div"); d.className = "stat pix" + (alert ? " alert" : "");
+    d.innerHTML = `<div class="v">${v}</div><div class="k">${k}</div>`;
+    $("rosStats").appendChild(d);
+  });
+  setSeg($("rosFilter"), Object.keys(ROS_FILTERS).indexOf(rosFilter));
+  const list = all.filter(ROS_FILTERS[rosFilter]).filter((r) => {
+    if (!needle) return true;
+    const n = rosName(r);
+    return [n.title, ...n.extra, r.mac, r.homeIp, r.apIp, r.model, r.vendor, r.name].some((v) => v && String(v).toLowerCase().includes(needle));
+  }).sort((a, b) => (stranger(b) - stranger(a)) || ((b.online || b.apNow) - (a.online || a.apNow)) || (b.last - a.last));
+  const box = $("roster");
+  box.innerHTML = "";
+  if (!list.length) box.innerHTML = `<div class="empty">${all.length ? "No devices match." : "Nothing seen yet. Press Scan now."}</div>`;
+  list.forEach((r) => {
+    const n = rosName(r);
+    const row = document.createElement("div");
+    row.className = "rrow pix" + (stranger(r) ? " stranger" : r.online || r.apNow ? " on" : "");
+    const top = document.createElement("div"); top.className = "top";
+    const t = document.createElement("div"); t.className = "t";
+    const b = document.createElement("b"); b.textContent = n.title;
+    const sub = document.createElement("div"); sub.className = "sub";
+    const bits = [];
+    if (r.online) bits.push(["badge live", `home Wi-Fi now · ${r.homeIp}`]);
+    else if (r.home) bits.push(["badge", "home Wi-Fi"]);
+    if (r.apNow) bits.push(["badge live", `setup network now${r.apIp ? " · " + r.apIp : ""}`]);
+    else if (r.setup) bits.push(["badge", "setup network"]);
+    if (r.blocked) bits.push(["badge wait", "blocked"]);
+    if (r.router) bits.push(["badge on", "router"]);
+    if (r.pc) bits.push(["badge on", "this PC"]);
+    bits.forEach(([cls, text]) => { const x = document.createElement("span"); x.className = cls; x.textContent = text; sub.appendChild(x); });
+    const words = [...n.extra, /^.[26AE]/i.test(r.mac) ? "private address" : "",
+      r.online || r.apNow ? "" : r.last ? "last seen " + netAgo(r.last) : "", r.tries ? `${r.tries} Connect tr${r.tries === 1 ? "y" : "ies"}` : ""].filter(Boolean);
+    if (words.length) { const w = document.createElement("span"); w.textContent = words.join(" · "); sub.appendChild(w); }
+    t.append(b, sub);
+    const act = document.createElement("div"); act.className = "act";
+    if (!r.router && !r.pc && !r.nova) {
+      const g = document.createElement("div"); g.className = "gseg";
+      [["mine", "Mine"], ["friend", "Friend"], ["", "Unknown"]].forEach(([val, label]) => {
+        const btn = document.createElement("button"); btn.dataset.g = val; btn.textContent = label;
+        btn.setAttribute("aria-pressed", String(r.group === val));
+        btn.onclick = (e) => { e.stopPropagation(); r.group = val; rosKey = ""; renderRoster(); api("/api/netgroup", { mac: r.mac, group: val }); };
+        g.appendChild(btn);
+      });
+      act.appendChild(g);
+      if (r.setup) { const bb = blockBtn(r.mac); bb.onclick = ((f) => (e) => { e.stopPropagation(); f(); })(bb.onclick); act.appendChild(bb); }
+    }
+    top.append(iconSvg(rosIcon(r), "ico"), t, act);
+    top.onclick = () => { rosOpen.has(r.mac) ? rosOpen.delete(r.mac) : rosOpen.add(r.mac); rosKey = ""; renderRoster(); };
+    row.appendChild(top);
+    if (rosOpen.has(r.mac)) {
+      const more = document.createElement("div"); more.className = "more";
+      const inp = document.createElement("input"); inp.type = "text"; inp.className = "pix"; inp.maxLength = 40;
+      inp.placeholder = `Give it a name (e.g. "Jay's phone")`; inp.value = r.label || "";
+      inp.onchange = () => { api("/api/netlabel", { mac: r.mac, label: inp.value }); rosKey = ""; };
+      const facts = document.createElement("div"); facts.className = "sub";
+      facts.textContent = [`address ${r.mac}`, r.first ? "first seen " + new Date(r.first * 1000).toLocaleString() : "",
+        r.joins ? `joined the setup network ${r.joins}×` : ""].filter(Boolean).join(" · ");
+      const tl = document.createElement("div"); tl.className = "tl";
+      const events = (S.history || []).filter((e) => (e.mac || "").toUpperCase() === r.mac).slice(-30).reverse();
+      if (!events.length) tl.innerHTML = `<span class="muted">No events yet.</span>`;
+      events.forEach((e) => {
+        const line = document.createElement("div");
+        const tm = document.createElement("time"); tm.textContent = new Date(e.t * 1000).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+        const w = document.createElement("span"); w.textContent = (H_WORDS[e.k] || [e.k])[0] + (e.note ? `: ${e.note}` : "");
+        line.append(tm, w); tl.appendChild(line);
+      });
+      more.append(inp, facts, tl);
+      row.appendChild(more);
+    }
     box.appendChild(row);
   });
 }
@@ -1910,6 +2060,7 @@ function render() {
   renderDevices();
   renderBrands();
   renderNet();
+  renderRoster();
   renderHistory();
   renderNamePreview();
 

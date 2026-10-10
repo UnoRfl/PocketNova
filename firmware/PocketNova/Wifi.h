@@ -311,6 +311,7 @@ async function poll(){const r=await fetch("/result").then(r=>r.json()).catch(()=
  if(r.state=="online"){say("Connected! "+r.ip,"ok");return}
  say("Couldn't join: "+r.reason+".","bad")}
 scan();
+fetch("/hello?s="+Math.min(screen.width,screen.height)+"x"+Math.max(screen.width,screen.height)+"@"+(devicePixelRatio||1)).catch(()=>{});
 </script></body></html>)HTML";
 
 // ---------------------------------------------------------------------
@@ -332,6 +333,7 @@ struct ApGuest {
   uint8_t  joins;
   uint32_t windowAt, bannedUntil;
   char     ua[112];               // how its browser describes it ("...Android 14; SM-S918B...")
+  char     scr[16];               // its screen, "390x844@3" (tells iPhone generations apart)
 };
 const int   GUESTS = 12;
 ApGuest     guests[GUESTS];             // recent visitors, for the flood check
@@ -414,6 +416,7 @@ void apOnJoin(WiFiEvent_t, WiFiEventInfo_t info) {
     memcpy(g->mac, m, 6);
     g->joins = 0; g->windowAt = now; g->bannedUntil = 0;
     g->ua[0] = 0;
+    g->scr[0] = 0;
   }
   if (now - g->windowAt > 60000) { g->windowAt = now; g->joins = 0; }
   g->joins++;
@@ -597,6 +600,17 @@ void wifiStartSetup() {
     web->send_P(200, "text/html", SETUP_PAGE);
   });
   web->on("/scan", HTTP_GET, webScan);
+  // The page reports the phone's screen size. iPhones never say which model
+  // they are, but each generation has its own screen size and sharpness,
+  // so the PC panel can narrow it down (390x844@3 = iPhone 12, 13 or 14).
+  web->on("/hello", HTTP_GET, [] {
+    noteClient();
+    uint8_t mac[6];
+    String s = web->arg("s");
+    if (s.length() < sizeof(ApGuest::scr) && apMacOf((uint32_t)web->client().remoteIP(), mac))
+      for (auto& g : guests) if (!memcmp(g.mac, mac, 6)) { strcpy(g.scr, s.c_str()); break; }
+    web->send(204);
+  });
   web->on("/save", HTTP_POST, webSave);
   web->on("/result", HTTP_GET, webResult);
   web->onNotFound(webRedirect);
