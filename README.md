@@ -15,6 +15,7 @@ A pocket remote, presentation clicker and virtual pet for the **M5Stack Atom Mat
 - **Wi-Fi.** Its own setup network with a sign-in page that opens by itself. Gets the time from the internet. Give it your own name on the network, and list every device on your Wi-Fi (new ones are flagged).
 - **Phone remote.** A web page that controls it over Bluetooth, protected by a code shown on the LEDs.
 - **PC panel (Windows).** Opens by itself when Pocket Nova is plugged in. Every setting, a live copy of the screen and firmware updates over the cable or over Wi-Fi. With no cable it falls back to Bluetooth.
+- **Wi-Fi link.** The PC panel can reach Pocket Nova over your Wi-Fi (no cable), and keys, media buttons, slides and the air mouse can go over Wi-Fi too when Bluetooth is shaky. Both ends prove they know a shared secret key without sending it (HMAC challenge-response).
 - **PC alerts.** A finished download, a maxed-out processor or a low laptop battery pops up on the LEDs.
 - **Network tools.** Pings your router and the internet to tell Wi-Fi trouble from an internet outage (with a latency chart and outage log in the panel), and a Wi-Fi channel analyzer that recommends a channel.
 - **Bluetooth finder.** Find your earbuds or a tracker by signal strength: the LEDs go from blue to red as you get closer.

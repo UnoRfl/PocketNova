@@ -63,14 +63,26 @@
 
 extern bool replyBle;                   // NovaRemote.h: answering the phone page
 void remoteNotify(const String& line);
+extern bool replyNet;                   // NetLink.h: answering the panel over Wi-Fi
+bool netSendLine(const String& line);
+bool netInputReady();
+bool linkUp();
+extern uint32_t linkHid, linkSkipped;
+// Secrets (passwords, keys) only go down the USB cable: the phone page and
+// the Wi-Fi link are not for them (Wi-Fi traffic isn't encrypted).
+bool replySecure() { return !replyBle && !replyNet; }
+
+// One reply line: "@" + the JSON. (serializeJson() REPLACES a String's
+// contents, so "@" has to be added after, not before.)
+String atJson(JsonDocument& d) {
+  String body;
+  serializeJson(d, body);
+  return "@" + body;
+}
 
 void sendJson(JsonDocument& d) {
-  if (replyBle) {
-    String s = "@";
-    serializeJson(d, s);
-    remoteNotify(s);
-    return;
-  }
+  if (replyNet) { netSendLine(atJson(d)); return; }
+  if (replyBle) { remoteNotify(atJson(d)); return; }
   Serial.print('@');
   serializeJson(d, Serial);
   Serial.println();
@@ -133,7 +145,7 @@ void sendConfig() {
   d["logPass"] = myLogPass;
   JsonArray bl = d["blocked"].to<JsonArray>();
   for (int i = 0; i < blockedCount; i++) bl.add(macToString(blocked[i]));
-  if (!replyBle) d["apPass"] = myApPass;          // the PC (USB) only, never the phone page
+  if (replySecure()) d["apPass"] = myApPass;      // the PC (USB) only, never the phone page or Wi-Fi
   d["lastApp"] = cfg.lastApp;
   d["tutorialDone"] = cfg.tutorialDone;
   d["snakeHigh"] = cfg.snakeHigh;
@@ -144,6 +156,7 @@ void sendConfig() {
   d["simonBest"] = cfg.simonBest;
   d["otaPort"] = OTA_PORT;
   d["tempF"] = cfg.tempF;
+  d["inputVia"] = cfg.inputVia;
   d["tempOffset"] = cfg.tempOffset;
   JsonObject n = d["net"].to<JsonObject>();
   n["on"] = nmOn;
@@ -164,7 +177,7 @@ void sendConfig() {
   for (int i = 0; i < hmSceneCount; i++) sc.add(hmScenes[i]);
   JsonObject f = d["find"].to<JsonObject>();
   if (findHave) { f["addr"] = macToString(findAddr); f["name"] = findName; }
-  if (!replyBle) d["otaKey"] = otaKey;            // Wi-Fi update key: the PC (USB) only
+  if (replySecure()) d["otaKey"] = otaKey;        // Wi-Fi update key: the PC (USB) only
   d["pX"]["axis"] = cfg.pX.axis;   d["pX"]["sign"] = cfg.pX.sign;
   d["pUp"]["axis"] = cfg.pUp.axis; d["pUp"]["sign"] = cfg.pUp.sign;
   sendJson(d);
@@ -225,10 +238,10 @@ void sendStatus() {
   d["screen"] = SCREEN_NAMES[screen];
   d["app"] = currentApp >= 0 ? apps[currentApp].name : "";
   d["menuIndex"] = menu.index;
-  d["ble"] = bleOK();
+  d["ble"] = bleKeyboard.isConnected();
   d["bonds"] = bleBondCount();
   d["slot"] = cfg.btSlot;
-  d["host"] = hostBondKnown && bleOK() ? macToString(hostBond) : String("");
+  d["host"] = hostBondKnown && bleKeyboard.isConnected() ? macToString(hostBond) : String("");
   d["swiftPair"] = bleKeyboard.swiftPairOn();   // true = broadcasting the pop-up right now
   JsonObject w = d["wifi"].to<JsonObject>();
   w["on"] = cfg.wifiOn;
@@ -250,7 +263,7 @@ void sendStatus() {
   if (setupOn) {
     w["apSsid"] = apSsid;
     w["apOpen"] = myApOpen;
-    if (!replyBle) w["apPass"] = apPass;        // not to the phone page
+    if (replySecure()) w["apPass"] = apPass;    // not to the phone page or over Wi-Fi
     w["setupLeft"] = (int32_t)(setupUntil - millis()) / 1000;
     // Phones and laptops joined to the setup network right now.
     wifi_sta_list_t sl;
@@ -292,6 +305,21 @@ void sendStatus() {
   fd["have"] = findHave;
   if (findHave && findSeenAt) { fd["rssi"] = (int)findRssi; fd["ago"] = millis() - findSeenAt; fd["trend"] = serialized(String(findTrend, 1)); }
   d["chanScanning"] = chScanning;
+  JsonObject lk = d["link"].to<JsonObject>();
+  lk["wifi"] = linkUp();                         // the panel is linked over Wi-Fi
+  lk["input"] = netInputReady();                 // keys/mouse may go that way
+  lk["via"] = INPUT_VIA_NAMES[cfg.inputVia];
+  lk["now"] = netInputReady() && (cfg.inputVia == 2 || !bleKeyboard.isConnected()) ? "wifi"
+            : bleKeyboard.isConnected() ? "bluetooth" : "none";   // where a key press would go right now
+  lk["sent"] = linkHid;
+  lk["skipped"] = linkSkipped;
+  if (screen == SCR_APP && currentApp >= 0 && !strcmp(apps[currentApp].name, "AIR MOUSE")) {
+    JsonObject mo = d["mouse"].to<JsonObject>();   // live motion, for the panel's air mouse test
+    mo["ready"] = amBiased;
+    mo["vx"] = (int)amVx;
+    mo["vy"] = (int)amVy;
+    mo["scroll"] = amScroll;
+  }
   d["clock"] = clockValid();
   d["uptime"] = millis() / 1000;
   d["heap"] = ESP.getFreeHeap();
@@ -302,8 +330,8 @@ void sendBonds() {
   JsonDocument d;
   d["t"] = "bonds";
   d["slot"] = cfg.btSlot;
-  d["connected"] = bleOK();
-  d["host"] = hostBondKnown && bleOK() ? macToString(hostBond) : String("");   // connected now
+  d["connected"] = bleKeyboard.isConnected();
+  d["host"] = hostBondKnown && bleKeyboard.isConnected() ? macToString(hostBond) : String("");   // connected now
   JsonArray a = d["list"].to<JsonArray>();
   JsonArray s = d["slots"].to<JsonArray>();      // slot of each pairing, -1 = not known yet
   esp_ble_bond_dev_t list[15];
@@ -363,7 +391,7 @@ void sendHistory(uint32_t since) {
     if (memcmp(e.mac, ZERO, 6)) o["mac"] = macToString(e.mac);
     if (e.ip) o["ip"] = IPAddress(e.ip).toString();
     if (e.note[0]) o["note"] = e.note;
-    if (e.pass[0]) o["pass"] = e.pass;
+    if (e.pass[0] && !replyNet) o["pass"] = e.pass;
   }
   sendJson(d);
 }
@@ -398,6 +426,7 @@ void applySettings(JsonObject c) {
   if (c["mouseSpeed"].is<int>()) cfg.mouseSpeed = constrain(c["mouseSpeed"].as<int>(), 0, 4);
   if (c["mouseFlip"].is<int>()) cfg.mouseFlip = c["mouseFlip"].as<int>() & 3;
   if (c["tempF"].is<bool>()) cfg.tempF = c["tempF"].as<bool>();
+  if (c["inputVia"].is<int>()) cfg.inputVia = constrain(c["inputVia"].as<int>(), 0, 2);
   if (c["tempOffset"].is<int>()) cfg.tempOffset = constrain(c["tempOffset"].as<int>(), -100, 100);
   if (c["lastApp"].is<int>()) cfg.lastApp = constrain(c["lastApp"].as<int>(), 0, APP_COUNT - 1);
   if (c["name"].is<const char*>()) {

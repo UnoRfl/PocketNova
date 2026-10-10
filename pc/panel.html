@@ -417,6 +417,30 @@ details.howto[open] summary { margin-bottom: 8px; }
 .empty-state svg { width: 44px; height: 44px; image-rendering: pixelated; flex: none; }
 .stat .v.cool { color: #7cc4ff; } .stat .v.ok { color: var(--good); } .stat .v.hot { color: var(--warn); }
 
+/* ---- connection (2.15): three link tiles, the "keys go by" route, air mouse test pad */
+.links { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+@media (max-width: 640px) { .links { grid-template-columns: 1fr; } }
+.lnk { display: grid; gap: 4px; padding: 12px; background: var(--panel-2); box-shadow: inset 0 0 0 2px var(--line); --px: 6px; position: relative; }
+.lnk .t { display: flex; align-items: center; gap: 8px; font-family: var(--font-pixel); font-weight: 600; font-size: 1.05rem; }
+.lnk .t svg { width: 20px; height: 20px; image-rendering: pixelated; }
+.lnk .s { font-size: .82rem; color: var(--muted); }
+.lnk .role { font-family: var(--font-tiny); font-size: .6rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.lnk.on { box-shadow: inset 0 0 0 2px var(--good); }
+.lnk.on .role { color: var(--good); }
+.lnk.main { background: linear-gradient(170deg, #20342a, #17241d); }
+.lnk.warn { box-shadow: inset 0 0 0 2px var(--warn); }
+.lnk.on::after { content: ""; position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; background: var(--good); box-shadow: 0 0 8px var(--good); animation: pulse 2s ease-in-out infinite; }
+.route { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--nova-soft); box-shadow: inset 0 0 0 2px var(--nova); --px: 5px; }
+.route b { font-family: var(--font-pixel); font-weight: 600; font-size: 1.05rem; }
+.pad2 { display: grid; grid-template-columns: 200px 1fr; gap: 14px; align-items: center; }
+@media (max-width: 560px) { .pad2 { grid-template-columns: 1fr; } }
+.testpad { position: relative; width: 200px; height: 140px; background: #0b0913; box-shadow: inset 0 0 0 2px var(--line); --px: 6px; overflow: hidden; }
+.testpad::before, .testpad::after { content: ""; position: absolute; background: #241d36; }
+.testpad::before { left: 50%; top: 0; bottom: 0; width: 1px; } .testpad::after { top: 50%; left: 0; right: 0; height: 1px; }
+.testpad i { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; background: var(--nova-hi); box-shadow: 0 0 12px var(--nova-hi); left: 50%; top: 50%; transition: left .12s linear, top .12s linear; }
+.testpad.off i { background: var(--line); box-shadow: none; }
+.testpad.scroll i { background: var(--cyan); box-shadow: 0 0 12px var(--cyan); }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
@@ -496,6 +520,20 @@ details.howto[open] summary { margin-bottom: 8px; }
           <div class="inline"><button class="btn pix" id="flipX">Swap left / right</button><button class="btn pix" id="flipY">Swap forward / back</button></div></div>
         <div class="row"><label for="lastApp">Double tap on Nova opens</label><select id="lastApp" class="pix"></select></div>
       </div>
+      <div class="section" id="secConn">
+        <h2>Connection to this PC</h2>
+        <p class="hint">Pocket Nova can reach this PC three ways. The panel uses the best one it has (USB, then Wi-Fi, then Bluetooth). Keys, media buttons, slides and the air mouse go over <b>Bluetooth</b>, or over <b>Wi-Fi</b> through this panel when Bluetooth is shaky.</p>
+        <div class="links">
+          <div class="lnk" id="lnkUsb"><span class="t"><span id="lnkUsbIco"></span>USB cable</span><span class="role" id="lnkUsbRole">-</span><span class="s" id="lnkUsbS">-</span></div>
+          <div class="lnk" id="lnkWifi"><span class="t"><span id="lnkWifiIco"></span>Wi-Fi</span><span class="role" id="lnkWifiRole">-</span><span class="s" id="lnkWifiS">-</span></div>
+          <div class="lnk" id="lnkBt"><span class="t"><span id="lnkBtIco"></span>Bluetooth</span><span class="role" id="lnkBtRole">-</span><span class="s" id="lnkBtS">-</span></div>
+        </div>
+        <div class="route pix" id="routeNow"><span>A key press right now goes</span><b id="routeWord">-</b></div>
+        <div class="row"><span class="label">Keys and mouse go by</span><div class="seg" id="inputViaSeg"></div></div>
+        <p class="field-note" id="inputViaNote"></p>
+        <label class="toggle"><input type="checkbox" id="wifiInput"><span>Let Pocket Nova press keys and move the mouse on this PC over Wi-Fi</span></label>
+        <p class="hint">Over Wi-Fi this panel has to be running (it starts with Windows). Windows doesn't let any program type into windows that run as administrator, so those only work over Bluetooth. The Wi-Fi link proves both ends know Pocket Nova's secret key, but it isn't encrypted: fine on your home network.</p>
+      </div>
       <div class="section" id="secApps">
         <h2>Apps on the menu</h2>
         <p class="hint">Pick which apps the Atom's menu shows, and their order. Fewer apps = less tilting to reach the ones you use. Hidden apps still open from this panel. Settings always stays, so you can't lock yourself out.</p>
@@ -505,6 +543,9 @@ details.howto[open] summary { margin-bottom: 8px; }
       <div class="section">
         <h2>Air mouse</h2>
         <p class="hint">Open AIR MOUSE on the Atom, hold it flat and point the top edge at the screen. Turn left and right to move the cursor, tip it to go up and down. Tap to click, tilt right and tap to right-click, tilt left and tap to scroll. If the mouse doesn't move, remove Pocket Nova in Windows Bluetooth settings and pair it again (Windows needs to see that it has a mouse now).</p>
+        <div class="pad2"><div class="testpad pix off" id="mousePad" role="img" aria-label="Air mouse motion test"><i id="mouseDot"></i></div>
+          <div class="section" style="gap:6px"><b id="mouseTestTitle">Test it here</b><span class="muted" id="mouseTestText">Open AIR MOUSE and move Pocket Nova: the dot follows your hand. If it goes the wrong way, use the Swap buttons below.</span>
+          <div><button class="btn pix" id="mouseOpen">Open AIR MOUSE</button></div></div></div>
         <div class="row"><span class="label">Speed</span><div class="seg" id="mouseSpeedSeg"></div></div>
         <div class="row"><span class="label">Direction</span>
           <div class="inline"><button class="btn pix" id="mouseFlipX" aria-pressed="false">Swap left / right</button><button class="btn pix" id="mouseFlipY" aria-pressed="false">Swap up / down</button></div></div>
@@ -1196,6 +1237,7 @@ function checkTransport() {
     if (!hide) showBtModal();
   }
   if (t === "usb" && lastTransport === "bluetooth") { $("btModal").hidden = true; toast("Cable plugged in: back to USB"); }
+  if (t === "wifi" && lastTransport && lastTransport !== "wifi") { $("btModal").hidden = true; toast("Linked over Wi-Fi"); }
   lastTransport = t;
 }
 
@@ -2625,6 +2667,59 @@ document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () 
   if (t.dataset.tab === "home") fetchSen();
 }));
 
+// ---- Connection to this PC (2.15)
+const VIA = [["Auto", "Bluetooth while it's connected, Wi-Fi when it drops."], ["Bluetooth only", "Never over Wi-Fi."],
+             ["Wi-Fi first", "Over Wi-Fi whenever this panel is linked, Bluetooth otherwise. Best when Bluetooth keeps dropping."]];
+seg($("inputViaSeg"), VIA.map((v) => v[0]), (i) => cmd({ cmd: "set", cfg: { inputVia: i } }));
+$("wifiInput").onchange = (e) => api("/api/settings", { wifiInput: e.target.checked });
+$("lnkUsbIco").appendChild(iconSvg("pc"));
+$("lnkWifiIco").appendChild(iconSvg("wifi"));
+$("lnkBtIco").appendChild(iconSvg("bt"));
+function lnk(id, on, main, role, text, warn) {
+  $(id).className = "lnk pix" + (on ? " on" : warn ? " warn" : "") + (main ? " main" : "");
+  $(id + "Role").textContent = role;
+  $(id + "S").textContent = text;
+}
+function renderConn() {
+  const st = S.status || {}, c = S.config || {}, wl = S.wifiLink || {}, lk = st.link || {}, t = S.transport;
+  const ok = gate("secConn", fwAtLeast("2.15.0"), "Needs firmware 2.15 or newer on Pocket Nova. Update it in the System tab.");
+  lnk("lnkUsb", t === "usb", t === "usb", t === "usb" ? "panel link" : "not plugged in", t === "usb" ? (S.port || "") + " · settings and firmware updates" : "Plug in for firmware updates over the cable");
+  const wifiOn = !!wl.ready;
+  const wifiRole = [t === "wifi" ? "panel link" : "", wifiOn && lk.input ? "keys and mouse" : ""].filter(Boolean).join(" + ") || (wifiOn ? "standing by" : "not linked");
+  lnk("lnkWifi", wifiOn, t === "wifi", wifiRole, wifiOn ? `${wl.ip} · ${lk.sent || 0} key/mouse reports` : (wl.error || "Looking for Pocket Nova…"), !wifiOn && wl.keyKnown);
+  const btOn = !!st.ble;
+  lnk("lnkBt", btOn, t === "bluetooth", [t === "bluetooth" ? "panel link" : "", btOn ? "keyboard and mouse" : ""].filter(Boolean).join(" + ") || "waiting",
+      btOn ? (st.host ? nameFor(st.host) : "connected") : "Not connected to a PC on this slot", false);
+  if (!ok) return;
+  setSeg($("inputViaSeg"), c.inputVia || 0);
+  $("inputViaNote").textContent = VIA[c.inputVia || 0][1];
+  if (document.activeElement !== $("wifiInput")) $("wifiInput").checked = wl.input !== false;
+  const now = lk.now || "none";
+  $("routeWord").textContent = { wifi: "over Wi-Fi", bluetooth: "over Bluetooth", none: "nowhere: no link to a PC" }[now];
+  $("routeNow").style.boxShadow = now === "none" ? "inset 0 0 0 2px var(--bad)" : "";
+}
+
+// ---- Air mouse test pad: the dot shows the motion Pocket Nova measures right now
+$("mouseOpen").onclick = () => { cmd({ cmd: "app", name: "AIR MOUSE" }); toast("AIR MOUSE is open. Hold it still for a moment, then move it."); };
+function renderMouseTest() {
+  const m = (S.status || {}).mouse, pad = $("mousePad");
+  if (!m) {
+    pad.className = "testpad pix off";
+    $("mouseDot").style.left = "50%"; $("mouseDot").style.top = "50%";
+    $("mouseTestTitle").textContent = "Test it here";
+    $("mouseTestText").textContent = "Open AIR MOUSE and move Pocket Nova: the dot follows your hand. If it goes the wrong way, use the Swap buttons below.";
+    return;
+  }
+  pad.className = "testpad pix" + (m.scroll ? " scroll" : "");
+  const k = (v) => Math.max(-1, Math.min(1, v / 900));
+  $("mouseDot").style.left = 50 + k(m.vx) * 45 + "%";
+  $("mouseDot").style.top = 50 + k(m.vy) * 45 + "%";
+  $("mouseTestTitle").textContent = !m.ready ? "Hold it still…" : m.scroll ? "Scroll mode" : "Move it";
+  $("mouseTestText").textContent = !m.ready ? "Learning the gyroscope's resting value." :
+    "Turn right: the dot goes right. Tip the top edge down: the dot goes down. If not, use Swap below. Clicks and moves go " +
+    ({ wifi: "over Wi-Fi.", bluetooth: "over Bluetooth.", none: "nowhere yet: no link to a PC." }[((S.status || {}).link || {}).now] || "to the PC.");
+}
+
 function renderTools() {
   if (!S.hello) return;
   renderAppsMenu();
@@ -2633,6 +2728,8 @@ function renderTools() {
   renderFinder();
   renderHome();
   renderSensor();
+  renderConn();
+  renderMouseTest();
 }
 
 function render() {
@@ -2643,10 +2740,10 @@ function render() {
   if (!on && S.usbPresent) stuckSince = stuckSince || Date.now(); else stuckSince = 0;
   $("offStuck").hidden = !stuckSince || Date.now() - stuckSince < 10000;
   $("offline").hidden = !!on || !!switching || relink || updating;   // short drops, slot switches, updates: no "looking" flash
-  const viaBt = S.transport === "bluetooth";
+  const viaBt = S.transport === "bluetooth", viaWifi = S.transport === "wifi";
   checkTransport();
   chip($("usbChip"), on ? "good" : relink ? "warn" : "bad",
-       on ? (viaBt ? "Linked by Bluetooth" : "Linked by USB") : relink ? "Reconnecting (Bluetooth)…" : switching ? "Restarting…" : "Not linked", $("usbText"));
+       on ? (viaBt ? "Linked by Bluetooth" : viaWifi ? "Linked by Wi-Fi" : "Linked by USB") : relink ? "Reconnecting (Bluetooth)…" : switching ? "Restarting…" : "Not linked", $("usbText"));
   if (updating) chip($("usbChip"), "warn", { build: "Building firmware…", upload: `Installing firmware ${S.update.pct || 0}%`, restart: "Restarting…" }[S.update.stage] || "Updating firmware", $("usbText"));
 
   const h = S.hello, c = S.config, st = S.status;
@@ -2722,7 +2819,7 @@ function render() {
   }
   if (!on) novaFace = switching ? "blink" : "asleep";
   paintMascot();
-  $("portName").textContent = viaBt ? "Bluetooth" : S.port || "-";
+  $("portName").textContent = viaBt ? "Bluetooth" : viaWifi ? "Wi-Fi" : S.port || "-";
   $("fwDir").textContent = S.firmwareDir || "";
   $("updateWifiBtn").disabled = !S.wifiUpdate || !!(S.update || {}).running;
   $("updateWifiBtn").title = S.wifiUpdate ? "" : "Needs Pocket Nova on your Wi-Fi, and one USB connection first";
@@ -2743,9 +2840,9 @@ function render() {
   renderTools();
 
   const up = S.update || {};
-  $("updateBtn").disabled = !!up.running || viaBt;
+  $("updateBtn").disabled = !!up.running || ((viaBt || viaWifi) && !S.usbPresent);
   $("updateBtn").textContent = up.running ? "Updating…" : "Update firmware";
-  $("updateBtn").title = viaBt ? "Firmware updates need the USB cable" : "";
+  $("updateBtn").title = (viaBt || viaWifi) && !S.usbPresent ? "Over the cable needs the USB cable. Use Update over Wi-Fi instead." : "";
   renderUpdate();
 }
 $("nameInput").oninput = (e) => (e.target.dataset.touched = "1");

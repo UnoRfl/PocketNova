@@ -38,6 +38,7 @@ struct Config {
   uint8_t  simonBest    = 0;          // SIMON longest sequence
   bool     tempF        = false;      // room sensor: show Fahrenheit
   int8_t   tempOffset   = 0;          // room sensor correction, tenths of a degree C
+  uint8_t  inputVia     = 0;          // keys/mouse: 0 auto, 1 Bluetooth only, 2 Wi-Fi first (NetLink.h)
   char     name[25]     = "Pocket Nova";
 } cfg;
 
@@ -46,6 +47,7 @@ struct Config {
 const uint8_t BRIGHT_LEVELS[] = {6, 12, 20, 30, 40};
 const uint8_t BRIGHT_COUNT    = sizeof(BRIGHT_LEVELS);
 const uint8_t BT_SLOTS        = 3;
+const char* const INPUT_VIA_NAMES[] = {"auto", "bluetooth", "wifi"};   // cfg.inputVia
 
 Preferences prefs;
 const uint8_t CONFIG_VERSION = 3;   // bump when saved settings need fixing up
@@ -77,6 +79,7 @@ void saveConfig() {
   prefs.putUChar("simon", cfg.simonBest);
   prefs.putBool("tempF", cfg.tempF);
   prefs.putChar("tempOff", cfg.tempOffset);
+  prefs.putUChar("inVia", cfg.inputVia);
   prefs.putString("name", cfg.name);
   prefs.putUChar("ver", CONFIG_VERSION);
   prefs.end();
@@ -109,6 +112,7 @@ void loadConfig() {
   cfg.simonBest    = prefs.getUChar("simon", 0);
   cfg.tempF        = prefs.getBool("tempF", false);
   cfg.tempOffset   = prefs.getChar("tempOff", 0);
+  cfg.inputVia     = prefs.getUChar("inVia", 0);
   if (prefs.isKey("name")) prefs.getString("name", cfg.name, sizeof(cfg.name));
   uint8_t ver      = prefs.getUChar("ver", 0);
   bool    hadOld   = prefs.isKey("pxS");   // anything saved before?
@@ -118,6 +122,7 @@ void loadConfig() {
   if (cfg.btSlot >= BT_SLOTS) cfg.btSlot = 0;
   if (cfg.rotation > 3) cfg.rotation = 0;
   if (cfg.mouseSpeed > 4) cfg.mouseSpeed = 2;
+  if (cfg.inputVia > 2) cfg.inputVia = 0;
 
   // Settings migrations, oldest first. Each runs once, then the version
   // number is stamped so it never runs again.

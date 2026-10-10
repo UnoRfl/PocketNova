@@ -16,6 +16,8 @@ The panel itself is panel.html, served only to this PC (127.0.0.1).
 """
 
 import ctypes
+import hashlib
+import hmac
 import http.client
 import json
 import os
@@ -57,6 +59,10 @@ VENDORS_PATH = os.path.join(DATA_DIR, "vendors.json")
 MODELS_PATH = os.path.join(DATA_DIR, "models.json")
 NETLOG_PATH = os.path.join(DATA_DIR, "netlog.json")
 SENSORLOG_PATH = os.path.join(DATA_DIR, "sensorlog.json")
+# The firmware is built in the panel's own folder, not arduino-cli's shared
+# cache: that cache sometimes can't be cleared on Windows ("unlinkat ...
+# is a directory") and then every update failed at the build step.
+BUILD_DIR = os.path.join(DATA_DIR, "build")
 HTTP_PORT = 47800
 BAUD = 115200
 
@@ -97,6 +103,7 @@ DEFAULT_SETTINGS = {
     "alerts": {"download": True, "cpu": False, "battery": True},   # PC alerts on the LEDs
     "otaKey": "",                                       # Wi-Fi update key (learned over USB)
     "otaIp": "",                                        # Pocket Nova's address on your Wi-Fi
+    "wifiInput": True,                                  # let Pocket Nova press keys / move the mouse over Wi-Fi
 }
 
 
@@ -841,6 +848,290 @@ class BleLink:
 
 # ---------------------------------------------------------------- device link
 
+# ---------------------------------------------------------------- keys and mouse over Wi-Fi
+
+from ctypes import wintypes
+
+class _MOUSEINPUT(ctypes.Structure):
+    _fields_ = [("dx", wintypes.LONG), ("dy", wintypes.LONG), ("mouseData", wintypes.DWORD),
+                ("dwFlags", wintypes.DWORD), ("time", wintypes.DWORD), ("dwExtraInfo", ctypes.c_size_t)]
+
+
+class _KEYBDINPUT(ctypes.Structure):
+    _fields_ = [("wVk", wintypes.WORD), ("wScan", wintypes.WORD), ("dwFlags", wintypes.DWORD),
+                ("time", wintypes.DWORD), ("dwExtraInfo", ctypes.c_size_t)]
+
+
+class _HARDWAREINPUT(ctypes.Structure):
+    _fields_ = [("uMsg", wintypes.DWORD), ("wParamL", wintypes.WORD), ("wParamH", wintypes.WORD)]
+
+
+class _INPUTUNION(ctypes.Union):
+    _fields_ = [("mi", _MOUSEINPUT), ("ki", _KEYBDINPUT), ("hi", _HARDWAREINPUT)]
+
+
+class _INPUT(ctypes.Structure):
+    _fields_ = [("type", wintypes.DWORD), ("u", _INPUTUNION)]
+
+
+# USB/Bluetooth keyboards send key numbers called "HID usages"; Windows
+# programs press keys by "virtual-key codes". This table turns one into the other.
+HID_VK = {0x04 + i: 0x41 + i for i in range(26)}                 # A-Z
+HID_VK.update({0x1E + i: 0x31 + i for i in range(9)})            # 1-9
+HID_VK.update({0x3A + i: 0x70 + i for i in range(12)})           # F1-F12
+HID_VK.update({0x68 + i: 0x7C + i for i in range(12)})           # F13-F24
+HID_VK.update({0x27: 0x30, 0x28: 0x0D, 0x29: 0x1B, 0x2A: 0x08, 0x2B: 0x09, 0x2C: 0x20, 0x2D: 0xBD, 0x2E: 0xBB,
+               0x2F: 0xDB, 0x30: 0xDD, 0x31: 0xDC, 0x33: 0xBA, 0x34: 0xDE, 0x35: 0xC0, 0x36: 0xBC, 0x37: 0xBE,
+               0x38: 0xBF, 0x39: 0x14, 0x46: 0x2C, 0x47: 0x91, 0x48: 0x13, 0x49: 0x2D, 0x4A: 0x24, 0x4B: 0x21,
+               0x4C: 0x2E, 0x4D: 0x23, 0x4E: 0x22, 0x4F: 0x27, 0x50: 0x25, 0x51: 0x28, 0x52: 0x26, 0x53: 0x90,
+               0x65: 0x5D})
+MOD_VK = [0xA2, 0xA0, 0xA4, 0x5B, 0xA3, 0xA1, 0xA5, 0x5C]        # L Ctrl, L Shift, L Alt, L Win, R Ctrl, R Shift, R Alt, R Win
+# Media report bits (Pocket Nova's report map): next, previous, stop, play/pause, mute,
+# volume up, volume down, browser home, then This PC, calculator, favourites, search,
+# browser stop, browser back, media player, mail.
+MEDIA_VK = [0xB0, 0xB1, 0xB2, 0xB3, 0xAD, 0xAF, 0xAE, 0xAC, 0xB6, 0xB7, 0xAB, 0xAA, 0xA9, 0xA6, 0xB5, 0xB4]
+EXTENDED_VK = {0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x2D, 0x2E, 0x2C, 0x5B, 0x5C, 0x5D, 0x90, 0xA3, 0xA5}
+EXTENDED_VK.update(MEDIA_VK)
+
+
+class Injector:
+    """Presses keys and moves the mouse on this PC from Pocket Nova's
+    reports (the same bytes it would send over Bluetooth). Windows doesn't
+    let a normal program type into windows running as administrator, so
+    those stay out of reach (that's a Windows safety rule)."""
+
+    def __init__(self):
+        self.keys, self.mods, self.media, self.buttons = set(), 0, 0, 0
+        self.kb_at = 0.0
+        self.count = 0
+        self.lock = threading.Lock()
+        self.user32 = ctypes.WinDLL("user32", use_last_error=True) if os.name == "nt" else None
+        threading.Thread(target=self._unstick, daemon=True).start()
+
+    def _send(self, items):
+        if not items or not self.user32:
+            return
+        arr = (_INPUT * len(items))(*items)
+        self.user32.SendInput(len(items), arr, ctypes.sizeof(_INPUT))
+
+    def _key(self, vk, up):
+        i = _INPUT(type=1)
+        flags = (2 if up else 0) | (1 if vk in EXTENDED_VK else 0)
+        scan = self.user32.MapVirtualKeyW(vk, 0) if self.user32 else 0
+        i.u.ki = _KEYBDINPUT(vk, scan, flags, 0, 0)
+        return i
+
+    def _mouse(self, flags, dx=0, dy=0, data=0):
+        i = _INPUT(type=0)
+        i.u.mi = _MOUSEINPUT(dx, dy, data & 0xFFFFFFFF, flags, 0, 0)
+        return i
+
+    def handle(self, line):
+        try:
+            msg = json.loads(line[1:])
+            rid, d = int(msg["r"]), bytes.fromhex(msg["d"])
+        except (ValueError, KeyError):
+            return
+        with self.lock:
+            self.count += 1
+            if rid == 1 and len(d) >= 8:
+                self._keyboard(d[0], {k for k in d[2:8] if k})
+            elif rid == 2 and len(d) >= 2:
+                self._media_keys(d[0] | d[1] << 8)
+            elif rid == 3 and len(d) >= 4:
+                sgn = lambda b: b - 256 if b > 127 else b
+                self._mouse_report(d[0], sgn(d[1]), sgn(d[2]), sgn(d[3]))
+
+    def _keyboard(self, mods, keys):
+        self.kb_at = time.time()
+        ev = []
+        for b in range(8):                                   # modifiers down first...
+            if mods & (1 << b) and not self.mods & (1 << b):
+                ev.append(self._key(MOD_VK[b], False))
+        for k in keys - self.keys:                           # ...then the keys
+            if k in HID_VK:
+                ev.append(self._key(HID_VK[k], False))
+        for k in self.keys - keys:                           # keys up...
+            if k in HID_VK:
+                ev.append(self._key(HID_VK[k], True))
+        for b in range(8):                                   # ...then modifiers up
+            if self.mods & (1 << b) and not mods & (1 << b):
+                ev.append(self._key(MOD_VK[b], True))
+        self.mods, self.keys = mods, keys
+        self._send(ev)
+
+    def _media_keys(self, bits):
+        ev = []
+        for b in range(16):
+            if bits & (1 << b) and not self.media & (1 << b):
+                ev.append(self._key(MEDIA_VK[b], False))
+            elif self.media & (1 << b) and not bits & (1 << b):
+                ev.append(self._key(MEDIA_VK[b], True))
+        self.media = bits
+        self._send(ev)
+
+    def _mouse_report(self, buttons, x, y, wheel):
+        ev = []
+        if x or y:
+            ev.append(self._mouse(0x0001, x, y))                # relative move (Windows adds pointer speed, like a real mouse)
+        for bit, down, up in ((1, 0x0002, 0x0004), (2, 0x0008, 0x0010), (4, 0x0020, 0x0040)):
+            if buttons & bit and not self.buttons & bit:
+                ev.append(self._mouse(down))
+            elif self.buttons & bit and not buttons & bit:
+                ev.append(self._mouse(up))
+        if wheel:
+            ev.append(self._mouse(0x0800, data=wheel * 120))    # one notch = 120
+        self.buttons = buttons
+        self._send(ev)
+
+    def release_all(self):
+        with self.lock:
+            self._keyboard(0, set())
+            self._media_keys(0)
+            self._mouse_report(0, 0, 0, 0)
+
+    def _unstick(self):
+        """If a key-up got lost on the way (weak Wi-Fi), don't leave a key held down."""
+        while True:
+            time.sleep(1)
+            if (self.keys or self.mods or self.media or self.buttons) and time.time() - self.kb_at > 3:
+                self.release_all()
+
+
+injector = Injector()
+
+
+class WifiLink:
+    """The panel <-> Pocket Nova over your Wi-Fi (NetLink.h on the device):
+    TCP port 3233, the same JSON lines as USB. Both sides prove they know
+    the update key (learned once over USB) without sending it."""
+
+    PORT = 3233
+
+    def __init__(self, on_line, on_up, on_down):
+        self.on_line, self.on_up, self.on_down = on_line, on_up, on_down
+        self.sock = None
+        self.ready = False
+        self.last_error = ""
+        self.lock = threading.Lock()
+        self.paused = False
+
+    def start(self):
+        threading.Thread(target=self._run, daemon=True).start()
+
+    def send(self, obj):
+        with self.lock:
+            if not self.ready:
+                return False
+            try:
+                self.sock.sendall((json.dumps(obj, separators=(",", ":")) + "\n").encode())
+                return True
+            except OSError:
+                self._close()
+                return False
+
+    def _close(self):
+        try:
+            self.sock.close()
+        except Exception:
+            pass
+
+    def _run(self):
+        while True:
+            with settings_lock:
+                key, ip = settings.get("otaKey"), settings.get("otaIp")
+            if self.paused or not key or not ip:
+                self.last_error = "" if self.paused else ("Plug Pocket Nova in by USB once so this PC learns its key"
+                                                          if not key else "Pocket Nova isn't on your Wi-Fi")
+                time.sleep(3)
+                continue
+            try:
+                self._session(ip, key)
+            except (OSError, ValueError) as e:
+                self.last_error = str(e) or e.__class__.__name__
+            was = self.ready
+            self.ready = False
+            self._close()
+            if was:
+                log(f"Wi-Fi link closed: {self.last_error}")
+                self.on_down()
+            time.sleep(4)
+
+    def _session(self, ip, key):
+        s = socket.create_connection((ip, self.PORT), timeout=4)
+        s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        self.sock = s
+        buf = b""
+
+        def read_line(deadline):
+            nonlocal buf
+            while b"\n" not in buf:
+                if time.time() > deadline:
+                    raise ValueError("Pocket Nova stopped answering")
+                try:
+                    chunk = s.recv(4096)
+                except socket.timeout:
+                    continue
+                if not chunk:
+                    raise ValueError("Pocket Nova closed the link (another PC may be linked)")
+                buf += chunk
+            raw, buf = buf.split(b"\n", 1)
+            return raw.decode("utf-8", "replace").strip()
+
+        def parse(line):                                       # tolerate a missing "@" (firmware 2.15.0)
+            return json.loads(line[1:] if line.startswith("@") else line)
+
+        hello = parse(read_line(time.time() + 5))
+        if hello.get("t") != "challenge" or len(hello.get("n", "")) != 32:
+            raise ValueError("unexpected answer on port 3233")
+        mine = os.urandom(16).hex()
+        mac = hmac.new(key.encode(), f"dev:{hello['n']}".encode(), hashlib.sha256).hexdigest()
+        with settings_lock:
+            want_input = settings.get("wifiInput", True)
+        s.sendall((json.dumps({"cmd": "auth", "mac": mac, "n": mine, "input": want_input}) + "\n").encode())
+        reply = parse(read_line(time.time() + 5))
+        proof = hmac.new(key.encode(), f"pc:{mine}".encode(), hashlib.sha256).hexdigest()
+        if reply.get("t") != "auth" or not hmac.compare_digest(str(reply.get("mac", "")), proof):
+            raise ValueError("the device at that address couldn't prove it's your Pocket Nova")
+        s.settimeout(1)
+        self.ready, self.last_error = True, ""
+        log(f"Wi-Fi link up with {ip}")
+        self.on_up()
+        last_rx = last_ping = time.time()
+        while True:
+            now = time.time()
+            if now - last_ping > 5:                          # heartbeat: the device drops a silent link after 20 s
+                last_ping = now
+                if not self.send({"cmd": "ping"}):
+                    raise ValueError("send failed")
+            if now - last_rx > 20:
+                raise ValueError("no answer for 20 s")
+            try:
+                chunk = s.recv(4096)
+            except socket.timeout:
+                continue
+            if not chunk:
+                raise ValueError("Pocket Nova closed the link")
+            last_rx = time.time()
+            buf += chunk
+            while b"\n" in buf:
+                raw, buf = buf.split(b"\n", 1)
+                line = raw.decode("utf-8", "replace").strip()
+                if not line:
+                    continue
+                if not line.startswith("@"):
+                    line = "@" + line
+                if line.startswith('@{"t":"hid"'):
+                    with settings_lock:
+                        allowed = settings.get("wifiInput", True)
+                    if allowed:
+                        injector.handle(line)
+                elif line.startswith('@{"t":"pong"'):
+                    pass
+                else:
+                    self.on_line(line)
+
+
 class DeviceLink:
     """Finds Pocket Nova on a USB serial port (or, failing that, over
     Bluetooth) and keeps talking to it."""
@@ -867,6 +1158,8 @@ class DeviceLink:
         self._next_ble = 0.0
         self.ble_lost_at = 0.0                # when the Bluetooth link last dropped
         self.ble.start()
+        self.wifi = WifiLink(self._wifi_line, self._wifi_up, self._wifi_down)
+        self.wifi.start()
 
     # ---- helpers
     def _add_log(self, text):
@@ -874,18 +1167,44 @@ class DeviceLink:
         self.logs.append((self.seq, text))
 
     def connected(self):
-        return self.ser is not None or self.ble.connected
+        return self.ser is not None or self.wifi.ready or self.ble.connected
 
     def transport(self):
-        return "usb" if self.ser is not None else "bluetooth" if self.ble.connected else ""
+        return "usb" if self.ser is not None else "wifi" if self.wifi.ready else "bluetooth" if self.ble.connected else ""
 
     def ble_reconnecting(self):
         """A short Bluetooth drop: keep showing the last state while it relinks."""
-        return self.ser is None and not self.ble.connected and time.time() - self.ble_lost_at < 20
+        return self.ser is None and not self.wifi.ready and not self.ble.connected and time.time() - self.ble_lost_at < 20
+
+    # ---- Wi-Fi callbacks (from the Wi-Fi thread). Order of preference: USB, Wi-Fi, Bluetooth.
+    def _wifi_line(self, line):
+        if self.ser is None:                  # with the cable in, Wi-Fi only carries keys and mouse
+            self._handle_line(line)
+
+    def _wifi_up(self):
+        if self.ser is not None:
+            return
+        if self.ble.connected:                # Wi-Fi is steadier: let Bluetooth go
+            self.ble.close()
+        with self.lock:
+            self.state = {}
+            self._add_log(f"-- Connected to Pocket Nova over Wi-Fi ({settings.get('otaIp')})")
+        self.mirror_on = False
+        self.send({"cmd": "hello"})
+        self._after_connect()
+
+    def _wifi_down(self):
+        injector.release_all()
+        if self.ser is None:
+            self.mirror_on = False
+            self._next_ble = 0.0              # try Bluetooth straight away
+            self.ble_lost_at = time.time()
+            with self.lock:
+                self._add_log("-- Wi-Fi link dropped, reconnecting...")
 
     # ---- Bluetooth callbacks (from the Bluetooth thread)
     def _ble_line(self, line):
-        if self.ser is None:                  # USB wins if both are up
+        if self.ser is None and not self.wifi.ready:   # USB, then Wi-Fi, win if they're up
             self._handle_line(line)
 
     def _ble_up(self):
@@ -911,7 +1230,7 @@ class DeviceLink:
 
     def send(self, obj):
         if not self.ser:
-            return self.ble.send(obj)
+            return self.wifi.send(obj) if self.wifi.ready else self.ble.send(obj)
         try:
             with self.lock:
                 self.ser.write((json.dumps(obj, separators=(",", ":")) + "\n").encode())
@@ -1145,11 +1464,11 @@ class DeviceLink:
             if not self.ser:
                 if self.scan():
                     continue
-                if self.ble.connected:
+                if self.wifi.ready or self.ble.connected:
                     self._periodic()
                     time.sleep(0.05)
                     continue
-                if time.time() >= self._next_ble:   # no cable: look for it over Bluetooth
+                if time.time() >= self._next_ble:   # no cable and no Wi-Fi link: look for it over Bluetooth
                     self._next_ble = time.time() + (4 if self.ble_reconnecting() else 15)
                     self.ble.try_connect()
                 if not self.ble_reconnecting() and self.ble_lost_at:
@@ -1246,7 +1565,7 @@ class Updater:
                 raise RuntimeError(f"Firmware folder not found: {sketch}")
             out = tempfile.mkdtemp(prefix="pocketnova-")
             self.lines.append("Building firmware... (about a minute)")
-            self._exec([cli, "compile", "--fqbn", fqbn, "--output-dir", out, sketch])
+            self._exec([cli, "compile", "--fqbn", fqbn, "--build-path", BUILD_DIR, "--output-dir", out, sketch])
             path = os.path.join(out, os.path.basename(sketch.rstrip("\\/")) + ".ino.bin")
             if not os.path.exists(path):
                 raise RuntimeError("The build finished but the firmware file is missing.")
@@ -1317,11 +1636,11 @@ class Updater:
             if not os.path.isdir(sketch):
                 raise RuntimeError(f"Firmware folder not found: {sketch}")
             self.lines.append("Building firmware... (about a minute)")
-            self._exec([cli, "compile", "--fqbn", fqbn, sketch])
+            self._exec([cli, "compile", "--fqbn", fqbn, "--build-path", BUILD_DIR, sketch])
             self.lines.append(f"Uploading to {port}... (about 2 minutes, keep it plugged in)")
             self._stage("upload")
             link.release()
-            self._exec([cli, "upload", "-p", port, "--fqbn", fqbn + ",UploadSpeed=115200", sketch])
+            self._exec([cli, "upload", "-p", port, "--fqbn", fqbn + ",UploadSpeed=115200", "--input-dir", BUILD_DIR, sketch])
             self.pct = 100
             self.lines.append("Installed. Waiting for Pocket Nova to start up...")
             self._stage("restart")
@@ -1636,6 +1955,9 @@ class Handler(BaseHTTPRequestHandler):
                 "firmwareDir": settings.get("firmwareDir"),
                 "alerts": alert_cfg,
                 "wifiUpdate": wifi_update,
+                "wifiLink": {"ready": link.wifi.ready, "error": link.wifi.last_error, "ip": settings.get("otaIp", ""),
+                             "keyKnown": bool(settings.get("otaKey")), "input": settings.get("wifiInput", True),
+                             "injected": injector.count},
             })
         return self._send(404, {"error": "not found"})
 
@@ -1742,6 +2064,11 @@ class Handler(BaseHTTPRequestHandler):
                     settings["autoOpen"] = bool(body["autoOpen"])
                 if "historyDays" in body:
                     settings["historyDays"] = max(0, int(body["historyDays"]))
+                if "wifiInput" in body:
+                    settings["wifiInput"] = bool(body["wifiInput"])
+                    link.wifi.send({"cmd": "linkcfg", "input": settings["wifiInput"]})
+                    if not settings["wifiInput"]:
+                        injector.release_all()
                 save_settings(settings)
             if "autostart" in body:
                 try:

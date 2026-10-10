@@ -51,7 +51,7 @@
 #include "Ir.h"
 #include <esp_task_wdt.h>
 
-const char* const FW_VERSION = "2.14.1";
+const char* const FW_VERSION = "2.15.1";
 
 // Why Pocket Nova last started (for the panel and the history).
 const char* resetReasonName() {
@@ -287,8 +287,11 @@ void menuFrame(Event e) {
   if (now - menuIdleSince > MENU_IDLE_MS) { goPet(); return; }
   clearFb();
   menu.draw(drawMenuItem, menuName, apps[menuOrder[menu.index]].color);
-  // Bluetooth dot: top-right corner glows blue while connected.
-  if (bleOK() && !fb[4]) fb[4] = CRGB(0, 0, beatsin8(20, 15, 60));
+  // Link dot, top-right: blue = Bluetooth connected, green = keys go over Wi-Fi (the panel).
+  if (!fb[4]) {
+    if (bleKeyboard.isConnected() && !(cfg.inputVia == 2 && netInputReady())) fb[4] = CRGB(0, 0, beatsin8(20, 15, 60));
+    else if (netInputReady()) fb[4] = CRGB(0, beatsin8(20, 15, 60), 0);
+  }
 }
 
 // ============================================================================
@@ -395,7 +398,7 @@ void statusPrint() {
                 "ble=%s slot=%d rot=%d bright=%d tv=%s pet=%s love=%u\n",
                 SCREEN_NAMES[screen], currentApp >= 0 ? apps[currentApp].name : "-",
                 tiltX, tiltY, tiltBaseX, tiltBaseY, tiltDir, rawSz,
-                bleOK() ? "connected" : "waiting", cfg.btSlot + 1, cfg.rotation,
+                bleKeyboard.isConnected() ? "connected" : "waiting", cfg.btSlot + 1, cfg.rotation,
                 cfg.brightIdx + 1, tvBrandName(cfg.tvBrand), PET_MOOD_NAMES[petMood], cfg.petLove);
 }
 
@@ -465,6 +468,7 @@ void alertDraw() {
 
 #include "Remote.h"
 #include "NovaRemote.h"
+#include "NetLink.h"
 
 // ============================================================================
 //  MEMORY: the ESP32's Bluetooth chip can do "classic" Bluetooth (speakers,
@@ -523,6 +527,7 @@ void setup() {
   bleKeyboard.setName(cfg.name);
   bleKeyboard.setScanService(REMOTE_SVC);
   bleKeyboard.begin();
+  bleKeyboard.setReportSink(netHidSink);  // keys/mouse may go over Wi-Fi instead (NetLink.h)
   tzOffsetSec = cfg.tz;                 // until the PC or the internet says otherwise
   histBoot = esp_random();
   esp_reset_reason_t why = esp_reset_reason();
@@ -575,7 +580,7 @@ void loop() {
   M5.update();
   inputUpdate();
 
-  bool ble = bleOK();
+  bool ble = bleKeyboard.isConnected();
   if (ble != lastBle) {
     lastBle = ble;
     Serial.println(ble ? "[BLE] Connected" : "[BLE] Disconnected");
@@ -584,6 +589,7 @@ void loop() {
   bleSlotMapUpdate();
   wifiUpdate();
   otaUpdate();
+  linkUpdate();
   sensorUpdate();
   mdnsUpdate();
   netMonitorUpdate();

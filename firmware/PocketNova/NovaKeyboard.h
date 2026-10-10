@@ -105,6 +105,10 @@ const uint8_t MOUSE_LEFT   = 1;
 const uint8_t MOUSE_RIGHT  = 2;
 const uint8_t MOUSE_MIDDLE = 4;
 
+// Somewhere else to send reports (Pocket Nova: the PC panel over Wi-Fi).
+// Return true if it took the report; false = send it over Bluetooth as usual.
+typedef bool (*ReportSink)(uint8_t reportId, const uint8_t* data, size_t len);
+
 //  Low level key report: up to 6 keys and shift, ctrl etc at once
 typedef struct
 {
@@ -122,6 +126,7 @@ private:
   BLECharacteristic* inputMediaKeys;
   BLECharacteristic* inputMouse;
   uint8_t            _mouseButtons = 0;
+  ReportSink         sink = nullptr;
   BLEAdvertising*    advertising;
   KeyReport          _keyReport;
   MediaKeyReport     _mediaKeyReport;
@@ -159,6 +164,7 @@ public:
   void mousePress(uint8_t b);
   void mouseRelease(uint8_t b);
   void mouseClick(uint8_t b);
+  void setReportSink(ReportSink s) { sink = s; }   // Pocket Nova addition
   bool isConnected(void);
   void setBatteryLevel(uint8_t level);
   void setName(std::string deviceName);

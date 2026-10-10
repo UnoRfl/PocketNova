@@ -119,9 +119,7 @@ void remoteReply(const char* t, const char* key = nullptr, const char* val = nul
   JsonDocument d;
   d["t"] = t;
   if (key) d[key] = val;
-  String s = "@";
-  serializeJson(d, s);
-  remoteNotify(s);
+  remoteNotify(atJson(d));
 }
 
 void remoteAskCode(uint16_t id) {

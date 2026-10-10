@@ -12,7 +12,9 @@
 
 // ---------- shared helpers ----------
 
-bool bleOK() { return bleKeyboard.isConnected(); }
+bool netInputReady();   // NetLink.h
+// Can keys and the mouse reach a PC right now? Over Bluetooth, or over Wi-Fi through the panel.
+bool bleOK() { return bleKeyboard.isConnected() || netInputReady(); }
 
 void drawBleWaiting() {   // pulsing yellow Bluetooth rune = "pair me first"
   uint8_t v = beatsin8(40, 30, 255);
@@ -1170,7 +1172,7 @@ void setDrawItem(int i, int xo) {
     return;
   }
   if (i == ST_BT) {                              // blue = connected, yellow = waiting
-    drawSpriteTint(SPR_BT, xo, 0, bleOK() ? CRGB(0, 60, 255) : CRGB(160, 120, 0));
+    drawSpriteTint(SPR_BT, xo, 0, bleKeyboard.isConnected() ? CRGB(0, 60, 255) : CRGB(160, 120, 0));
     for (int s = 0; s <= cfg.btSlot; s++) px(xo + 4, 4 - s, CRGB(60, 60, 60));   // slot dots
     return;
   }
@@ -1267,7 +1269,7 @@ bool settingsFrame(Event e) {
         break;
       case ST_BT:
         snprintf(buf, sizeof(buf), "SLOT %d %s - %d SAVED", cfg.btSlot + 1,
-                 bleOK() ? "CONNECTED" : "WAITING", bleBondCount());
+                 bleKeyboard.isConnected() ? "CONNECTED" : "WAITING", bleBondCount());
         setMenu.showLabelNow(buf, CRGB(0, 120, 255));
         break;
       case ST_PAIR:
@@ -1303,7 +1305,7 @@ bool settingsFrame(Event e) {
         Serial.println("[CAL] Tilt toward the RIGHT arrow (right edge down) and tap");
         break;
       case ST_INFO:
-        snprintf(buf, sizeof(buf), "%s V%s BLE %s TV %s", cfg.name, FW_VERSION, bleOK() ? "ON" : "OFF",
+        snprintf(buf, sizeof(buf), "%s V%s BLE %s TV %s", cfg.name, FW_VERSION, bleKeyboard.isConnected() ? "ON" : "OFF",
                  tvBrandName(cfg.tvBrand));
         setMenu.showLabelNow(buf, CRGB(0, 120, 255));
         break;

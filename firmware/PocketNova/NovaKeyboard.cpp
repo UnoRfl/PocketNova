@@ -266,6 +266,7 @@ void NovaKeyboard::setDelay(uint32_t ms) {
 
 void NovaKeyboard::sendReport(KeyReport* keys)
 {
+  if (sink && sink(KEYBOARD_ID, (const uint8_t*)keys, sizeof(KeyReport))) return;
   if (this->isConnected())
   {
     this->inputKeyboard->setValue((uint8_t*)keys, sizeof(KeyReport));
@@ -279,6 +280,7 @@ void NovaKeyboard::sendReport(KeyReport* keys)
 
 void NovaKeyboard::sendReport(MediaKeyReport* keys)
 {
+  if (sink && sink(MEDIA_KEYS_ID, (const uint8_t*)keys, sizeof(MediaKeyReport))) return;
   if (this->isConnected())
   {
     this->inputMediaKeys->setValue((uint8_t*)keys, sizeof(MediaKeyReport));
@@ -295,8 +297,9 @@ void NovaKeyboard::sendReport(MediaKeyReport* keys)
 //  only how far it moved since the last report; the PC adds it up.
 // ---------------------------------------------------------------------
 void NovaKeyboard::mouseReport(int8_t x, int8_t y, int8_t wheel) {
-  if (!this->isConnected()) return;
   uint8_t r[4] = {_mouseButtons, (uint8_t)x, (uint8_t)y, (uint8_t)wheel};
+  if (sink && sink(MOUSE_ID, r, sizeof(r))) return;
+  if (!this->isConnected()) return;
   this->inputMouse->setValue(r, sizeof(r));
   this->inputMouse->notify();
 }
