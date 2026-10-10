@@ -46,6 +46,7 @@ void lookupTask(void* arg) {
   size_t n = strlen(l->name);
   if (n > 6 && !strcasecmp(l->name + n - 6, ".local")) {
     String h(l->name);
+    if (!mdnsUp) mdnsUp = MDNS.begin(wifiHostname);   // only started when a .local name needs it (it costs RAM)
     r = MDNS.queryHost(h.substring(0, n - 6), 3000);
     ok = (uint32_t)r != 0;
   } else {
@@ -69,10 +70,9 @@ bool lookupStart(Lookup& l, const char* name) {
   return true;
 }
 
-// Pocket Nova answers to "<router name>.local" too, once it's online.
+// mDNS starts only for a .local lookup (above); stop it when Wi-Fi goes.
 void mdnsUpdate() {
-  if (wifiState == WF_ONLINE && !mdnsUp) mdnsUp = MDNS.begin(wifiHostname);
-  else if (wifiState != WF_ONLINE && mdnsUp) { MDNS.end(); mdnsUp = false; }
+  if (wifiState != WF_ONLINE && mdnsUp && !lookupBusy) { MDNS.end(); mdnsUp = false; }
 }
 
 // ---------------------------------------------------------------------
@@ -202,6 +202,7 @@ void nmTimeout(esp_ping_handle_t, void*) { nmMs = -1; }
 void nmEnd(esp_ping_handle_t, void*) { nmDone = true; }
 
 bool nmPingStart(const ip_addr_t& ip) {
+  if (ESP.getFreeHeap() < 16000) return false;   // too tight for the ping task: skip this round
   esp_ping_config_t c = ESP_PING_DEFAULT_CONFIG();
   c.target_addr = ip;
   c.count = 1;

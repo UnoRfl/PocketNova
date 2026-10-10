@@ -51,7 +51,7 @@
 #include "Ir.h"
 #include <esp_task_wdt.h>
 
-const char* const FW_VERSION = "2.14.0";
+const char* const FW_VERSION = "2.14.1";
 
 // Why Pocket Nova last started (for the panel and the history).
 const char* resetReasonName() {
@@ -467,6 +467,27 @@ void alertDraw() {
 #include "NovaRemote.h"
 
 // ============================================================================
+//  MEMORY: the ESP32's Bluetooth chip can do "classic" Bluetooth (speakers,
+//  old headsets) and Bluetooth LE. By default it sets aside RAM for both,
+//  but Pocket Nova only speaks LE (keyboard, mouse, phone remote). Running
+//  Wi-Fi AND Bluetooth on 2.14 left only ~17 KB free, and a PC connecting
+//  then needed more than that: the Bluetooth stack crashed. Starting the
+//  chip in LE-only mode and releasing the classic part returns that RAM
+//  to the heap. (Must happen before anything starts Bluetooth.)
+// ============================================================================
+#include <esp_bt.h>
+
+void bleOnlyStart() {
+  uint32_t before = ESP.getFreeHeap();
+  esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT);
+  esp_bt_controller_config_t c = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
+  c.mode = ESP_BT_MODE_BLE;
+  if (esp_bt_controller_init(&c) != ESP_OK || esp_bt_controller_enable(ESP_BT_MODE_BLE) != ESP_OK)
+    Serial.println("[BT] LE-only start failed, the Bluetooth library will try its own way");
+  Serial.printf("[MEM] Free memory %u -> %u bytes after dropping classic Bluetooth\n", before, ESP.getFreeHeap());
+}
+
+// ============================================================================
 //  Boot animation: a rainbow spiral that winds in
 // ============================================================================
 
@@ -498,6 +519,7 @@ void setup() {
 
   if (M5.IMU.Init() != 0) Serial.println("[ERROR] IMU not found");
   bleApplySlot();                       // pick this slot's Bluetooth address first
+  bleOnlyStart();                       // before the keyboard: hands classic Bluetooth's memory back
   bleKeyboard.setName(cfg.name);
   bleKeyboard.setScanService(REMOTE_SVC);
   bleKeyboard.begin();
