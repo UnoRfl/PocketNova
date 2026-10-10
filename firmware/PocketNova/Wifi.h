@@ -305,7 +305,8 @@ void blockLoad() {
 }
 void blockSave() {
   prefs.begin("wifi", false);
-  prefs.putBytes("block", blocked, blockedCount * 6);
+  if (blockedCount) prefs.putBytes("block", blocked, blockedCount * 6);
+  else prefs.remove("block");                 // putBytes() ignores an empty list, so the old one would come back
   prefs.end();
 }
 int blockFind(const uint8_t* m) {
@@ -632,6 +633,7 @@ volatile int  netCount = 0;
 volatile int  netNext = 0;             // next host number to ask about
 int           netLast = 0;             // last host number (254 on a normal home network)
 int           netTail = 0;             // listening rounds left after the last question
+int           netPass = 0;             // 0 = first sweep, 1 = second chance for the quiet ones
 uint32_t      netBase = 0;             // the network part of the address, e.g. 192.168.1.0
 uint32_t      netStepAt = 0;
 bool          netScanning = false;
@@ -656,10 +658,14 @@ void netStep(void*) {
     memcpy(netFound[netCount].mac, mac->addr, 6);
     netCount++;
   }
-  for (int k = 0; k < 6 && netNext <= netLast; k++, netNext++) {
+  for (int k = 0; k < 6 && netNext <= netLast; netNext++) {
     ip4_addr_t t;
     t.addr = htonl(netBase + netNext);
+    bool have = false;                         // second sweep: only ask the ones that didn't answer
+    if (netPass) for (int j = 0; j < netCount; j++) if (netFound[j].ip == t.addr) { have = true; break; }
+    if (have) continue;
     etharp_request(netIf, &t);
+    k++;
   }
 }
 
@@ -675,6 +681,7 @@ bool netScanStart() {
   netNext = 1;                                // .0 is the network itself
   netLast = (int)(~mask) - 1;                 // the top address is "everyone" (broadcast)
   netTail = 5;
+  netPass = 0;
   netCount = 0;
   netStepAt = millis();
   netScanning = true;
@@ -682,12 +689,22 @@ bool netScanStart() {
   return true;
 }
 
-int netScanPercent() { return netLast > 0 ? constrain((netNext - 1) * 100 / netLast, 0, 100) : 0; }
+int netScanPercent() { return netLast > 0 ? constrain((netPass * netLast + netNext - 1) * 100 / (2 * netLast), 0, 100) : 0; }
 
 void netScanUpdate(uint32_t now) {
   if (!netScanning || (int32_t)(now - netStepAt) < 0) return;
   netStepAt = now + 200;
-  if (wifiState != WF_ONLINE) { netNext = netLast + 1; netTail = 0; }   // lost the network: report what we have
+  if (wifiState != WF_ONLINE) { netNext = netLast + 1; netTail = 0; netPass = 1; }   // lost the network: report what we have
+  // PHONES NAP: with the screen off a phone only wakes its Wi-Fi every few
+  // hundred ms to check for mail, so it can sleep through one question.
+  // A second sweep, asking only the addresses that stayed quiet, catches most.
+  if (netNext > netLast && netTail <= 0 && netPass == 0) {
+    netPass = 1;
+    netNext = 1;
+    netTail = 5;
+    netStepAt = now + 1500;                     // give sleepers a moment before asking again
+    return;
+  }
   if (netNext > netLast && netTail-- <= 0) {
     netScanning = false;
     Serial.printf("[WIFI] Found %d other device(s)\n", netCount);

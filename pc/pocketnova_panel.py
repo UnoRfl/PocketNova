@@ -20,6 +20,7 @@ import os
 import re
 import shutil
 import socket
+import struct
 import subprocess
 import sys
 import threading
@@ -81,7 +82,8 @@ def log(msg):
 DEFAULT_SETTINGS = {
     "autoOpen": True,                                   # open the panel when plugged in
     "labels": {},                                       # Bluetooth address -> your name for it
-    "netDevices": {},                                   # Wi-Fi MAC -> {label, name, first, last, ip}
+    "netDevices": {},                                   # Wi-Fi MAC -> {label, name, first, last, ip, mine}
+    "historyDays": 30,                                  # forget history older than this (0 = keep forever)
     "firmwareDir": os.path.join(os.path.expanduser("~"), "Downloads", "PocketNova", "firmware", "PocketNova"),
     "arduinoCli": r"C:\Program Files\Arduino CLI\arduino-cli.exe",
 }
@@ -90,7 +92,10 @@ DEFAULT_SETTINGS = {
 def load_settings():
     s = dict(DEFAULT_SETTINGS)
     try:
-        with open(SETTINGS_PATH, encoding="utf-8") as f:
+        # utf-8-sig: install.ps1 (Windows PowerShell) writes the file with a
+        # byte-order mark, which plain "utf-8" chokes on, and then every
+        # setting was quietly lost (known devices, names...).
+        with open(SETTINGS_PATH, encoding="utf-8-sig") as f:
             s.update(json.load(f))
     except (OSError, ValueError):
         pass
@@ -129,10 +134,17 @@ class History:
         except (OSError, ValueError, AttributeError):
             pass
 
+    def _prune(self):
+        days = settings.get("historyDays", 30)
+        if days:
+            cutoff = time.time() - days * 86400
+            self.items = [e for e in self.items if e.get("t", 0) >= cutoff]
+        del self.items[:-self.MAX]
+
     def add(self, item):
         with self.lock:
             self.items.append(item)
-            del self.items[:-self.MAX]
+            self._prune()
             self._save()
 
     def _save(self):
@@ -157,14 +169,25 @@ class History:
                                    "ip": e.get("ip", ""), "note": e.get("note", "")})
                 self.last = e["n"]
             if fresh:
-                del self.items[:-self.MAX]
+                self._prune()
                 self._save()
         return self.last < msg.get("last", 0)
 
-    def clear(self):
+    def clear(self, older_than_days=None, kinds=None):
+        """Everything, or only events older than N days, or only some kinds."""
         with self.lock:
-            self.items = []
+            if older_than_days:
+                cutoff = time.time() - older_than_days * 86400
+                self.items = [e for e in self.items if e.get("t", 0) >= cutoff]
+            elif kinds:
+                self.items = [e for e in self.items if e.get("k") not in kinds]
+            else:
+                self.items = []
             self._save()
+
+    def all(self):
+        with self.lock:
+            return list(self.items)
 
     def recent(self, n=300):
         with self.lock:
@@ -186,6 +209,85 @@ def _dns_name(ip):
     return "" if name == ip else name.split(".")[0]
 
 
+def _dns_read_name(buf, i):
+    """Reads a DNS name at buf[i] (following compression pointers); returns (name, next index)."""
+    labels, end, hops = [], None, 0
+    while i < len(buf) and hops < 20:
+        n = buf[i]
+        if n == 0:
+            i += 1
+            break
+        if n >= 0xC0:                       # pointer to a name earlier in the packet
+            if end is None:
+                end = i + 2
+            i = ((n & 0x3F) << 8) | buf[i + 1]
+            hops += 1
+            continue
+        labels.append(buf[i + 1:i + 1 + n].decode("utf-8", "replace"))
+        i += 1 + n
+    return ".".join(labels), (end if end is not None else i)
+
+
+def _mdns_name(ip):
+    """mDNS: asks the device itself "what's your name?" (the "who is
+    23.1.168.192.in-addr.arpa" question, sent straight to it on port 5353).
+    iPhones, Macs, Chromecasts and many Androids answer, e.g. "Unos-iPhone"."""
+    q = b"".join(bytes([len(p)]) + p.encode() for p in reversed(ip.split("."))) + b"\x07in-addr\x04arpa\x00"
+    pkt = struct.pack(">HHHHHH", 0x4E56, 0, 1, 0, 0, 0) + q + struct.pack(">HH", 12, 0x8001)   # PTR, "answer me directly"
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.settimeout(1.5)
+    try:
+        s.sendto(pkt, (ip, 5353))
+        buf = s.recv(1500)
+        an = struct.unpack(">H", buf[6:8])[0]
+        _, i = _dns_read_name(buf, 12)
+        i += 4                              # the question's type and class
+        for _ in range(an):
+            _, i = _dns_read_name(buf, i)
+            rtype, _, _, rlen = struct.unpack(">HHIH", buf[i:i + 10])
+            i += 10
+            if rtype == 12:
+                name = _dns_read_name(buf, i)[0]
+                return name[:-6] if name.endswith(".local") else name
+            i += rlen
+    except (OSError, struct.error, IndexError):
+        pass
+    finally:
+        s.close()
+    return ""
+
+
+def _netbios_name(ip):
+    """NetBIOS: the old Windows "what's your name?" (UDP port 137). Windows
+    PCs, many printers and NAS boxes answer with their computer name."""
+    pkt = struct.pack(">HHHHHH", 0x4E57, 0, 1, 0, 0, 0) + b"\x20CKAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\x00" + struct.pack(">HH", 0x21, 1)
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.settimeout(1.0)
+    try:
+        s.sendto(pkt, (ip, 137))
+        buf = s.recv(1500)
+        count = buf[56]
+        for k in range(count):
+            e = buf[57 + 18 * k:57 + 18 * (k + 1)]
+            flags = struct.unpack(">H", e[16:18])[0]
+            if e[15] == 0 and not flags & 0x8000:   # the machine's own name, not a group
+                return e[:15].decode("ascii", "replace").strip()
+    except (OSError, struct.error, IndexError):
+        pass
+    finally:
+        s.close()
+    return ""
+
+
+# Names many devices share ("Android", "iPhone"...): fine to show, useless
+# for telling one device from another.
+GENERIC_NAMES = {"android", "iphone", "ipad", "localhost", "unknown", "espressif", "esp32", "galaxy"}
+
+
+def _unique_name(name):
+    return bool(name) and name.lower().split("-")[0] not in GENERIC_NAMES and not name.lower().startswith("android-")
+
+
 def _my_ips():
     try:
         return {a[4][0] for a in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET)}
@@ -199,12 +301,21 @@ def enrich_netscan(msg):
     found = [dict(d) for d in msg.get("list", [])]
     if msg.get("myMac"):
         found.append({"ip": msg.get("me", ""), "mac": msg["myMac"], "nova": True})
-    pool = ThreadPoolExecutor(16)
-    jobs = {pool.submit(_dns_name, d["ip"]): d for d in found if d.get("ip") and not d.get("nova")}
-    done, _ = wait(jobs, timeout=4)            # slow answers are skipped, not waited for
+    # Three ways to ask a device's name, all at once (the router's can take
+    # 5 s to give up); the best answer wins: router, then mDNS, then NetBIOS.
+    ways = (_dns_name, _mdns_name, _netbios_name)
+    pool = ThreadPoolExecutor(32)
+    jobs = {pool.submit(f, d["ip"]): (rank, d) for d in found if d.get("ip") and not d.get("nova")
+            for rank, f in enumerate(ways)}
+    done, _ = wait(jobs, timeout=6)            # slow answers are skipped, not waited for
     pool.shutdown(wait=False)
+    best = {}
     for j in done:
-        jobs[j]["name"] = j.result()
+        rank, d = jobs[j]
+        name = j.result()
+        if name and rank < best.get(id(d), (9,))[0]:
+            best[id(d)] = (rank, name)
+            d["name"] = name
     mine, now = _my_ips(), int(time.time())
     with settings_lock:
         book = settings.setdefault("netDevices", {})
@@ -212,17 +323,33 @@ def enrich_netscan(msg):
         for d in found:
             mac = d["mac"].upper()
             entry = book.get(mac)
-            d["new"] = entry is None and not first_scan
             if entry is None:
-                entry = book[mac] = {"label": "", "first": now}
+                entry = book[mac] = {"label": "", "first": now, "mine": first_scan or bool(d.get("nova"))}
+                # SAME DEVICE, NEW ADDRESS: a phone that changed its private
+                # address still answers with its own name. If that name belongs
+                # to a device we already know, it's that device, not a newcomer.
+                twin = next((m for m, e in book.items() if m != mac and _unique_name(d.get("name", ""))
+                             and e.get("name", "").lower() == d["name"].lower()), None)
+                if twin:
+                    old = book[twin]
+                    entry.update(label=old.get("label", ""), mine=old.get("mine", False),
+                                 first=old.get("first", now), sameAs=twin)
+                    d["linked"] = twin
+                else:
+                    d["new"] = not first_scan
             entry.update(last=now, ip=d["ip"])
             if d.get("name"):
                 entry["name"] = d["name"]
+            d.setdefault("new", False)
             d["name"] = entry.get("name", "")
             d["label"] = entry.get("label", "")
             d["first"] = entry["first"]
+            d["mine"] = entry.get("mine", False) or bool(entry.get("label"))
             d["router"] = d["ip"] == msg.get("router")
             d["pc"] = d["ip"] in mine
+            if d["router"] or d["pc"] or d.get("nova"):   # obviously yours
+                entry["mine"] = d["mine"] = True
+                d["new"] = False
             if d["new"]:
                 history.add({"t": now, "k": "home_new", "mac": mac, "ip": d["ip"], "note": d.get("name", "")})
         save_settings(settings)
@@ -876,6 +1003,7 @@ class Handler(BaseHTTPRequestHandler):
                 "replies": replies,
                 "labels": labels,
                 "autoOpen": auto_open,
+                "historyDays": settings.get("historyDays", 30),
                 "autostart": autostart_enabled(),
                 "update": updater.info(),
                 "usbPresent": link.usb_present(),
@@ -920,19 +1048,53 @@ class Handler(BaseHTTPRequestHandler):
                 if entry is None:
                     return self._send(404, {"error": "unknown device"})
                 entry["label"] = label
+                if label:
+                    entry["mine"] = True            # naming a device = it's yours
                 save_settings(settings)
             with link.lock:                     # show it at once, without a new scan
                 for d in (link.state.get("netscan") or {}).get("list", []):
                     if d["mac"].upper() == mac:
                         d["label"] = label
+                        d["mine"] = d.get("mine") or bool(label)
+            return self._send(200, {"ok": True})
+        if path == "/api/netmine":
+            # {"mac": "..", "mine": true} for one device, {"all": true} for everything in the last scan
+            with link.lock:
+                shown = (link.state.get("netscan") or {}).get("list", [])
+                macs = [d["mac"].upper() for d in shown] if body.get("all") else [str(body.get("mac", ""))[:17].upper()]
+                mine = bool(body.get("mine", True))
+                for d in shown:
+                    if d["mac"].upper() in macs:
+                        d["mine"] = mine
+                        d["new"] = False
+            with settings_lock:
+                book = settings.setdefault("netDevices", {})
+                for m in macs:
+                    if m in book:
+                        book[m]["mine"] = mine
+                save_settings(settings)
             return self._send(200, {"ok": True})
         if path == "/api/history/clear":
-            history.clear()
+            days = body.get("olderThanDays")
+            kinds = body.get("kinds")
+            history.clear(older_than_days=float(days) if days else None,
+                          kinds=set(map(str, kinds)) if isinstance(kinds, list) else None)
+            return self._send(200, {"ok": True})
+        if path == "/api/history/all":            # for exporting
+            return self._send(200, {"items": history.all()})
+        if path == "/api/netforget":              # start the home-network device list over
+            with settings_lock:
+                settings["netDevices"] = {}
+                save_settings(settings)
+            with link.lock:
+                link.state.pop("netscan", None)
             return self._send(200, {"ok": True})
         if path == "/api/settings":
             with settings_lock:
                 if "autoOpen" in body:
                     settings["autoOpen"] = bool(body["autoOpen"])
+                if "historyDays" in body:
+                    settings["historyDays"] = max(0, int(body["historyDays"]))
                 save_settings(settings)
             if "autostart" in body:
                 try:
