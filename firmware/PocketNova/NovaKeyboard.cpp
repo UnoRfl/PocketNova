@@ -1,7 +1,7 @@
 // NovaKeyboard - based on ESP32-BLE-Keyboard 0.3.0 by T-vK
 // (github.com/T-vK/ESP32-BLE-Keyboard), renamed and extended for Pocket Nova:
-// the reconnect fix in onConnect(), Swift Pair advertising, and several
-// connections at once for the phone remote. All credit for the original
+// the reconnect fix in onConnect(), Swift Pair advertising, several
+// connections at once for the phone remote, and a mouse for the air mouse. All credit for the original
 // keyboard code goes to its author.
 
 #if defined(USE_NIMBLE)
@@ -34,6 +34,7 @@
 // Report IDs:
 #define KEYBOARD_ID 0x01
 #define MEDIA_KEYS_ID 0x02
+#define MOUSE_ID 0x03
 
 static const uint8_t _hidReportDescriptor[] = {
   USAGE_PAGE(1),      0x01,          // USAGE_PAGE (Generic Desktop Ctrls)
@@ -97,6 +98,37 @@ static const uint8_t _hidReportDescriptor[] = {
   USAGE(2),           0x83, 0x01,    //   Usage (Media sel)   ; bit 6: 64
   USAGE(2),           0x8A, 0x01,    //   Usage (Mail)        ; bit 7: 128
   HIDINPUT(1),        0x02,          //   INPUT (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+  END_COLLECTION(0),                 // END_COLLECTION
+  // ------------------------------------------------- Mouse (Pocket Nova addition)
+  // One report, 4 bytes: [buttons][x][y][wheel]. x/y/wheel are RELATIVE
+  // moves (-127..127 per report), like any USB mouse.
+  USAGE_PAGE(1),      0x01,          // USAGE_PAGE (Generic Desktop)
+  USAGE(1),           0x02,          // USAGE (Mouse)
+  COLLECTION(1),      0x01,          // COLLECTION (Application)
+  USAGE(1),           0x01,          //   USAGE (Pointer)
+  COLLECTION(1),      0x00,          //   COLLECTION (Physical)
+  REPORT_ID(1),       MOUSE_ID,      //     REPORT_ID (3)
+  USAGE_PAGE(1),      0x09,          //     USAGE_PAGE (Button)
+  USAGE_MINIMUM(1),   0x01,          //     USAGE_MINIMUM (Button 1)
+  USAGE_MAXIMUM(1),   0x03,          //     USAGE_MAXIMUM (Button 3)
+  LOGICAL_MINIMUM(1), 0x00,          //     LOGICAL_MINIMUM (0)
+  LOGICAL_MAXIMUM(1), 0x01,          //     LOGICAL_MAXIMUM (1)
+  REPORT_SIZE(1),     0x01,          //     REPORT_SIZE (1)
+  REPORT_COUNT(1),    0x03,          //     REPORT_COUNT (3) ; left, right, middle
+  HIDINPUT(1),        0x02,          //     INPUT (Data,Var,Abs)
+  REPORT_SIZE(1),     0x05,          //     REPORT_SIZE (5) ; padding to a whole byte
+  REPORT_COUNT(1),    0x01,          //     REPORT_COUNT (1)
+  HIDINPUT(1),        0x03,          //     INPUT (Const,Var,Abs)
+  USAGE_PAGE(1),      0x01,          //     USAGE_PAGE (Generic Desktop)
+  USAGE(1),           0x30,          //     USAGE (X)
+  USAGE(1),           0x31,          //     USAGE (Y)
+  USAGE(1),           0x38,          //     USAGE (Wheel)
+  LOGICAL_MINIMUM(1), 0x81,          //     LOGICAL_MINIMUM (-127)
+  LOGICAL_MAXIMUM(1), 0x7f,          //     LOGICAL_MAXIMUM (127)
+  REPORT_SIZE(1),     0x08,          //     REPORT_SIZE (8)
+  REPORT_COUNT(1),    0x03,          //     REPORT_COUNT (3)
+  HIDINPUT(1),        0x06,          //     INPUT (Data,Var,Rel)
+  END_COLLECTION(0),                 //   END_COLLECTION
   END_COLLECTION(0)                  // END_COLLECTION
 };
 
@@ -117,6 +149,7 @@ void NovaKeyboard::begin(void)
   inputKeyboard = hid->inputReport(KEYBOARD_ID);  // <-- input REPORTID from report map
   outputKeyboard = hid->outputReport(KEYBOARD_ID);
   inputMediaKeys = hid->inputReport(MEDIA_KEYS_ID);
+  inputMouse = hid->inputReport(MOUSE_ID);
 
   outputKeyboard->setCallbacks(this);
 
@@ -256,6 +289,32 @@ void NovaKeyboard::sendReport(MediaKeyReport* keys)
 #endif // USE_NIMBLE
   }	
 }
+
+// ---------------------------------------------------------------------
+//  MOUSE (Pocket Nova addition). A mouse never says where the cursor IS,
+//  only how far it moved since the last report; the PC adds it up.
+// ---------------------------------------------------------------------
+void NovaKeyboard::mouseReport(int8_t x, int8_t y, int8_t wheel) {
+  if (!this->isConnected()) return;
+  uint8_t r[4] = {_mouseButtons, (uint8_t)x, (uint8_t)y, (uint8_t)wheel};
+  this->inputMouse->setValue(r, sizeof(r));
+  this->inputMouse->notify();
+}
+
+static int8_t clamp127(int v) { return v > 127 ? 127 : v < -127 ? -127 : v; }
+
+void NovaKeyboard::mouseMove(int x, int y, int wheel) {
+  // Bigger moves than one report can hold go out as several.
+  while (x || y || wheel) {
+    int8_t sx = clamp127(x), sy = clamp127(y), sw = clamp127(wheel);
+    mouseReport(sx, sy, sw);
+    x -= sx; y -= sy; wheel -= sw;
+  }
+}
+
+void NovaKeyboard::mousePress(uint8_t b)   { _mouseButtons |= b;  mouseReport(0, 0, 0); }
+void NovaKeyboard::mouseRelease(uint8_t b) { _mouseButtons &= ~b; mouseReport(0, 0, 0); }
+void NovaKeyboard::mouseClick(uint8_t b)   { mousePress(b); mouseRelease(b); }
 
 extern
 const uint8_t _asciimap[128] PROGMEM;
@@ -554,6 +613,8 @@ void NovaKeyboard::onConnect(BLEServer* pServer) {
   BLE2902* desc = (BLE2902*)this->inputKeyboard->getDescriptorByUUID(BLEUUID((uint16_t)0x2902));
   if (desc) desc->setNotifications(true);
   desc = (BLE2902*)this->inputMediaKeys->getDescriptorByUUID(BLEUUID((uint16_t)0x2902));
+  if (desc) desc->setNotifications(true);
+  desc = (BLE2902*)this->inputMouse->getDescriptorByUUID(BLEUUID((uint16_t)0x2902));
   if (desc) desc->setNotifications(true);
 #endif
 }

@@ -13,7 +13,7 @@
 //    status                       live state (screen, tilt, Bluetooth, pet)
 //    set   {"cfg":{...}}          change settings (brightIdx, rotation,
 //                                 autoRotate, tvBrand, lastApp, name,
-//                                 swiftPair)
+//                                 swiftPair, mouseSpeed 0..4, mouseFlip 0..3)
 //    flip  {"axis":"x"|"y"}       swap left/right or forward/back
 //    bonds                        paired devices
 //    unbond {"addr":"AA:.."}      forget one device      (restarts)
@@ -43,6 +43,8 @@
 //    mirror {"on":true}           stream the screen (@{"t":"fb",...} 10x/s)
 //    tutorial                     play the tutorial
 //    pet   {"mood":"happy"|"love"|"dizzy"|"sleep"|"wake"}
+//    alert {"kind":"download"|"cpu"|"battery"|"note","text":".."}
+//                                 pop a message up over any screen
 // =====================================================================
 
 #include <ArduinoJson.h>
@@ -124,6 +126,12 @@ void sendConfig() {
   d["tutorialDone"] = cfg.tutorialDone;
   d["snakeHigh"] = cfg.snakeHigh;
   d["petLove"] = cfg.petLove;
+  d["mouseSpeed"] = cfg.mouseSpeed;
+  d["mouseFlip"] = cfg.mouseFlip;
+  d["reactBest"] = cfg.reactBest;
+  d["simonBest"] = cfg.simonBest;
+  d["otaPort"] = OTA_PORT;
+  if (!replyBle) d["otaKey"] = otaKey;            // Wi-Fi update key: the PC (USB) only
   d["pX"]["axis"] = cfg.pX.axis;   d["pX"]["sign"] = cfg.pX.sign;
   d["pUp"]["axis"] = cfg.pUp.axis; d["pUp"]["sign"] = cfg.pUp.sign;
   sendJson(d);
@@ -333,6 +341,8 @@ void applySettings(JsonObject c) {
   if (c["autoRotate"].is<bool>()) cfg.autoRotate = c["autoRotate"].as<bool>();
   if (c["tvBrand"].is<int>()) { cfg.tvBrand = constrain(c["tvBrand"].as<int>(), 0, BRAND_COUNT); cfg.tvPower = -1; }
   if (c["swiftPair"].is<bool>()) cfg.swiftPair = c["swiftPair"].as<bool>();
+  if (c["mouseSpeed"].is<int>()) cfg.mouseSpeed = constrain(c["mouseSpeed"].as<int>(), 0, 4);
+  if (c["mouseFlip"].is<int>()) cfg.mouseFlip = c["mouseFlip"].as<int>() & 3;
   if (c["lastApp"].is<int>()) cfg.lastApp = constrain(c["lastApp"].as<int>(), 0, APP_COUNT - 1);
   if (c["name"].is<const char*>()) {
     const char* n = c["name"];
@@ -559,6 +569,11 @@ void handleRemoteLine(const char* line) {
     int tvApp = 1;   // apps[1] is TV
     if (!(screen == SCR_APP && currentApp == tvApp)) openApp(tvApp);
     startFind();
+    replyOk(cmd);
+    return;
+  }
+  if (!strcmp(cmd, "alert")) {
+    alertShow(in["kind"] | "note", in["text"] | "");
     replyOk(cmd);
     return;
   }

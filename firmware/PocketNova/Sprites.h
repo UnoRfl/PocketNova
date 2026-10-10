@@ -74,6 +74,19 @@ SPRITE(ICO_SNAKE_2, "....." ".ggg." "...G." "...R." ".....")
 SPRITE(ICO_SNAKE_3, "....." "..gg." "...g." "...G." ".....")
 const char* const ICON_SNAKE[] = {ICO_SNAKE_1, ICO_SNAKE_2, ICO_SNAKE_3};
 
+SPRITE(ICO_MOUSE_1, "W...." "WW..." "WWW.." "WWWW." "..W..")
+SPRITE(ICO_MOUSE_2, ".W..." ".WW.." ".WWW." ".WWWW" "...W.")
+const char* const ICON_MOUSE[] = {ICO_MOUSE_1, ICO_MOUSE_2};
+
+SPRITE(ICO_REFLEX_1, "rrrrr" "rrrrr" "rrrrr" "rrrrr" "rrrrr")
+SPRITE(ICO_REFLEX_2, "GGGGG" "GGGGG" "GGWGG" "GGGGG" "GGGGG")
+const char* const ICON_REFLEX[] = {ICO_REFLEX_1, ICO_REFLEX_1, ICO_REFLEX_2};
+
+SPRITE(ICO_SIMON_1, ".GGG." "R...B" "R...B" "R...B" ".YYY.")
+SPRITE(ICO_SIMON_2, ".ggg." "R...b" "r...b" "r...b" ".YYY.")
+SPRITE(ICO_SIMON_3, ".GGG." "r...B" "r...B" "r...b" ".ggg.")
+const char* const ICON_SIMON[] = {ICO_SIMON_1, ICO_SIMON_2, ICO_SIMON_3};
+
 SPRITE(ICO_SET_1, "..w.." ".WWW." "wW.Ww" ".WWW." "..w..")
 SPRITE(ICO_SET_2, "w...w" ".WWW." ".W.W." ".WWW." "w...w")
 const char* const ICON_SET[] = {ICO_SET_1, ICO_SET_2};
@@ -153,3 +166,9 @@ SPRITE(SPR_TUTOR, ".YYY." "Y...Y" "...Y." "..Y.." "..Y..")
 // ---------- tutorial ----------
 SPRITE(SPR_TAP_DOT,  "....." "....." "..W.." "....." ".....")
 SPRITE(SPR_HOLD_RING, ".WWW." "W...W" "W...W" "W...W" ".WWW.")
+
+// ---------- PC alerts (Remote.h "alert") ----------
+SPRITE(SPR_AL_DOWN,  "..G.." "..G.." "GGGGG" ".GGG." "..G..")
+SPRITE(SPR_AL_HOT,   "..O.." ".OYO." ".OYO." "OYWYO" ".OOO.")
+SPRITE(SPR_AL_BATT,  ".www." "w...w" "w...w" "wRRRw" "wwwww")
+SPRITE(SPR_AL_BELL,  "..P.." ".PPP." ".PPP." "PPPPP" "..W..")

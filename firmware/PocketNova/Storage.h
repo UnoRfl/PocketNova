@@ -32,6 +32,10 @@ struct Config {
   bool     tutorialDone = false;
   uint16_t snakeHigh    = 0;
   uint16_t petLove      = 0;          // goes up every time you're nice to the pet
+  uint8_t  mouseSpeed   = 2;          // air mouse: 0..4 (MOUSE_GAIN in Apps.h)
+  uint8_t  mouseFlip    = 0;          // air mouse: bit 0 = swap left/right, bit 1 = swap up/down
+  uint16_t reactBest    = 0;          // REFLEX best time in ms (0 = none yet)
+  uint8_t  simonBest    = 0;          // SIMON longest sequence
   char     name[25]     = "Pocket Nova";
 } cfg;
 
@@ -65,6 +69,10 @@ void saveConfig() {
   prefs.putBool("tut", cfg.tutorialDone);
   prefs.putUShort("snake", cfg.snakeHigh);
   prefs.putUShort("love", cfg.petLove);
+  prefs.putUChar("mspeed", cfg.mouseSpeed);
+  prefs.putUChar("mflip", cfg.mouseFlip);
+  prefs.putUShort("react", cfg.reactBest);
+  prefs.putUChar("simon", cfg.simonBest);
   prefs.putString("name", cfg.name);
   prefs.putUChar("ver", CONFIG_VERSION);
   prefs.end();
@@ -91,6 +99,10 @@ void loadConfig() {
   cfg.tutorialDone = prefs.getBool("tut", false);
   cfg.snakeHigh    = prefs.getUShort("snake", 0);
   cfg.petLove      = prefs.getUShort("love", 0);
+  cfg.mouseSpeed   = prefs.getUChar("mspeed", 2);
+  cfg.mouseFlip    = prefs.getUChar("mflip", 0);
+  cfg.reactBest    = prefs.getUShort("react", 0);
+  cfg.simonBest    = prefs.getUChar("simon", 0);
   if (prefs.isKey("name")) prefs.getString("name", cfg.name, sizeof(cfg.name));
   uint8_t ver      = prefs.getUChar("ver", 0);
   bool    hadOld   = prefs.isKey("pxS");   // anything saved before?
@@ -99,6 +111,7 @@ void loadConfig() {
   if (cfg.brightIdx >= BRIGHT_COUNT) cfg.brightIdx = 2;
   if (cfg.btSlot >= BT_SLOTS) cfg.btSlot = 0;
   if (cfg.rotation > 3) cfg.rotation = 0;
+  if (cfg.mouseSpeed > 4) cfg.mouseSpeed = 2;
 
   // Settings migrations, oldest first. Each runs once, then the version
   // number is stamped so it never runs again.

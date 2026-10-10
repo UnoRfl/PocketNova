@@ -15,6 +15,8 @@ except firmware updates, which need the cable). USB always wins.
 The panel itself is panel.html, served only to this PC (127.0.0.1).
 """
 
+import ctypes
+import http.client
 import json
 import os
 import re
@@ -23,6 +25,7 @@ import socket
 import struct
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from collections import deque
@@ -62,7 +65,7 @@ KNOWN_USB = {(0x0403, 0x6001), (0x1A86, 0x55D4), (0x1A86, 0x7523), (0x10C4, 0xEA
 ALLOWED_CMDS = {
     "hello", "get", "status", "bonds", "set", "flip", "unbond", "unbond_all", "slot",
     "factory_reset", "reboot", "input", "tilt", "ir", "time", "mirror", "tutorial", "pet",
-    "tvbrands", "findtv", "wifi", "keys", "keytest", "netscan", "block", "wifiscan",
+    "tvbrands", "findtv", "wifi", "keys", "keytest", "netscan", "block", "wifiscan", "alert",
 }
 
 STARTUP_LNK = os.path.join(os.environ.get("APPDATA", ""), r"Microsoft\Windows\Start Menu\Programs\Startup",
@@ -88,6 +91,9 @@ DEFAULT_SETTINGS = {
     "historyDays": 30,                                  # forget history older than this (0 = keep forever)
     "firmwareDir": os.path.join(os.path.expanduser("~"), "Downloads", "PocketNova", "firmware", "PocketNova"),
     "arduinoCli": r"C:\Program Files\Arduino CLI\arduino-cli.exe",
+    "alerts": {"download": True, "cpu": False, "battery": True},   # PC alerts on the LEDs
+    "otaKey": "",                                       # Wi-Fi update key (learned over USB)
+    "otaIp": "",                                        # Pocket Nova's address on your Wi-Fi
 }
 
 
@@ -953,6 +959,11 @@ class DeviceLink:
             t = msg.get("t")
             with self.lock:
                 if t in ("hello", "config", "status", "bonds", "tvbrands", "keys", "wifiscan"):
+                    if t == "config" and "otaKey" in msg:
+                        msg = dict(msg)
+                        self._remember(otaKey=msg.pop("otaKey"), otaPort=msg.get("otaPort", 3232))
+                    if t == "status" and (msg.get("wifi") or {}).get("ip"):
+                        self._remember(otaIp=msg["wifi"]["ip"])
                     self.state[t] = msg
                     if t == "hello":
                         self.state["helloAt"] = time.time()
@@ -985,6 +996,20 @@ class DeviceLink:
         if "ready (firmware" in line:      # the device restarted: say hello again
             self.send({"cmd": "hello"})
             self._after_connect()
+
+    def _remember(self, **kv):
+        """Keep values for later (Wi-Fi updates need them without the cable)."""
+        with settings_lock:
+            if any(settings.get(k) != v for k, v in kv.items()):
+                settings.update(kv)
+                save_settings(settings)
+
+    def fw_at_least(self, major, minor):
+        fw = (self.state.get("hello") or {}).get("fw", "0")
+        try:
+            return tuple(int(x) for x in fw.split(".")[:2]) >= (major, minor)
+        except ValueError:
+            return False
 
     def _netscan_done(self, msg):
         try:
@@ -1106,17 +1131,92 @@ class Updater:
     def _stage(self, name):
         self.stage, self.stage_at = name, time.time()
 
+    def start(self, via="usb"):
+        if self.running:
+            return False
+        self.via = via
+        threading.Thread(target=self._run_wifi if via == "wifi" else self._run, daemon=True).start()
+        return True
+
     def info(self):
         return {"running": self.running, "ok": self.ok, "lines": list(self.lines), "stage": self.stage,
                 "pct": self.pct, "elapsed": int(time.time() - self.started) if self.started else 0,
                 "stageElapsed": int(time.time() - self.stage_at) if self.stage_at else 0,
-                "fw": self.fw, "error": self.error}
+                "fw": self.fw, "error": self.error, "via": getattr(self, "via", "usb")}
 
-    def start(self):
-        if self.running:
-            return False
-        threading.Thread(target=self._run, daemon=True).start()
-        return True
+    def _run_wifi(self):
+        """Same steps, but the firmware goes to Pocket Nova over your Wi-Fi
+        (Ota.h on the device): no cable needed."""
+        self.running, self.ok = True, None
+        self.lines.clear()
+        self.pct, self.fw, self.error, self.started = 0, "", "", time.time()
+        self._stage("build")
+        cli = settings.get("arduinoCli") or "arduino-cli"
+        if not os.path.exists(cli):
+            cli = shutil.which("arduino-cli") or cli
+        sketch = settings.get("firmwareDir")
+        fqbn = "esp32:esp32:m5stack-atom:PartitionScheme=min_spiffs"
+        with settings_lock:
+            key, ip, port = settings.get("otaKey"), settings.get("otaIp"), int(settings.get("otaPort", 3232))
+        try:
+            if not key:
+                raise RuntimeError("Plug Pocket Nova in by USB once so this PC learns its Wi-Fi update key.")
+            if not ip:
+                raise RuntimeError("Pocket Nova isn't on your Wi-Fi. Join a network in the Wi-Fi tab first.")
+            if not os.path.isdir(sketch):
+                raise RuntimeError(f"Firmware folder not found: {sketch}")
+            out = tempfile.mkdtemp(prefix="pocketnova-")
+            self.lines.append("Building firmware... (about a minute)")
+            self._exec([cli, "compile", "--fqbn", fqbn, "--output-dir", out, sketch])
+            path = os.path.join(out, os.path.basename(sketch.rstrip("\\/")) + ".ino.bin")
+            if not os.path.exists(path):
+                raise RuntimeError("The build finished but the firmware file is missing.")
+            self.lines.append(f"Sending it to {ip} over Wi-Fi...")
+            self._stage("upload")
+            self._send_wifi(ip, port, key, path)
+            self.pct = 100
+            self.lines.append("Installed. Waiting for Pocket Nova to start up...")
+            self._stage("restart")
+            self._wait_for_device(60)
+            self.lines.append(f"Done. Pocket Nova is running firmware {self.fw}." if self.fw
+                              else "Done. Pocket Nova is restarting.")
+            self._stage("done")
+            self.ok = True
+        except Exception as e:
+            self.lines.append(f"FAILED: {e}")
+            self.error = str(e)
+            self._stage("failed")
+            self.ok = False
+        finally:
+            self.running = False
+
+    def _send_wifi(self, ip, port, key, path):
+        size = os.path.getsize(path)
+        try:
+            conn = http.client.HTTPConnection(ip, port, timeout=30)
+            conn.putrequest("POST", "/update")
+            conn.putheader("Content-Type", "application/octet-stream")
+            conn.putheader("Content-Length", str(size))
+            conn.putheader("X-Size", str(size))
+            conn.putheader("X-Key", key)
+            conn.endheaders()
+            sent = 0
+            with open(path, "rb") as f:
+                while True:
+                    chunk = f.read(4096)
+                    if not chunk:
+                        break
+                    conn.send(chunk)
+                    sent += len(chunk)
+                    self.pct = sent * 100 // size
+            r = conn.getresponse()
+            body = r.read().decode("utf-8", "replace").strip()
+        except OSError as e:
+            raise RuntimeError(f"Couldn't reach Pocket Nova at {ip} ({e}). Is it on the same Wi-Fi as this PC?")
+        if r.status == 403:
+            raise RuntimeError("Pocket Nova turned the update key down. Plug it in by USB once to refresh it.")
+        if r.status != 200:
+            raise RuntimeError(f"Pocket Nova couldn't install it: {body or r.status}")
 
     def _run(self):
         self.running, self.ok = True, None
@@ -1161,10 +1261,10 @@ class Updater:
             link.resume()
             self.running = False
 
-    def _wait_for_device(self):
-        """Up to 30 s for the fresh firmware to say hello over USB."""
+    def _wait_for_device(self, limit=30):
+        """Up to `limit` seconds for the fresh firmware to say hello."""
         since = time.time()
-        while time.time() - since < 30:
+        while time.time() - since < limit:
             with link.lock:
                 hello = link.state.get("hello") or {}
                 fresh = link.state.get("helloAt", 0) > since
@@ -1205,6 +1305,124 @@ class Updater:
 
 
 updater = Updater()
+
+
+# ---------------------------------------------------------------- PC alerts
+
+class _PowerStatus(ctypes.Structure):
+    _fields_ = [("ACLineStatus", ctypes.c_ubyte), ("BatteryFlag", ctypes.c_ubyte),
+                ("BatteryLifePercent", ctypes.c_ubyte), ("SystemStatusFlag", ctypes.c_ubyte),
+                ("BatteryLifeTime", ctypes.c_ulong), ("BatteryFullLifeTime", ctypes.c_ulong)]
+
+
+class Alerts:
+    """Watches this PC and pops things up on Pocket Nova's LEDs:
+    a finished download, the CPU flat out, the battery running low."""
+
+    CPU_BUSY = 90          # percent...
+    CPU_FOR = 30           # ...for this many seconds
+    CPU_QUIET = 600        # then not again for 10 minutes
+    BATTERY_LOW = 20       # percent, on battery
+    PARTIAL = (".crdownload", ".part", ".partial", ".tmp", ".download", ".opdownload")
+
+    def __init__(self):
+        self.downloads = os.path.join(os.path.expanduser("~"), "Downloads")
+        self.seen = None              # file name -> size, None = not looked yet
+        self.pending = {}             # new file -> size last time (waiting for it to stop growing)
+        self.cpu_prev = None
+        self.busy_since = 0.0
+        self.cpu_said = 0.0
+        self.battery_said = False
+
+    def send(self, kind, text):
+        if not link.connected() or not link.fw_at_least(2, 13):
+            return False
+        log(f"Alert: {kind}: {text}")
+        return link.send({"cmd": "alert", "kind": kind, "text": text})
+
+    # CPU use from GetSystemTimes: the share of time NOT spent idle since last time.
+    def _cpu(self):
+        idle, kernel, user = ctypes.c_ulonglong(), ctypes.c_ulonglong(), ctypes.c_ulonglong()
+        if not ctypes.windll.kernel32.GetSystemTimes(ctypes.byref(idle), ctypes.byref(kernel), ctypes.byref(user)):
+            return None
+        now = (idle.value, kernel.value + user.value)       # kernel time includes idle time
+        prev, self.cpu_prev = self.cpu_prev, now
+        if not prev or now[1] == prev[1]:
+            return None
+        return 100.0 * (1 - (now[0] - prev[0]) / (now[1] - prev[1]))
+
+    def _battery(self):
+        st = _PowerStatus()
+        if not ctypes.windll.kernel32.GetSystemPowerStatus(ctypes.byref(st)):
+            return None
+        if st.BatteryFlag & 128 or st.BatteryLifePercent == 255:   # no battery (a desktop)
+            return None
+        return st.BatteryLifePercent, st.ACLineStatus == 1
+
+    def _scan_downloads(self):
+        files = {}
+        try:
+            with os.scandir(self.downloads) as it:
+                for e in it:
+                    if e.is_file():
+                        files[e.name] = e.stat().st_size
+        except OSError:
+            return []
+        if self.seen is None:                 # first look: whatever's there is old news
+            self.seen = files
+            return []
+        done = []
+        for name, size in files.items():
+            if name in self.seen or name.lower().endswith(self.PARTIAL) or name.startswith("~"):
+                continue
+            if any((name + ext) in files for ext in (".part",)):   # Firefox: still downloading
+                continue
+            if size > 0 and self.pending.get(name) == size:      # same size twice: finished
+                done.append(name)
+                self.pending.pop(name, None)
+                self.seen[name] = size
+            else:
+                self.pending[name] = size
+        for name in list(self.seen):
+            if name not in files:
+                del self.seen[name]
+        return done
+
+    def tick(self):
+        with settings_lock:
+            want = dict(DEFAULT_SETTINGS["alerts"], **settings.get("alerts", {}))
+        now = time.time()
+        for name in self._scan_downloads():
+            if want["download"]:
+                self.send("download", "Downloaded " + os.path.splitext(name)[0][:28])
+        cpu = self._cpu()
+        if cpu is not None:
+            if cpu < self.CPU_BUSY:
+                self.busy_since = 0.0
+            elif not self.busy_since:
+                self.busy_since = now
+            elif now - self.busy_since > self.CPU_FOR and now - self.cpu_said > self.CPU_QUIET and want["cpu"]:
+                self.cpu_said = now
+                self.send("cpu", f"CPU busy {cpu:.0f} percent")
+        bat = self._battery()
+        if bat:
+            pct, plugged = bat
+            if plugged or pct > self.BATTERY_LOW + 5:
+                self.battery_said = False
+            elif pct <= self.BATTERY_LOW and not self.battery_said and want["battery"]:
+                self.battery_said = True
+                self.send("battery", f"Battery {pct} percent")
+
+    def run(self):
+        while True:
+            try:
+                self.tick()
+            except Exception as e:
+                log(f"Alerts: {e!r}")
+            time.sleep(2)
+
+
+alerts = Alerts()
 
 
 # ---------------------------------------------------------------- Windows bits
@@ -1296,6 +1514,9 @@ class Handler(BaseHTTPRequestHandler):
             link.ui_seen = time.time()
             with link.lock:
                 st = dict(link.state)
+            with settings_lock:
+                alert_cfg = dict(DEFAULT_SETTINGS["alerts"], **settings.get("alerts", {}))
+                wifi_update = bool(settings.get("otaKey")) and bool(settings.get("otaIp"))
                 logs = [{"i": i, "text": t} for i, t in link.logs if i > since]
                 replies = [{"i": i, **r} for i, r in link.replies if i > rsince]
             with settings_lock:
@@ -1326,6 +1547,8 @@ class Handler(BaseHTTPRequestHandler):
                                             | {d["mac"] for d in (st.get("netscan") or {}).get("list", [])}
                                             | {c["mac"] for c in ((st.get("status") or {}).get("wifi") or {}).get("apClients", [])}),
                 "firmwareDir": settings.get("firmwareDir"),
+                "alerts": alert_cfg,
+                "wifiUpdate": wifi_update,
             })
         return self._send(404, {"error": "not found"})
 
@@ -1440,7 +1663,18 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(500, {"error": str(e)})
             return self._send(200, {"ok": True})
         if path == "/api/firmware":
-            return self._send(200, {"started": updater.start()})
+            return self._send(200, {"started": updater.start("wifi" if body.get("via") == "wifi" else "usb")})
+        if path == "/api/alerts":
+            # {"download": bool, "cpu": bool, "battery": bool} to choose, {"test": true} to try one
+            if body.get("test"):
+                return self._send(200, {"sent": alerts.send("note", "Hello from your PC")})
+            with settings_lock:
+                a = settings.setdefault("alerts", dict(DEFAULT_SETTINGS["alerts"]))
+                for k in ("download", "cpu", "battery"):
+                    if k in body:
+                        a[k] = bool(body[k])
+                save_settings(settings)
+            return self._send(200, {"ok": True})
         return self._send(404, {"error": "not found"})
 
 
@@ -1509,6 +1743,7 @@ def main():
     log(f"Pocket Nova Panel started (pid {os.getpid()})")
     threading.Thread(target=server.serve_forever, daemon=True).start()
     threading.Thread(target=run_link_forever, daemon=True).start()
+    threading.Thread(target=alerts.run, daemon=True).start()
     if want_open:
         open_window()
 

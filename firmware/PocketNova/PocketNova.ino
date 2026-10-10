@@ -22,6 +22,7 @@
  *    Input.h    button/tilt events   Ir.h      TV code table
  *    BleCtl.h   Bluetooth slots and pairings
  *    Wifi.h     Wi-Fi setup page and internet time
+ *    Ota.h      firmware updates over Wi-Fi
  *    Shortcuts.h  the Keys app's shortcut library and your picks
  *    NovaRemote.h  Bluetooth service for the phone remote web page
  *    Apps.h     every app            Pet.h     Nova the pet
@@ -46,7 +47,7 @@
 #include "Ir.h"
 #include <esp_task_wdt.h>
 
-const char* const FW_VERSION = "2.12.0";
+const char* const FW_VERSION = "2.13.0";
 
 // Why Pocket Nova last started (for the panel and the history).
 const char* resetReasonName() {
@@ -85,6 +86,7 @@ PocketKeyboard bleKeyboard("Pocket Nova", "M5Stack", 100);
 #include "BleCtl.h"
 #include "History.h"
 #include "Wifi.h"
+#include "Ota.h"
 #include "Shortcuts.h"
 #include "Apps.h"
 #include "Pet.h"
@@ -108,6 +110,7 @@ App apps[] = {
   {"MEDIA",    CRGB(160, 0, 255),   ICON_MEDIA,  FRAMES(ICON_MEDIA),  mediaEnter,    mediaFrame,    nullptr,    true},
   {"TV",       CRGB(150, 0, 255),   ICON_TV,     FRAMES(ICON_TV),     tvEnter,       tvFrame,       nullptr,    false},
   {"SLIDES",   CRGB(0, 255, 80),    ICON_SLIDES, FRAMES(ICON_SLIDES), nullptr,       slidesFrame,   nullptr,    false},
+  {"AIR MOUSE",CRGB(255, 255, 255), ICON_MOUSE,  FRAMES(ICON_MOUSE),  mouseEnter,    mouseFrame,    nullptr,    false},
   {"KEYS",     CRGB(255, 120, 0),   ICON_KEYS,   FRAMES(ICON_KEYS),   keysEnter,     keysFrame,     nullptr,    false},
   {"LEVEL",    CRGB(0, 255, 0),     ICON_LEVEL,  FRAMES(ICON_LEVEL),  nullptr,       levelFrame,    nullptr,    false},
   {"DICE",     CRGB(255, 255, 255), ICON_DICE,   FRAMES(ICON_DICE),   nullptr,       diceFrame,     nullptr,    false},
@@ -115,6 +118,8 @@ App apps[] = {
   {"LIGHTS",   CRGB(255, 0, 180),   ICON_LIGHT,  FRAMES(ICON_LIGHT),  lightEnter,    lightFrame,    nullptr,    false},
   {"TORCH",    CRGB(255, 255, 255), ICON_TORCH,  FRAMES(ICON_TORCH),  torchEnter,    torchFrame,    torchLeave, false},
   {"SNAKE",    CRGB(0, 255, 0),     ICON_SNAKE,  FRAMES(ICON_SNAKE),  snakeEnter,    snakeFrame,    nullptr,    false},
+  {"REFLEX",   CRGB(0, 255, 0),     ICON_REFLEX, FRAMES(ICON_REFLEX), reflexEnter,   reflexFrame,   nullptr,    false},
+  {"SIMON",    CRGB(255, 200, 0),   ICON_SIMON,  FRAMES(ICON_SIMON),  simonEnter,    simonFrame,    nullptr,    false},
   {"SETTINGS", CRGB(200, 200, 200), ICON_SET,    FRAMES(ICON_SET),    settingsEnter, settingsFrame, nullptr,    true},
 };
 const int APP_COUNT = sizeof(apps) / sizeof(apps[0]);
@@ -319,6 +324,68 @@ void statusPrint() {
                 cfg.brightIdx + 1, tvBrandName(cfg.tvBrand), PET_MOOD_NAMES[petMood], cfg.petLove);
 }
 
+// ============================================================================
+//  PC alerts: the panel can pop a message up over whatever is on screen
+//  ({"cmd":"alert"} in Remote.h). An icon pulses, the text scrolls past,
+//  the icon pulses again. A tap (or hold) clears it early, and that press
+//  goes to the alert, not to the app underneath.
+// ============================================================================
+
+struct Alert {
+  bool        on = false;
+  const char* icon = nullptr;
+  CRGB        color;
+  uint8_t     phase = 0;         // 0 = icon, 1 = text, 2 = icon again
+  uint32_t    at = 0;
+  Scroller    text;
+  char        msg[64];
+} alert;
+
+void alertShow(const char* kind, const char* msg) {
+  if (!strcmp(kind, "download"))     { alert.icon = SPR_AL_DOWN; alert.color = CRGB(0, 255, 80); }
+  else if (!strcmp(kind, "cpu"))     { alert.icon = SPR_AL_HOT;  alert.color = CRGB(255, 90, 0); }
+  else if (!strcmp(kind, "battery")) { alert.icon = SPR_AL_BATT; alert.color = CRGB(255, 0, 0); }
+  else                               { alert.icon = SPR_AL_BELL; alert.color = CRGB(160, 60, 255); }
+  size_t k = 0;                  // keep what the 3x5 font can show
+  for (const char* p = msg; *p && k < sizeof(alert.msg) - 1; p++)
+    if (isalnum((unsigned char)*p) || strchr(" +-.:/?!", *p)) alert.msg[k++] = toupper((unsigned char)*p);
+  alert.msg[k] = 0;
+  alert.on = true;
+  alert.phase = 0;
+  alert.at = millis();
+  Serial.printf("[ALERT] %s: %s\n", kind, alert.msg);
+}
+
+// A press while an alert shows clears it, and the app never sees that press.
+void alertEat(Event& e) {
+  if (!alert.on || !(e == EV_TAP || e == EV_DOUBLE || e == EV_TRIPLE || e == EV_HOLD)) return;
+  alert.on = false;
+  e = EV_NONE;
+  fadeIn();
+}
+
+// Drawn over the app, which keeps running underneath.
+void alertDraw() {
+  if (!alert.on) return;
+  uint32_t now = millis();
+  clearFb();
+  if (alert.phase == 1) {
+    if (alert.text.draw()) return;
+    alert.phase = 2;
+    alert.at = now;
+  }
+  uint32_t el = now - alert.at;
+  if (alert.phase == 0 && el > 1600) {
+    alert.phase = 1;
+    alert.text.start(alert.msg[0] ? alert.msg : "ALERT", alert.color);
+    alert.text.draw();
+    return;
+  }
+  if (alert.phase == 2 && el > 1200) { alert.on = false; fadeIn(); return; }
+  uint8_t v = beatsin8(90, 60, 255);
+  drawSpriteTint(alert.icon, 0, 0, CRGB(alert.color).nscale8_video(v));
+}
+
 #include "Remote.h"
 #include "NovaRemote.h"
 
@@ -365,6 +432,7 @@ void setup() {
     Serial.printf("[SYS] Started again after: %s\n", resetReasonName());
   }
   wifiBegin();
+  otaLoadKey();
   irsend.begin();
 
   // A restart Pocket Nova asked for itself (slot switch, new name...) skips
@@ -412,10 +480,12 @@ void loop() {
   swiftPairUpdate();
   bleSlotMapUpdate();
   wifiUpdate();
+  otaUpdate();
   remoteUpdate();
 
   Event e = popEvent();
   if (e != EV_NONE) Serial.printf("[EV] %s\n", eventName(e));
+  alertEat(e);
 
   switch (screen) {
     case SCR_TUTORIAL: tutorialFrame(e); break;
@@ -426,6 +496,7 @@ void loop() {
       break;
   }
 
+  alertDraw();
   drawFx();
   remoteDrawOverlay();
   present();

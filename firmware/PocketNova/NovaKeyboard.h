@@ -1,7 +1,7 @@
 // NovaKeyboard - based on ESP32-BLE-Keyboard 0.3.0 by T-vK
 // (github.com/T-vK/ESP32-BLE-Keyboard), renamed and extended for Pocket Nova:
-// the reconnect fix in onConnect(), Swift Pair advertising, and several
-// connections at once for the phone remote. All credit for the original
+// the reconnect fix in onConnect(), Swift Pair advertising, several
+// connections at once for the phone remote, and a mouse for the air mouse. All credit for the original
 // keyboard code goes to its author.
 
 #ifndef NOVA_KEYBOARD_H
@@ -101,6 +101,10 @@ const MediaKeyReport KEY_MEDIA_CONSUMER_CONTROL_CONFIGURATION = {0, 64}; // Medi
 const MediaKeyReport KEY_MEDIA_EMAIL_READER = {0, 128};
 
 
+const uint8_t MOUSE_LEFT   = 1;
+const uint8_t MOUSE_RIGHT  = 2;
+const uint8_t MOUSE_MIDDLE = 4;
+
 //  Low level key report: up to 6 keys and shift, ctrl etc at once
 typedef struct
 {
@@ -116,6 +120,8 @@ private:
   BLECharacteristic* inputKeyboard;
   BLECharacteristic* outputKeyboard;
   BLECharacteristic* inputMediaKeys;
+  BLECharacteristic* inputMouse;
+  uint8_t            _mouseButtons = 0;
   BLEAdvertising*    advertising;
   KeyReport          _keyReport;
   MediaKeyReport     _mediaKeyReport;
@@ -132,6 +138,7 @@ private:
   BLEServer*         server = nullptr;
   uint32_t           _delay_ms = 7;
   void delay_ms(uint64_t ms);
+  void mouseReport(int8_t x, int8_t y, int8_t wheel);
   void applyAdvertising(void);
 
 public:
@@ -148,6 +155,10 @@ public:
   size_t write(const MediaKeyReport c);
   size_t write(const uint8_t *buffer, size_t size);
   void releaseAll(void);
+  void mouseMove(int x, int y, int wheel = 0);   // relative move (Pocket Nova addition)
+  void mousePress(uint8_t b);
+  void mouseRelease(uint8_t b);
+  void mouseClick(uint8_t b);
   bool isConnected(void);
   void setBatteryLevel(uint8_t level);
   void setName(std::string deviceName);

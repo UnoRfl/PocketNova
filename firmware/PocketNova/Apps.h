@@ -406,6 +406,155 @@ bool slidesFrame(Event e) {
 }
 
 // =====================================================================
+//  AIR MOUSE - point Pocket Nova like a laser pointer and the cursor follows.
+//    turn left / right     cursor left / right
+//    tip forward / back    cursor down / up
+//    tap                   left click (two quick taps = double click)
+//    tilt right + tap      right click
+//    tilt left + tap       scroll mode on/off (tip forward/back to scroll)
+//
+//  HOW: the GYROSCOPE measures how fast it's turning, in degrees per
+//  second, around each of its 3 axes. Turning speed x time = how far it
+//  turned, and that becomes how far the cursor moves. The tilt sensor
+//  can't do this: it only feels gravity, and turning left/right on a desk
+//  doesn't change which way gravity pulls.
+//
+//  DRIFT: a gyro never reads exactly 0, even lying still (its "bias").
+//  The first half second learns it (hold still!), and it keeps re-learning
+//  whenever you hold still, so the cursor doesn't creep.
+// =====================================================================
+
+const float    MOUSE_GAIN[]    = {10, 16, 24, 36, 52};   // cursor pixels per degree turned (speed 1..5)
+const float    MOUSE_DEAD      = 2.0f;    // deg/s: slower than this is hand tremor, ignored
+const float    MOUSE_WHEEL     = 0.25f;   // scroll notches per degree tipped
+const uint16_t MOUSE_SETTLE_MS = 500;     // learning the bias when the app opens
+const uint16_t MOUSE_FREEZE_MS = 200;     // pressing the button jolts it: hold the cursor still
+
+float    amBias[3], amSum[3], amRemX, amRemY, amRemW, amVx, amVy;
+uint16_t amSamples;
+uint32_t amStart, amLast, amStillSince;
+bool     amBiased, amScroll;
+
+void mouseEnter() {
+  amStart = amLast = millis();
+  amSamples = 0;
+  amBiased = amScroll = false;
+  amSum[0] = amSum[1] = amSum[2] = 0;
+  amRemX = amRemY = amRemW = amVx = amVy = 0;
+  amStillSince = 0;
+}
+
+// Tremor filter with a soft edge: under MOUSE_DEAD nothing, above it the
+// speed minus MOUSE_DEAD, so slow careful moves still start smoothly.
+float mouseDead(float v) {
+  float a = fabsf(v);
+  return a < MOUSE_DEAD ? 0 : (a - MOUSE_DEAD) * (v > 0 ? 1 : -1);
+}
+
+bool mouseFrame(Event e) {
+  if (e == EV_HOLD) return false;
+  uint32_t now = millis();
+  float g[3];
+  M5.IMU.getGyroData(&g[0], &g[1], &g[2]);
+  float dt = min(0.1f, (now - amLast) / 1000.0f);
+  amLast = now;
+  bool conn = bleOK();
+  clearFb();
+
+  if (!amBiased) {                       // hold still: learning the bias
+    for (int k = 0; k < 3; k++) amSum[k] += g[k];
+    amSamples++;
+    if (now - amStart >= MOUSE_SETTLE_MS) {
+      for (int k = 0; k < 3; k++) amBias[k] = amSum[k] / amSamples;
+      amBiased = true;
+      Serial.printf("[MOUSE] Gyro bias %.2f %.2f %.2f deg/s\n", amBias[0], amBias[1], amBias[2]);
+    }
+    uint8_t v = beatsin8(120, 40, 255);
+    px(2, 2, CRGB(v, v, v));
+    return true;
+  }
+
+  float r[3];
+  for (int k = 0; k < 3; k++) r[k] = g[k] - amBias[k];
+  // Still for a second? Then whatever it reads now is drift: nudge the bias toward it.
+  if (fabsf(r[0]) < 3 && fabsf(r[1]) < 3 && fabsf(r[2]) < 3) {
+    if (!amStillSince) amStillSince = now;
+    else if (now - amStillSince > 1000) for (int k = 0; k < 3; k++) amBias[k] += r[k] * 0.02f;
+  } else {
+    amStillSince = 0;
+  }
+
+  // Which gyro axis is which: the same calibration the tilt uses (Settings >
+  // CALIBRATE). Tipping the top edge down turns around the board's
+  // left-right axis; tipping the right edge down, around its up-down axis.
+  // Turning flat on a desk turns around Z, the axis through the screen.
+  float pitchP = cfg.pX.sign * r[cfg.pX.axis];      // + = top edge going down (screen at 0 degrees)
+  float rollP  = -cfg.pUp.sign * r[cfg.pUp.axis];   // + = right edge going down
+  float pitch;
+  switch (cfg.rotation & 3) {                        // the screen's "top" may be another edge
+    case 0:  pitch = pitchP;  break;
+    case 1:  pitch = rollP;   break;
+    case 2:  pitch = -pitchP; break;
+    default: pitch = -rollP;  break;
+  }
+  float yaw = r[2];                                  // + = turning right (seen from above)
+  if (cfg.mouseFlip & 1) yaw = -yaw;
+  if (cfg.mouseFlip & 2) pitch = -pitch;
+
+  float gain = MOUSE_GAIN[cfg.mouseSpeed];
+  float mx = mouseDead(yaw) * dt * gain, my = mouseDead(pitch) * dt * gain;
+  bool frozen = M5.Btn.isPressed() || now - lastPressMs < MOUSE_FREEZE_MS;
+  if (frozen || !conn) {
+    amRemX = amRemY = amRemW = 0;
+  } else if (amScroll) {
+    amRemW -= mouseDead(pitch) * dt * MOUSE_WHEEL;   // tip forward = scroll down
+  } else {
+    amRemX += mx;
+    amRemY += my;
+  }
+  // Mice only send whole steps: send the whole part, keep the fraction for next time.
+  int ix = (int)amRemX, iy = (int)amRemY, iw = (int)amRemW;
+  amRemX -= ix; amRemY -= iy; amRemW -= iw;
+  if (ix || iy || iw) bleKeyboard.mouseMove(ix, iy, iw);
+
+  if (e == EV_TAP) {
+    if (!conn) fxError();
+    else if (tiltDir == T_RIGHT) {
+      bleKeyboard.mouseClick(MOUSE_RIGHT);
+      fxRipple(CRGB(255, 0, 180));
+      Serial.println("[MOUSE] Right click");
+    } else if (tiltDir == T_LEFT) {
+      amScroll = !amScroll;
+      fxRipple(CRGB(0, 200, 255));
+      Serial.printf("[MOUSE] Scroll mode %s\n", amScroll ? "on" : "off");
+    } else {
+      bleKeyboard.mouseClick(MOUSE_LEFT);
+      flash();
+      Serial.println("[MOUSE] Click");
+    }
+  }
+
+  if (!conn) { drawBleWaiting(); return true; }
+  if (tiltDir == T_RIGHT) { drawGlyph('R', 1, 0, CRGB(255, 0, 180)); return true; }   // "tap = right click"
+  if (tiltDir == T_LEFT)  { drawGlyph('S', 1, 0, CRGB(0, 200, 255)); return true; }   // "tap = scroll mode"
+  // A dot that runs ahead of the motion, so you can see it's tracking.
+  float vx = frozen ? 0 : mx / dt, vy = frozen ? 0 : my / dt;
+  if (amScroll) vx = 0;
+  amVx = amVx * 0.7f + vx * 0.3f;
+  amVy = amVy * 0.7f + vy * 0.3f;
+  int dx = (int)roundf(constrain(amVx / 300.0f, -2.0f, 2.0f));
+  int dy = (int)roundf(constrain(amVy / 300.0f, -2.0f, 2.0f));
+  if (amScroll) {                                    // scroll mode: a cyan track
+    for (int y = 0; y < 5; y++) px(2, y, CRGB(0, 30, 50));
+    px(2, 2 + dy, CRGB(0, 220, 255));
+  } else {
+    drawSpriteTint(ICO_MOUSE_1, 0, 0, CRGB(30, 30, 40));
+    px(2 + dx, 2 + dy, flashing() ? CRGB(255, 255, 255) : CRGB(255, 200, 255));
+  }
+  return true;
+}
+
+// =====================================================================
 //  KEYS - Windows shortcuts. Tilt to pick, tap to fire.
 // =====================================================================
 
@@ -813,6 +962,182 @@ bool snakeFrame(Event e) {
         else if (snNewBest) snprintf(buf, sizeof(buf), "NEW BEST %d!", snScore);
         else snprintf(buf, sizeof(buf), "%d BEST %d", snScore, cfg.snakeHigh);
         snScroll.start(buf, snState == SN_WIN || snNewBest ? CRGB::Green : CRGB(255, 200, 0));
+      }
+      break;
+  }
+  return true;
+}
+
+// =====================================================================
+//  REFLEX - reaction time. Press to start, wait for green, press as fast
+//  as you can. Pressing before it turns green doesn't count.
+//  The button is read once per frame (every 20 ms), so times are +-20 ms.
+// =====================================================================
+
+enum { RX_READY, RX_WAIT, RX_GO, RX_SHOW, RX_EARLY } rxState = RX_READY;
+uint32_t rxGoAt = 0;
+uint16_t rxLast = 0;
+bool     rxNewBest = false;
+Scroller rxScroll;
+
+void reflexEnter() { rxState = RX_READY; rxScroll.stop(); }
+
+void reflexArm(uint32_t now) {
+  rxState = RX_WAIT;
+  rxGoAt = now + 1500 + esp_random() % 2500;   // 1.5 to 4 s: you can't guess it
+  rxScroll.stop();
+}
+
+bool reflexFrame(Event e) {
+  if (e == EV_HOLD) return false;
+  uint32_t now = millis();
+  // The moment the button goes DOWN, not the tap (a tap only counts once
+  // you let go, which would add your press time to the score).
+  bool press = M5.Btn.wasPressed();
+  clearFb();
+  switch (rxState) {
+    case RX_READY:
+      if (press) { reflexArm(now); break; }
+      drawSprite(ICON_REFLEX[(now / 400) % 3]);
+      break;
+    case RX_WAIT:
+      if (press) {
+        rxState = RX_EARLY;
+        fxError();
+        Serial.println("[REFLEX] Too soon");
+        break;
+      }
+      if ((int32_t)(now - rxGoAt) >= 0) { rxState = RX_GO; rxGoAt = now; }
+      fill_solid(fb, 25, CRGB(beatsin8(40, 8, 40), 0, 0));
+      break;
+    case RX_GO:
+      if (press) {
+        rxLast = min<uint32_t>(now - rxGoAt, 9999);
+        rxNewBest = !cfg.reactBest || rxLast < cfg.reactBest;
+        if (rxNewBest) { cfg.reactBest = rxLast; saveConfig(); }
+        rxState = RX_SHOW;
+        fxRipple(rxNewBest ? CRGB(255, 200, 0) : CRGB::Green);
+        Serial.printf("[REFLEX] %u ms (best %u)\n", rxLast, cfg.reactBest);
+        break;
+      }
+      fill_solid(fb, 25, CRGB::Green);
+      break;
+    case RX_SHOW:
+    case RX_EARLY:
+      if (press) { reflexArm(now); break; }
+      if (!rxScroll.draw()) {                       // press any time to go again
+        char buf[32];
+        if (rxState == RX_EARLY) snprintf(buf, sizeof(buf), "TOO SOON");
+        else if (rxNewBest) snprintf(buf, sizeof(buf), "%u MS NEW BEST!", rxLast);
+        else snprintf(buf, sizeof(buf), "%u MS BEST %u", rxLast, cfg.reactBest);
+        rxScroll.start(buf, rxState == RX_EARLY ? CRGB::Red : rxNewBest ? CRGB(255, 200, 0) : CRGB::Green);
+        rxScroll.draw();
+      }
+      break;
+  }
+  return true;
+}
+
+// =====================================================================
+//  SIMON - watch the sides light up, then repeat the order by tilting
+//  toward each side. One more step every round.
+//    left = red   right = blue   forward (top) = green   back (bottom) = yellow
+// =====================================================================
+
+const uint8_t SIMON_MAX = 40;
+const CRGB    SIMON_COL[4] = {CRGB(255, 0, 0), CRGB(0, 60, 255), CRGB(0, 255, 0), CRGB(255, 200, 0)};
+enum { SM_READY, SM_SHOW, SM_INPUT, SM_OVER } smState = SM_READY;
+uint8_t  smSeq[SIMON_MAX], smLen = 0, smPos = 0;
+uint32_t smAt = 0;
+TiltDir  smPrev = T_LEVEL;
+bool     smNewBest = false;
+Scroller smScroll;
+
+void simonSide(uint8_t d, CRGB c) {
+  for (int i = 1; i < 4; i++) {
+    if (d == 0) px(0, i, c);
+    else if (d == 1) px(4, i, c);
+    else if (d == 2) px(i, 0, c);
+    else px(i, 4, c);
+  }
+}
+
+int8_t simonDirOf(TiltDir t) {
+  return t == T_LEFT ? 0 : t == T_RIGHT ? 1 : t == T_FWD ? 2 : t == T_BACK ? 3 : -1;
+}
+
+void simonNext(uint32_t now) {
+  if (smLen < SIMON_MAX) smSeq[smLen++] = esp_random() % 4;
+  smState = SM_SHOW;
+  smPos = 0;
+  smAt = now + 700;                     // a short pause before the show
+}
+
+void simonGameOver(uint32_t now) {
+  smState = SM_OVER;
+  smAt = now;
+  uint8_t score = smLen - 1;            // rounds fully repeated
+  smNewBest = score > cfg.simonBest;
+  if (smNewBest) { cfg.simonBest = score; saveConfig(); }
+  fxError();
+  Serial.printf("[SIMON] Game over at step %d of %d, score %d (best %d)\n", smPos + 1, smLen, score, cfg.simonBest);
+}
+
+void simonEnter() { smState = SM_READY; smScroll.stop(); }
+
+bool simonFrame(Event e) {
+  if (e == EV_HOLD) return false;
+  uint32_t now = millis();
+  clearFb();
+  switch (smState) {
+    case SM_READY:
+      if (e == EV_TAP) { smLen = 0; simonNext(now); break; }
+      drawSprite(ICON_SIMON[(now / 350) % 3]);
+      break;
+
+    case SM_SHOW: {
+      // Each step: lit for `on` ms, then dark for 180 ms. Faster as it grows.
+      uint16_t on = max(220, 520 - smLen * 15), step = on + 180;
+      int32_t t = (int32_t)(now - smAt);
+      if (t < 0) break;
+      uint16_t i = t / step;
+      if (i >= smLen) {
+        smState = SM_INPUT;
+        smPos = 0;
+        smAt = now;
+        smPrev = tiltDir;               // still tilted? level it first
+        break;
+      }
+      if (t % step < on) simonSide(smSeq[i], SIMON_COL[smSeq[i]]);
+      break;
+    }
+
+    case SM_INPUT: {
+      for (int d = 0; d < 4; d++) simonSide(d, CRGB(SIMON_COL[d]).nscale8_video(35));
+      int8_t d = simonDirOf(tiltDir);
+      if (d >= 0) simonSide(d, SIMON_COL[d]);
+      if (d >= 0 && smPrev == T_LEVEL) {           // a fresh tilt is an answer
+        smAt = now;
+        if (d != smSeq[smPos]) simonGameOver(now);
+        else if (++smPos >= smLen) { fxRipple(CRGB::Green); simonNext(now); }
+      } else if (now - smAt > 5000) {
+        simonGameOver(now);                        // too long to answer
+      }
+      smPrev = tiltDir;
+      break;
+    }
+
+    case SM_OVER:
+      if (e == EV_TAP) { smLen = 0; smScroll.stop(); simonNext(now); break; }
+      if (now - smAt < 1200) {                     // flash the side it should have been
+        if ((now / 150) % 2 && smPos < smLen) simonSide(smSeq[smPos], SIMON_COL[smSeq[smPos]]);
+      } else if (!smScroll.draw()) {
+        char buf[24];
+        uint8_t score = smLen ? smLen - 1 : 0;
+        if (smNewBest) snprintf(buf, sizeof(buf), "NEW BEST %d!", score);
+        else snprintf(buf, sizeof(buf), "%d BEST %d", score, cfg.simonBest);
+        smScroll.start(buf, smNewBest ? CRGB::Green : CRGB(255, 200, 0));
+        smScroll.draw();
       }
       break;
   }

@@ -103,6 +103,7 @@ h2::before { content: ""; width: 8px; height: 8px; background: var(--star); box-
 button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--star); outline-offset: 2px; }
 .btn.primary { background: var(--nova); color: #140b24; font-weight: 700; box-shadow: inset 0 0 0 2px var(--nova-hi), 0 3px 0 #4b2b8a; }
 .btn.primary:hover { background: var(--nova-hi); }
+.btn[aria-pressed="true"] { background: var(--nova); color: #140b24; font-weight: 700; box-shadow: inset 0 0 0 2px var(--nova-hi); }
 .btn.danger { color: #ffb3bb; box-shadow: inset 0 0 0 2px #5a2630, 0 3px 0 #0c0a14; }
 .btn.danger.armed { background: var(--bad); color: #1a0508; font-weight: 700; animation: shake .3s; }
 @keyframes shake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
@@ -426,6 +427,13 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
         <div class="row"><label for="lastApp">Double tap on Nova opens</label><select id="lastApp" class="pix"></select></div>
       </div>
       <div class="section">
+        <h2>Air mouse</h2>
+        <p class="hint">Open AIR MOUSE on the Atom, hold it flat and point the top edge at the screen. Turn left and right to move the cursor, tip it to go up and down. Tap to click, tilt right and tap to right-click, tilt left and tap to scroll. If the mouse doesn't move, remove Pocket Nova in Windows Bluetooth settings and pair it again (Windows needs to see that it has a mouse now).</p>
+        <div class="row"><span class="label">Speed</span><div class="seg" id="mouseSpeedSeg"></div></div>
+        <div class="row"><span class="label">Direction</span>
+          <div class="inline"><button class="btn pix" id="mouseFlipX" aria-pressed="false">Swap left / right</button><button class="btn pix" id="mouseFlipY" aria-pressed="false">Swap up / down</button></div></div>
+      </div>
+      <div class="section">
         <h2>Name</h2>
         <p class="hint">This is the name your PC and phone see in their Bluetooth lists, and your router sees on Wi-Fi. Saving it restarts Pocket Nova.</p>
         <div class="inline"><input type="text" id="nameInput" class="pix" maxlength="24" aria-label="Device name"><button class="btn primary pix" id="nameSave">Save name</button></div>
@@ -637,6 +645,8 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
           <div class="stat pix"><div class="v" id="petLove">0</div><div class="k">affection</div></div>
           <div class="stat pix"><div class="v" id="petTime">-</div><div class="k">time of day</div></div>
           <div class="stat pix"><div class="v" id="snakeBest">0</div><div class="k">Snake best</div></div>
+          <div class="stat pix"><div class="v" id="reactBest">-</div><div class="k">Reflex best</div></div>
+          <div class="stat pix"><div class="v" id="simonBest">0</div><div class="k">Simon best</div></div>
         </div>
       </div>
       <div class="section">
@@ -686,9 +696,17 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
         <label class="toggle"><input type="checkbox" id="autostart"><span>Start the watcher with Windows</span></label>
       </div>
       <div class="section">
+        <h2>Alerts on Pocket Nova</h2>
+        <p class="hint">This PC pops a message up on the LEDs, over whatever Pocket Nova is showing. Tap to clear it. Works over the cable or Bluetooth.</p>
+        <label class="toggle"><input type="checkbox" id="alDownload"><span>A download finished (your Downloads folder)</span></label>
+        <label class="toggle"><input type="checkbox" id="alCpu"><span>The processor has been flat out for 30 seconds</span></label>
+        <label class="toggle"><input type="checkbox" id="alBattery"><span>Laptop battery under 20% and not charging</span></label>
+        <div><button class="btn pix" id="alTest">Send a test alert</button></div>
+      </div>
+      <div class="section">
         <h2>Firmware</h2>
-        <p class="hint">Rebuilds and installs the firmware from <span class="mono" id="fwDir"></span>. Takes about 3 minutes, and a progress screen shows each step. Keep Pocket Nova plugged in until it says Done.</p>
-        <div class="inline"><button class="btn pix" id="updateBtn">Update firmware</button><button class="btn pix" id="rebootBtn">Restart Pocket Nova</button></div>
+        <p class="hint">Rebuilds and installs the firmware from <span class="mono" id="fwDir"></span>. Takes about 3 minutes, and a progress screen shows each step. Over the cable, keep Pocket Nova plugged in until it says Done. Over Wi-Fi it only needs power and your Wi-Fi (plug it in by USB once first, so this PC learns its update key).</p>
+        <div class="inline"><button class="btn pix" id="updateBtn">Update firmware</button><button class="btn pix" id="updateWifiBtn" disabled>Update over Wi-Fi</button><button class="btn pix" id="rebootBtn">Restart Pocket Nova</button></div>
       </div>
       <div class="section">
         <h2>Factory reset</h2>
@@ -1023,6 +1041,19 @@ $("autoRot").onchange = (e) => cmd({ cmd: "set", cfg: { autoRotate: e.target.che
 $("swiftPair").onchange = (e) => cmd({ cmd: "set", cfg: { swiftPair: e.target.checked } });
 $("flipX").onclick = () => { cmd({ cmd: "flip", axis: "x" }); toast("Left and right swapped"); };
 $("flipY").onclick = () => { cmd({ cmd: "flip", axis: "y" }); toast("Forward and back swapped"); };
+seg($("mouseSpeedSeg"), ["1", "2", "3", "4", "5"], (i) => cmd({ cmd: "set", cfg: { mouseSpeed: i } }));
+function flipMouse(bit, what) {
+  const f = ((S.config || {}).mouseFlip || 0) ^ bit;
+  cmd({ cmd: "set", cfg: { mouseFlip: f } });
+  toast(`Air mouse: ${what} swapped`);
+}
+$("mouseFlipX").onclick = () => flipMouse(1, "left and right");
+$("mouseFlipY").onclick = () => flipMouse(2, "up and down");
+["Download", "Cpu", "Battery"].forEach((k) => ($("al" + k).onchange = (e) => api("/api/alerts", { [k.toLowerCase()]: e.target.checked })));
+$("alTest").onclick = async () => {
+  const r = await api("/api/alerts", { test: true });
+  toast(r.sent ? "Test alert sent. Look at the LEDs." : "Couldn't send it. Is Pocket Nova connected and on firmware 2.13 or newer?", !r.sent);
+};
 $("lastApp").onchange = (e) => cmd({ cmd: "set", cfg: { lastApp: +e.target.value } });
 $("tvBrand").onchange = (e) => cmd({ cmd: "set", cfg: { tvBrand: +e.target.value } });
 function saveName(input) {
@@ -1580,14 +1611,15 @@ $("resetBtn").onclick = () => {
   toast("Factory reset. Pocket Nova is restarting into the tutorial.");
 };
 $("rebootBtn").onclick = () => { cmd({ cmd: "reboot" }); toast("Restarting Pocket Nova"); };
-async function startUpdate() {
-  const r = await api("/api/firmware", {});
+async function startUpdate(via) {
+  const r = await api("/api/firmware", { via: via === "wifi" ? "wifi" : "usb" });
   updShown = true; updClosed = false;
   if (!r.started) toast("An update is already running");
 }
-$("updateBtn").onclick = startUpdate;
-$("updRetry").onclick = startUpdate;
-$("offReinstall").onclick = startUpdate;
+$("updateBtn").onclick = () => startUpdate("usb");
+$("updateWifiBtn").onclick = () => startUpdate("wifi");
+$("updRetry").onclick = () => startUpdate((S.update || {}).via);
+$("offReinstall").onclick = () => startUpdate("usb");
 $("updClose").onclick = () => { updClosed = true; $("updScreen").hidden = true; };
 
 // ---- firmware update screen
@@ -1622,13 +1654,18 @@ function renderUpdate() {
   });
   $("updTitle").textContent = done ? "Pocket Nova is up to date" : failed ? "The update didn't finish" : "Updating Pocket Nova";
   $("updSub").textContent = done && up.fw ? `Now running firmware ${up.fw}` : "Firmware update";
+  const wifi = up.via === "wifi";
   $("updWarn").hidden = done || failed;
+  $("updWarn").textContent = wifi ? "Keep Pocket Nova powered and on your Wi-Fi, and leave this window open until it says Done."
+                                  : "Keep Pocket Nova plugged in and leave this window open until it says Done.";
   $("updText").textContent = {
     build: "Building the firmware on this PC. Pocket Nova keeps working until the install starts.",
-    upload: "Installing. Pocket Nova's screen goes dark while this runs. That's normal.",
+    upload: wifi ? "Sending it over Wi-Fi. Pocket Nova's LEDs fill up blue as it arrives."
+                 : "Installing. Pocket Nova's screen goes dark while this runs. That's normal.",
     restart: "Installed. Pocket Nova is starting up with the new firmware…",
     done: up.fw ? "Everything went fine. All your settings were kept." : "Installed. Pocket Nova is restarting and reconnects by itself.",
-    failed: (up.error || "Something went wrong.") + " Your settings are safe. Press Try again; if Pocket Nova seems stuck, it still accepts a new install over the cable.",
+    failed: (up.error || "Something went wrong.") + (wifi ? " Pocket Nova keeps running its old firmware. Press Try again, or update over the cable."
+                 : " Your settings are safe. Press Try again; if Pocket Nova seems stuck, it still accepts a new install over the cable."),
   }[stage] || "";
   $("updFoot").hidden = !(done || failed);
   $("updRetry").hidden = !failed;
@@ -2001,6 +2038,11 @@ function render() {
     if (document.activeElement !== $("nameInput") && !$("nameInput").dataset.touched) $("nameInput").value = c.name;
     fillWfNames(c);
     $("snakeBest").textContent = c.snakeHigh;
+    $("reactBest").textContent = c.reactBest ? c.reactBest + " ms" : "-";
+    $("simonBest").textContent = c.simonBest || 0;
+    if (c.mouseSpeed !== undefined) setSeg($("mouseSpeedSeg"), c.mouseSpeed);
+    $("mouseFlipX").setAttribute("aria-pressed", String(!!(c.mouseFlip & 1)));
+    $("mouseFlipY").setAttribute("aria-pressed", String(!!(c.mouseFlip & 2)));
   }
   if (st) {
     const wf = st.wifi || {};
@@ -2051,6 +2093,10 @@ function render() {
   paintMascot();
   $("portName").textContent = viaBt ? "Bluetooth" : S.port || "-";
   $("fwDir").textContent = S.firmwareDir || "";
+  $("updateWifiBtn").disabled = !S.wifiUpdate || !!(S.update || {}).running;
+  $("updateWifiBtn").title = S.wifiUpdate ? "" : "Needs Pocket Nova on your Wi-Fi, and one USB connection first";
+  const al = S.alerts || {};
+  ["Download", "Cpu", "Battery"].forEach((k) => { const el = $("al" + k); if (document.activeElement !== el) el.checked = !!al[k.toLowerCase()]; });
   if (document.activeElement !== $("autoOpen")) $("autoOpen").checked = !!S.autoOpen;
   if (document.activeElement !== $("autostart")) $("autostart").checked = !!S.autostart;
   if (document.activeElement !== $("histDays") && S.historyDays != null) $("histDays").value = String(S.historyDays);
