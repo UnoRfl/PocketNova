@@ -44,8 +44,23 @@
 #include "Display.h"
 #include "Input.h"
 #include "Ir.h"
+#include <esp_task_wdt.h>
 
-const char* const FW_VERSION = "2.9.0";
+const char* const FW_VERSION = "2.10.0";
+
+// Why Pocket Nova last started (for the panel and the history).
+const char* resetReasonName() {
+  switch (esp_reset_reason()) {
+    case ESP_RST_POWERON:  return "power on";
+    case ESP_RST_SW:       return "restart";
+    case ESP_RST_PANIC:    return "crash";
+    case ESP_RST_INT_WDT:
+    case ESP_RST_TASK_WDT:
+    case ESP_RST_WDT:      return "froze (watchdog)";
+    case ESP_RST_BROWNOUT: return "power dip";
+    default:               return "other";
+  }
+}
 
 // The phone remote's Bluetooth service and its two characteristics
 // (NovaRemote.h). Made-up IDs; the web page uses the same ones.
@@ -344,6 +359,11 @@ void setup() {
   bleKeyboard.begin();
   tzOffsetSec = cfg.tz;                 // until the PC or the internet says otherwise
   histBoot = esp_random();
+  esp_reset_reason_t why = esp_reset_reason();
+  if (why == ESP_RST_PANIC || why == ESP_RST_INT_WDT || why == ESP_RST_TASK_WDT || why == ESP_RST_WDT || why == ESP_RST_BROWNOUT) {
+    histAdd(H_RESTART, nullptr, 0, resetReasonName());
+    Serial.printf("[SYS] Started again after: %s\n", resetReasonName());
+  }
   wifiBegin();
   irsend.begin();
 
@@ -362,6 +382,13 @@ void setup() {
 
   if (!cfg.tutorialDone) startTutorial();
   else goPet();
+
+  // WATCHDOG: a timer the main loop has to reset every time round. If the
+  // loop ever gets stuck for 15 s (a bug, a radio driver that never answers),
+  // the timer runs out and the chip restarts itself instead of sitting
+  // frozen. The next start logs "froze (watchdog)" in the history.
+  esp_task_wdt_init(15, true);
+  enableLoopWDT();                      // Arduino resets it after each loop()
 }
 
 void loop() {

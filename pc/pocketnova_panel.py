@@ -60,7 +60,7 @@ KNOWN_USB = {(0x0403, 0x6001), (0x1A86, 0x55D4), (0x1A86, 0x7523), (0x10C4, 0xEA
 ALLOWED_CMDS = {
     "hello", "get", "status", "bonds", "set", "flip", "unbond", "unbond_all", "slot",
     "factory_reset", "reboot", "input", "tilt", "ir", "time", "mirror", "tutorial", "pet",
-    "tvbrands", "findtv", "wifi", "keys", "keytest", "netscan", "block",
+    "tvbrands", "findtv", "wifi", "keys", "keytest", "netscan", "block", "wifiscan",
 }
 
 STARTUP_LNK = os.path.join(os.environ.get("APPDATA", ""), r"Microsoft\Windows\Start Menu\Programs\Startup",
@@ -645,6 +645,7 @@ class DeviceLink:
             self.ser, hello = res
             self.port = dev
             self.connected_at = time.time()
+            self.last_rx = time.time()
             with self.lock:
                 self.state = {"hello": hello, "helloAt": time.time()}
                 self._add_log(f"-- Connected to {hello.get('name')} on {dev} (firmware {hello.get('fw')})")
@@ -670,7 +671,7 @@ class DeviceLink:
                 return
             t = msg.get("t")
             with self.lock:
-                if t in ("hello", "config", "status", "bonds", "tvbrands", "keys"):
+                if t in ("hello", "config", "status", "bonds", "tvbrands", "keys", "wifiscan"):
                     self.state[t] = msg
                     if t == "hello":
                         self.state["helloAt"] = time.time()
@@ -704,6 +705,12 @@ class DeviceLink:
 
     def _periodic(self):
         now = time.time()
+        # HANG FALLBACK: Pocket Nova answers a status request at least every
+        # 5 s. Silence for 15 s means the link (or the device) is stuck:
+        # close the port and find it again from scratch.
+        if self.ser and now - getattr(self, "last_rx", now) > 15:
+            self._drop("no answer for 15 s, reconnecting")
+            return
         if now >= self._next_hist:              # always, panel open or not: it's a log
             fw = (self.state.get("hello") or {}).get("fw", "0")
             try:
@@ -758,6 +765,7 @@ class DeviceLink:
                 self._drop(str(e) or "unplugged")
                 continue
             if data:
+                self.last_rx = time.time()
                 self._buf += data
                 while b"\n" in self._buf:
                     raw, self._buf = self._buf.split(b"\n", 1)

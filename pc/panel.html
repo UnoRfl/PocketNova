@@ -38,6 +38,7 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }   /* "hidden" always wins over a class's display: grid/flex */
 html, body { height: 100%; }
 body { margin: 0; background: var(--space); color: var(--fg); font: 14px/1.5 var(--font-ui); overflow-x: hidden; }
 button, input, select { font: inherit; color: inherit; }
@@ -213,6 +214,17 @@ input[type=text]:focus, input[type=password]:focus, select:focus { box-shadow: i
 .hrow .what { min-width: 0; overflow-wrap: anywhere; }
 .hrow .who { color: var(--muted); font-size: .8rem; }
 .hrow .btn { padding: 4px 9px; font-size: .78rem; }
+.group { background: rgba(30, 25, 48, .55); box-shadow: inset 0 0 0 2px var(--line-hi); padding: 16px; display: grid; gap: 12px; --px: 8px; }
+.ghead { display: flex; gap: 12px; align-items: flex-start; }
+.gnum { font-family: var(--font-pixel); font-size: 1.2rem; width: 30px; height: 30px; display: grid; place-items: center; flex: none;
+        background: var(--nova); color: #140b24; clip-path: polygon(0 4px, 4px 4px, 4px 0, calc(100% - 4px) 0, calc(100% - 4px) 4px, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 4px calc(100% - 4px), 0 calc(100% - 4px)); }
+.ghead h2::before { display: none; }
+.ghead .hint { margin-top: 4px; }
+.gsub { font-family: var(--font-tiny); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 400;
+        margin-top: 6px; padding-top: 10px; border-top: 2px dashed var(--line); }
+.danger-zone { margin-top: 6px; padding-top: 12px; border-top: 2px dashed var(--line); }
+#wfTryNote.bad { color: var(--bad); } #wfTryNote.good { color: var(--good); }
+#wfJoinMsg.bad, #wfNamesMsg2.bad { color: var(--bad); }
 .histtools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .histtools input[type=search] { flex: 1 1 200px; background: #120f1c; border: 0; box-shadow: inset 0 0 0 2px var(--line); padding: 8px 10px; min-width: 0; }
 .histtools input[type=search]:focus { box-shadow: inset 0 0 0 2px var(--nova); outline: 0; }
@@ -435,45 +447,67 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
 
     <!-- WI-FI -->
     <section class="pane" id="pane-wifi" hidden>
-      <div class="section">
-        <h2>Wi-Fi</h2>
+      <!-- ONE: Pocket Nova joining your Wi-Fi -->
+      <div class="group pix">
+        <div class="ghead"><span class="gnum">1</span><div><h2>Pocket Nova's internet</h2>
+          <p class="hint">Pocket Nova joining <b>your</b> Wi-Fi, like a phone does. It uses it for the time (night mode), the device scan below, and your router lists it by name.</p></div></div>
         <div class="stats">
           <div class="stat pix"><div class="v" id="wfState">-</div><div class="k">status</div></div>
           <div class="stat pix"><div class="v" id="wfSsid">-</div><div class="k">network</div></div>
           <div class="stat pix"><div class="v mono" id="wfIp">-</div><div class="k">address</div></div>
           <div class="stat pix"><div class="v" id="wfRssi">-</div><div class="k">signal</div></div>
         </div>
-        <p class="hint">Pocket Nova uses Wi-Fi to get the time from the internet, so Nova's night mode works on a phone charger too.</p>
+        <p class="hint" id="wfTryNote" role="status" hidden></p>
         <div class="row"><span class="label">Use Wi-Fi</span>
           <label class="toggle"><input type="checkbox" id="wifiOn"><span class="muted">Join the saved network</span></label></div>
-      </div>
-      <div class="section">
-        <h2>Names and password</h2>
-        <p class="hint">Make it yours. Leave a box empty to let Pocket Nova pick it automatically.</p>
+        <h3 class="gsub">Connect to a network</h3>
+        <div class="row"><label for="wfJoinSsid">Network</label>
+          <div class="namerow"><input type="text" id="wfJoinSsid" class="pix" list="wfJoinList" maxlength="32" autocomplete="off" placeholder="Your home Wi-Fi's name">
+            <button class="btn pix" id="wfJoinScan" type="button">Find networks</button></div></div>
+        <datalist id="wfJoinList"></datalist>
+        <div class="row"><label for="wfJoinPass">Password</label>
+          <div class="namerow"><input type="password" id="wfJoinPass" class="pix" maxlength="64" autocomplete="off" placeholder="Empty for an open network">
+            <button class="btn pix" id="wfJoinShow" type="button" aria-pressed="false">Show</button></div></div>
+        <div class="field-note">Your current network stays saved until the new one works. If it doesn't, Pocket Nova goes straight back to the old one. 2.4 GHz networks only (the ESP32 has no 5 GHz radio).</div>
+        <div class="inline"><button class="btn primary pix" id="wfJoinBtn">Connect</button><span class="hint" id="wfJoinMsg" role="status"></span></div>
+        <h3 class="gsub">How it shows up on your router</h3>
         <div class="row"><label for="wfNameInput">Pocket Nova's name</label>
           <input type="text" id="wfNameInput" class="pix" maxlength="24"></div>
-        <div class="field-note">What Bluetooth lists show. Changing it restarts Pocket Nova (about 2 seconds).</div>
+        <div class="field-note">Also what Bluetooth lists show. Changing it restarts Pocket Nova (about 2 seconds).</div>
         <div class="row"><label for="wfHostInput">Name on your router</label>
           <input type="text" id="wfHostInput" class="pix" maxlength="31" autocomplete="off"></div>
-        <div class="field-note" id="wfHostNote">Empty = made from Pocket Nova's name.</div>
-        <div class="row"><label for="wfApNameInput">Setup network name</label>
+        <div class="field-note">Empty = made from Pocket Nova's name. Routers only allow letters, numbers and dashes, so spaces become dashes.</div>
+        <div class="inline"><button class="btn primary pix" id="wfNamesSave2">Save names</button><span class="hint" id="wfNamesMsg2" role="status"></span></div>
+        <div class="inline danger-zone"><button class="btn danger pix" id="wfForget" data-confirm="Click again: Pocket Nova will be offline">Forget saved network</button>
+          <span class="hint">Pocket Nova goes offline until you connect it again.</span></div>
+      </div>
+
+      <!-- TWO: Pocket Nova's own network -->
+      <div class="group pix">
+        <div class="ghead"><span class="gnum">2</span><div><h2>Pocket Nova's own network</h2>
+          <p class="hint">A Wi-Fi network Pocket Nova <b>creates</b>, for setting it up from a phone: join it, and a page opens where you pick the network for box 1. It closes by itself after 10 minutes. On the Atom: Settings → Wi-Fi, double tap. If the page doesn't open, go to <b class="mono">http://192.168.4.1</b>.</p></div></div>
+        <div class="stats" id="wfSetup" hidden>
+          <div class="stat pix"><div class="v mono" id="wfApSsid">-</div><div class="k">join this network</div></div>
+          <div class="stat pix"><div class="v mono" id="wfApPass">-</div><div class="k">password</div></div>
+          <div class="stat pix"><div class="v" id="wfApLeft">-</div><div class="k">closes in</div></div>
+          <div class="stat pix"><div class="v" id="wfApCount">0</div><div class="k">joined now</div></div>
+        </div>
+        <div class="devices" id="wfApClients" hidden></div>
+        <div class="inline"><button class="btn primary pix" id="wfSetupBtn">Open setup network</button></div>
+        <h3 class="gsub">Its name and password</h3>
+        <div class="row"><label for="wfApNameInput">Network name</label>
           <input type="text" id="wfApNameInput" class="pix" maxlength="32" autocomplete="off"></div>
-        <div class="field-note">The Wi-Fi network Pocket Nova opens so your phone can set it up. Empty = Pocket Nova's name + "Setup".</div>
-        <div class="row"><label for="wfApPassInput">Setup network password</label>
+        <div class="field-note">Empty = Pocket Nova's name + "Setup".</div>
+        <div class="row"><label for="wfApPassInput">Password</label>
           <div class="namerow"><input type="password" id="wfApPassInput" class="pix" maxlength="63" autocomplete="new-password" placeholder="New random 8 digits each time">
             <button class="btn pix" id="wfApPassShow" type="button" aria-pressed="false">Show</button></div></div>
-        <div class="field-note">8 to 63 characters. Anyone who knows it can join while the setup network is open (10 minutes at a time) and change which Wi-Fi Pocket Nova uses, so pick something people won't guess.</div>
+        <div class="field-note">8 to 63 characters. Anyone who knows it can join while it's open and change which Wi-Fi Pocket Nova uses, so pick something people won't guess.</div>
         <div class="row"><span class="label">No password</span>
           <label class="toggle"><input type="checkbox" id="wfApOpen"><span class="muted">Open network: anyone nearby can join without a password</span></label></div>
         <div class="field-note" id="wfOpenNote" hidden>Open networks aren't encrypted, so others nearby could read what's typed on the setup page (including your home Wi-Fi password). The History below shows everyone who joins, and you can block anyone.</div>
         <div class="inline"><button class="btn primary pix" id="wfNamesSave">Save</button><span class="hint" id="wfNamesMsg" role="status"></span></div>
-        <div class="netnames">
-          <div class="stat pix"><div class="v mono" id="wfHostPrev">-</div><div class="k">your router lists it as</div></div>
-          <div class="stat pix"><div class="v" id="wfApPrev">-</div><div class="k">setup network</div></div>
-          <div class="stat pix"><div class="v" id="wfBtPrev">-</div><div class="k">Bluetooth</div></div>
-        </div>
-        <p class="hint">Routers only allow letters, numbers and dashes in a device name (its "hostname"), so spaces become dashes and apostrophes are dropped.</p>
       </div>
+
       <div class="section">
         <h2>Devices on your network <span class="count" id="netCount"></span></h2>
         <p class="hint">Pocket Nova asks every address on your Wi-Fi "who are you?" and lists everyone that answers. Press <b>It's mine</b> on your own devices (naming one counts too). After that, only devices you haven't approved get a <span class="badge new">new</span> tag and an alert. Phones that change their private address are recognised by the name they answer with when Pocket Nova can get one.</p>
@@ -486,19 +520,6 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
         <div class="progress" id="netProg" hidden><i></i></div>
         <div class="devices" id="netList"></div>
         <p class="hint" id="netWhen"></p>
-      </div>
-      <div class="section">
-        <h2>Set up a network</h2>
-        <p class="hint">Opens Pocket Nova's own setup network for 10 minutes. Join it from your phone with the password below, and a page opens by itself where you pick your home Wi-Fi. If the page doesn't open, go to <b class="mono">http://192.168.4.1</b>. On the Atom: Settings → Wi-Fi, double tap.</p>
-        <div class="stats" id="wfSetup" hidden>
-          <div class="stat pix"><div class="v mono" id="wfApSsid">-</div><div class="k">join this network</div></div>
-          <div class="stat pix"><div class="v mono" id="wfApPass">-</div><div class="k">password</div></div>
-          <div class="stat pix"><div class="v" id="wfApLeft">-</div><div class="k">closes in</div></div>
-          <div class="stat pix"><div class="v" id="wfApCount">0</div><div class="k">joined now</div></div>
-        </div>
-        <div class="devices" id="wfApClients" hidden></div>
-        <div class="inline"><button class="btn primary pix" id="wfSetupBtn">Open setup network</button>
-          <button class="btn danger pix" id="wfForget" data-confirm="Click again to forget it">Forget saved network</button></div>
       </div>
       <div class="section">
         <h2>History <span class="count" id="histCount"></span></h2>
@@ -721,10 +742,14 @@ const MOOD_WORDS = { idle: "relaxing", happy: "happy", love: "in love", dizzy: "
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 async function api(path, body) {
-  const r = await fetch(path, body === undefined ? {} : {
-    method: "POST", headers: { "Content-Type": "application/json", "X-PocketNova": "1" }, body: JSON.stringify(body)
-  });
-  return r.json().catch(() => ({}));
+  try {
+    const r = await fetch(path, body === undefined ? { signal: AbortSignal.timeout(8000) } : {
+      method: "POST", headers: { "Content-Type": "application/json", "X-PocketNova": "1" }, body: JSON.stringify(body), signal: AbortSignal.timeout(8000)
+    });
+    return r.json().catch(() => ({}));
+  } catch (e) {
+    return {};                          // the background program didn't answer in time; poll() shows that
+  }
 }
 const cmd = (o) => api("/api/cmd", o);
 
@@ -991,9 +1016,9 @@ function saveWfNames() {
   const c = S.config || {};
   const name = $("wfNameInput").value.trim(), host = $("wfHostInput").value.trim();
   const apName = $("wfApNameInput").value.trim(), pass = $("wfApPassInput").value;
-  const msg = $("wfNamesMsg");
+  const msg = $("wfNamesMsg"), msg2 = $("wfNamesMsg2");
   const bad = wfNamesProblem(apName, $("wfApOpen").checked ? "" : pass, name);
-  msg.className = bad ? "hint bad" : "hint"; msg.textContent = bad;
+  msg.className = msg2.className = bad ? "hint bad" : "hint"; msg.textContent = msg2.textContent = bad;
   if (bad) return;
   const o = { cmd: "wifi", action: "names", apName, host, open: $("wfApOpen").checked };
   // Only send the password if it was typed, or if we know the saved one
@@ -1008,6 +1033,58 @@ function saveWfNames() {
   toast(renaming ? "Saved. Pocket Nova is restarting with its new name." : "Saved");
 }
 $("wfNamesSave").onclick = saveWfNames;
+$("wfNamesSave2").onclick = saveWfNames;
+
+// ---- box 1: connect Pocket Nova to a network
+let wfScanWanted = 0;
+function wfScan(again) {
+  wfScanWanted = Date.now() + 20000;          // keep asking while Pocket Nova is still looking
+  $("wfJoinScan").textContent = "Looking…";
+  cmd({ cmd: "wifiscan", again: !!again });
+}
+$("wfJoinScan").onclick = () => wfScan(true);
+setInterval(() => { if (wfScanWanted > Date.now() && (!S.wifiscan || S.wifiscan.busy)) cmd({ cmd: "wifiscan" }); }, 1500);
+$("wfJoinShow").onclick = (e) => {
+  const show = $("wfJoinPass").type === "password";
+  $("wfJoinPass").type = show ? "text" : "password";
+  e.target.textContent = show ? "Hide" : "Show";
+  e.target.setAttribute("aria-pressed", String(show));
+};
+function wfConnect() {
+  const ssid = $("wfJoinSsid").value.trim(), pass = $("wfJoinPass").value, msg = $("wfJoinMsg");
+  const bad = !ssid ? "Type or pick a network first." : utf8Len(ssid) > 32 ? "That network name is too long (32 at most)."
+            : pass && (pass.length < 8 || pass.length > 64) ? "Wi-Fi passwords are 8 to 64 characters (leave it empty for an open network)." : "";
+  msg.className = bad ? "hint bad" : "hint"; msg.textContent = bad;
+  if (bad) return;
+  cmd({ cmd: "wifi", action: "connect", ssid, pass });
+  $("wfJoinPass").value = "";
+  toast(`Connecting to ${ssid}…`);
+}
+$("wfJoinBtn").onclick = wfConnect;
+["wfJoinSsid", "wfJoinPass"].forEach((id) => ($(id).onkeydown = (e) => { if (e.key === "Enter") wfConnect(); }));
+let wfTryShown = "";
+function renderJoin(wf) {
+  const sc = S.wifiscan;
+  if (sc && !sc.busy) {
+    const key = JSON.stringify(sc.list);
+    if ($("wfJoinList").dataset.key !== key) {
+      $("wfJoinList").dataset.key = key;
+      $("wfJoinList").innerHTML = "";
+      sc.list.forEach((n) => { const o = document.createElement("option"); o.value = n.ssid; o.label = `${n.rssi} dBm${n.open ? " · open" : ""}`; $("wfJoinList").appendChild(o); });
+    }
+    if (wfScanWanted) { wfScanWanted = 0; toast(`Found ${sc.list.length} networks: pick one in the Network box`); }
+  }
+  $("wfJoinScan").textContent = wfScanWanted > Date.now() ? "Looking…" : "Find networks";
+  const note = $("wfTryNote"), t = wf.lastTry;
+  let text = "", cls = "";
+  if (wf.trying) { text = `Trying "${wf.trying}"…` + (wf.prev ? ` If it doesn't work, Pocket Nova goes back to "${wf.prev}".` : ""); }
+  else if (t && t.outcome === "failed") { text = `Couldn't join "${t.ssid}": ${t.reason}.` + (wf.ssid ? ` Still using "${wf.ssid}".` : ""); cls = "bad"; }
+  else if (t && t.outcome === "ok" && wf.ssid === t.ssid) { text = `Connected to "${t.ssid}" and saved.`; cls = "good"; }
+  note.hidden = !text; note.textContent = text; note.className = "hint " + cls;
+  const key = t ? t.ssid + t.outcome : "";               // pop up a toast once per outcome
+  if (t && t.outcome !== "trying" && wfTryShown && key !== wfTryShown) toast(text, t.outcome === "failed");
+  if (t && t.outcome !== "trying") wfTryShown = key; else if (!wfTryShown) wfTryShown = "-";
+}
 $("wfApOpen").onchange = (e) => { e.target.dataset.touched = "1"; renderOpen(); };
 function renderOpen() {
   const open = $("wfApOpen").checked;
@@ -1050,12 +1127,8 @@ function hostnameFor(name) {
 }
 function renderNamePreview() {
   const name = $("wfNameInput").value.trim() || (S.config && S.config.name) || "Pocket Nova";
-  const host = hostnameFor($("wfHostInput").value.trim() || name);
-  $("wfHostPrev").textContent = host;
   $("wfHostInput").placeholder = hostnameFor(name);
   $("wfApNameInput").placeholder = name + " Setup";
-  $("wfApPrev").textContent = $("wfApNameInput").value.trim() || name + " Setup";
-  $("wfBtPrev").textContent = name;
 }
 
 // ---- devices on your network (the scan runs on Pocket Nova: netScan in Wifi.h)
@@ -1315,7 +1388,7 @@ function armed(btn, action) {
 }
 $("wifiOn").onchange = (e) => cmd({ cmd: "wifi", action: e.target.checked ? "on" : "off" });
 $("wfSetupBtn").onclick = () => cmd({ cmd: "wifi", action: S.status && S.status.wifi && S.status.wifi.setup ? "stop" : "setup" });
-armed($("wfForget"), () => { cmd({ cmd: "wifi", action: "forget" }); toast("Forgot the saved Wi-Fi network"); });
+armed($("wfForget"), () => { cmd({ cmd: "wifi", action: "forget" }); toast("Forgot the saved network. Connect it again in box 1."); });
 armed($("forgetAll"), () => { cmd({ cmd: "unbond_all" }); toast("Forgetting all devices. Pocket Nova is restarting."); });
 
 $("resetConfirm").oninput = (e) => ($("resetBtn").disabled = e.target.value.trim().toUpperCase() !== "RESET");
@@ -1755,6 +1828,7 @@ function render() {
     $("wfIp").textContent = wf.ip || "-";
     $("wfRssi").textContent = wf.rssi != null ? `${wf.rssi} dBm` : "-";
     $("wfSetup").hidden = !wf.setup;
+    renderJoin(wf);
     if (document.activeElement !== $("wifiOn")) $("wifiOn").checked = !!wf.on;
     $("wfApSsid").textContent = wf.apSsid || "-";
     $("wfApPass").textContent = wf.apPass || "-";
@@ -1837,7 +1911,8 @@ function handleReplies(replies) {
 
 async function poll() {
   try {
-    const s = await (await fetch(`/api/state?since=${logSince}&rsince=${replySince}`)).json();
+    // A request that never answers would stop the updates for good, so give up after 5 s and try again.
+    const s = await (await fetch(`/api/state?since=${logSince}&rsince=${replySince}`, { signal: AbortSignal.timeout(5000) })).json();
     if (!s.connected) { s.hello = s.hello || S.hello; }
     S = s;
     $("offTitle").textContent = "Looking for Pocket Nova";

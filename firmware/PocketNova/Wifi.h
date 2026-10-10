@@ -62,6 +62,16 @@ uint8_t   wifiRefusals = 0;       // how many times it said "no" this attempt
 uint32_t  wifiJoinAt = 0, wifiFailedAt = 0;
 bool      ntpStarted = false;
 
+// TRYING A NEW NETWORK SAFELY: the old one is kept aside until the new one
+// works. If the new one fails, Pocket Nova goes straight back to the old one,
+// so a typo can't cut it off from your Wi-Fi.
+bool      wifiTrying = false;     // joining a network that isn't saved yet
+char      prevSsid[33] = "";      // the network to go back to
+char      prevPass[65] = "";
+char      lastTrySsid[33] = "";   // the most recent try, for the panel and the setup page
+uint8_t   lastTryOutcome = 0;     // 0 = none / still trying, 1 = worked, 2 = failed
+const char* lastTryReason = "";
+
 bool        setupOn = false;
 uint32_t    setupUntil = 0;
 char        apSsid[33] = "";       // the setup network's name now (Wi-Fi names max out at 32)
@@ -215,6 +225,28 @@ void wifiJoin() {
 
 void wifiRadioFor(bool sta, bool ap) {
   WiFi.mode(sta && ap ? WIFI_AP_STA : ap ? WIFI_AP : sta ? WIFI_STA : WIFI_OFF);
+}
+
+// Join a network without saving it yet (see "trying a new network" above).
+void wifiTry(const char* ssid, const char* pass) {
+  if (!wifiTrying) {                       // remember the working one (not a half-tried one)
+    strcpy(prevSsid, wifiSsid);
+    strcpy(prevPass, wifiPass);
+  }
+  strncpy(wifiSsid, ssid, sizeof(wifiSsid) - 1);
+  strncpy(wifiPass, pass, sizeof(wifiPass) - 1);
+  wifiSsid[sizeof(wifiSsid) - 1] = 0;
+  wifiPass[sizeof(wifiPass) - 1] = 0;
+  strcpy(lastTrySsid, wifiSsid);
+  lastTryOutcome = 0;
+  lastTryReason = "";
+  wifiTrying = true;
+  cfg.wifiOn = true;
+  saveConfig();
+  WiFi.persistent(false);
+  if (!setupOn) wifiRadioFor(true, false);  // with the setup network open, the radio is already AP+STA
+  WiFi.disconnect();
+  wifiJoin();
 }
 
 // ---------------------------------------------------------------------
@@ -456,17 +488,10 @@ void webSave() {
   lastTrySeq = histSeq;
   lastTryIp = ip;
   memcpy(lastTryMac, mac, 6);
-  strncpy(wifiSsid, s.c_str(), sizeof(wifiSsid) - 1);
-  strncpy(wifiPass, p.c_str(), sizeof(wifiPass) - 1);
-  wifiSsid[sizeof(wifiSsid) - 1] = 0;
-  wifiPass[sizeof(wifiPass) - 1] = 0;
   if (web->hasArg("tz")) {               // the phone's time zone, so night mode is right
     tzOffsetSec = web->arg("tz").toInt();
     cfg.tz = tzOffsetSec;
   }
-  cfg.wifiOn = true;
-  saveConfig();
-  wifiSave();
   web->send(200, "application/json", "{\"ok\":true}");
   // ONE RADIO, ONE CHANNEL: the ESP32 has a single radio, so its own setup
   // network and your router must share a channel. If they differ, the radio
@@ -475,20 +500,22 @@ void webSave() {
   // drops for a second and rejoins by itself; the page just keeps asking.
   int ch = 0;
   for (int i = 0, n = WiFi.scanComplete(); i < n; i++)
-    if (WiFi.SSID(i) == wifiSsid) { ch = WiFi.channel(i); break; }
+    if (WiFi.SSID(i) == s) { ch = WiFi.channel(i); break; }
   if (ch && ch != WiFi.channel()) {
     Serial.printf("[WIFI] Moving the setup network to channel %d (the router's)\n", ch);
     WiFi.softAP(apSsid, myApOpen ? nullptr : apPass, ch);
   }
   setupJoining = true;
-  wifiJoin();                            // AP stays up meanwhile (AP+STA mode)
+  wifiTry(s.c_str(), p.c_str());         // AP stays up meanwhile (AP+STA mode)
 }
 
 void webResult() {
   JsonDocument d;
-  d["state"] = WIFI_STATE_NAMES[wifiState];
+  // After a failed try Pocket Nova reconnects to the old network, so "the
+  // radio is online" isn't the answer here: report how the try itself went.
+  d["state"] = lastTryOutcome == 1 ? "online" : lastTryOutcome == 2 ? "failed" : "connecting";
   d["ip"] = wifiIp();
-  d["reason"] = wifiReason();
+  d["reason"] = lastTryReason;
   String out;
   serializeJson(d, out);
   web->send(200, "application/json", out);
@@ -594,8 +621,33 @@ const char* wifiSetNames(const char* apName, const char* apPass_, const char* ho
   return nullptr;
 }
 
+// Nearby networks for the PC panel. Returns false while a scan is still running.
+bool wifiScanList(JsonArray a) {
+  int n = WiFi.scanComplete();          // -1 = still scanning, -2 = not started
+  if (n == WIFI_SCAN_FAILED) {
+    if (!(WiFi.getMode() & WIFI_MODE_STA)) WiFi.enableSTA(true);   // scanning needs the client side on
+    WiFi.scanNetworks(true);
+    return false;
+  }
+  if (n < 0) return false;
+  for (int i = 0; i < n && a.size() < 20; i++) {
+    String s = WiFi.SSID(i);
+    if (s.isEmpty()) continue;
+    bool dup = false;
+    for (JsonObject o : a) if (s == o["ssid"].as<const char*>()) { dup = true; break; }
+    if (dup) continue;
+    JsonObject o = a.add<JsonObject>();
+    o["ssid"] = s;
+    o["rssi"] = WiFi.RSSI(i);
+    o["open"] = WiFi.encryptionType(i) == WIFI_AUTH_OPEN;
+  }
+  return true;
+}
+
 void wifiForget() {
   wifiSsid[0] = wifiPass[0] = 0;
+  prevSsid[0] = prevPass[0] = 0;
+  wifiTrying = false;
   wifiSave();
   WiFi.disconnect(true);
   if (!setupOn) wifiRadioFor(false, false);
@@ -746,6 +798,12 @@ void wifiUpdate() {
           configTime(0, 0, "pool.ntp.org", "time.google.com");   // UTC; Nova adds tzOffsetSec
           ntpStarted = true;
         }
+        if (wifiTrying) {                  // the new network works: now it's saved
+          wifiTrying = false;
+          wifiSave();
+          lastTryOutcome = 1;
+          Serial.printf("[WIFI] Saved \"%s\"\n", wifiSsid);
+        }
         if (setupOn && setupJoining) {
           setupDoneAt = now;
           histForgetPass(lastTrySeq);      // it worked: that's a real password, don't keep it
@@ -763,6 +821,19 @@ void wifiUpdate() {
         setupJoining = false;
         WiFi.disconnect();
         Serial.printf("[WIFI] Couldn't join \"%s\": %s\n", wifiSsid, wifiReason());
+        if (wifiTrying) {                  // go back to the network that worked
+          wifiTrying = false;
+          lastTryOutcome = 2;
+          lastTryReason = wifiReason();
+          strcpy(wifiSsid, prevSsid);
+          strcpy(wifiPass, prevPass);
+          if (wifiHasNetwork()) {
+            Serial.printf("[WIFI] Going back to \"%s\"\n", wifiSsid);
+            wifiJoin();
+          } else {
+            wifiState = WF_OFF;
+          }
+        }
       }
       break;
     case WF_ONLINE:

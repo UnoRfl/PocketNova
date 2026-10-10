@@ -33,6 +33,8 @@
 //                                 setup network name/password and router name ("" = automatic)
 //    history {"since":n}          events after #n (History.h)
 //    block {"mac":"AA:..","on":true}  block/unblock a device on the setup network (blocking kicks it)
+//    wifi  {"action":"connect","ssid":"..","pass":".."}  join a network (saved only once it works)
+//    wifiscan {"again":true}      nearby networks (answer has "busy" while still looking)
 //    netscan                      list the devices on your Wi-Fi network
 //                                 (answers @{"t":"netscan",...} when done)
 //    keys  {"list":[ids], "custom":[{"n":0,"name":"..","mods":n,"key":n}]}
@@ -86,6 +88,7 @@ void sendHello() {
   d["slot"] = cfg.btSlot;
   d["slots"] = BT_SLOTS;
   d["address"] = bleOwnAddress();
+  d["reset"] = resetReasonName();
   d["brightLevels"] = BRIGHT_COUNT;
   JsonArray a = d["apps"].to<JsonArray>();
   for (int i = 0; i < APP_COUNT; i++) a.add(apps[i].name);
@@ -192,6 +195,13 @@ void sendStatus() {
   w["ssid"] = wifiSsid;                         // never the password
   w["ip"] = wifiIp();
   w["host"] = wifiHostname;
+  if (wifiTrying) { w["trying"] = wifiSsid; w["prev"] = prevSsid; }
+  if (lastTrySsid[0]) {
+    JsonObject t = w["lastTry"].to<JsonObject>();
+    t["ssid"] = lastTrySsid;
+    t["outcome"] = lastTryOutcome == 1 ? "ok" : lastTryOutcome == 2 ? "failed" : "trying";
+    if (lastTryOutcome == 2) t["reason"] = lastTryReason;
+  }
   if (netScanning) w["scan"] = netScanPercent();
   if (wifiState == WF_ONLINE) w["rssi"] = WiFi.RSSI();
   if (wifiState == WF_FAILED) w["reason"] = wifiReason();
@@ -437,6 +447,14 @@ void handleRemoteLine(const char* line) {
     }
     else if (!strcmp(a, "off")) wifiSetOn(false);
     else if (!strcmp(a, "forget")) wifiForget();
+    else if (!strcmp(a, "connect")) {        // join a network from the panel (kept only if it works)
+      const char* s = in["ssid"] | "";
+      const char* p = in["pass"] | "";
+      size_t pl = strlen(p);
+      if (!*s || strlen(s) > 32) { replyError("network name: 1 to 32 characters"); return; }
+      if (pl && (pl < 8 || pl > 64)) { replyError("password: 8 to 64 characters (or empty for an open network)"); return; }
+      wifiTry(s, p);
+    }
     else if (!strcmp(a, "logpass")) {         // log the passwords typed on the setup page?
       myLogPass = in["on"] | false;
       wifiSave();
@@ -453,6 +471,15 @@ void handleRemoteLine(const char* line) {
     else { replyError("unknown wifi action"); return; }
     replyOk(cmd, a);
     sendStatus();
+    return;
+  }
+  if (!strcmp(cmd, "wifiscan")) {          // nearby networks; ask again while "busy"
+    JsonDocument d;
+    d["t"] = "wifiscan";
+    if (in["again"] | false) { WiFi.scanDelete(); }
+    JsonArray a = d["list"].to<JsonArray>();
+    d["busy"] = !wifiScanList(a);
+    sendJson(d);
     return;
   }
   if (!strcmp(cmd, "history")) { sendHistory(in["since"] | 0); return; }

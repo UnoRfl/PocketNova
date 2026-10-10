@@ -27,9 +27,10 @@ enum HistKind : uint8_t {
   H_FLOOD,                       // joined too often too fast: blocked for 10 minutes
   H_KICK,                        // kicked from the panel
   H_CODE_BAD, H_CODE_OK,         // phone remote: wrong / right pairing code
+  H_RESTART,                     // Pocket Nova restarted after a freeze or crash
 };
 const char* const HIST_NAMES[] = {"setup_open", "setup_close", "join", "leave", "try", "joined", "failed",
-                                  "limited", "blocked", "flood", "kick", "code_bad", "code_ok"};
+                                  "limited", "blocked", "flood", "kick", "code_bad", "code_ok", "restart"};
 
 struct HistEntry {
   uint32_t seq;
