@@ -509,6 +509,11 @@ table.cheat td:first-child { white-space: nowrap; font-weight: 600; }
           <input type="search" id="histSearch" class="pix" placeholder="Search: device, address, network name…" aria-label="Search the history">
           <button class="btn pix" id="histExport">Export (CSV)</button>
         </div>
+        <div class="row"><span class="label">Typed passwords</span>
+          <label class="toggle"><input type="checkbox" id="histLogPass"><span class="muted">Keep the password typed with each Connect on the setup page</span></label></div>
+        <div class="row" id="histShowRow" hidden><span class="label"></span>
+          <label class="toggle"><input type="checkbox" id="histShowPass"><span class="muted">Show them (hidden as •••• otherwise)</span></label></div>
+        <p class="hint" id="histPassNote" hidden>So you can spot guessing like 123, 1234, password. A try that works has its password deleted straight away, so your real Wi-Fi password is never kept. Passwords typed before you switched this on weren't saved.</p>
         <div class="hist" id="histList"></div>
         <div id="blockedBox" hidden><h3 class="tiny muted" style="margin:6px 0">Blocked from the setup network</h3><div class="blocked" id="blockedList"></div></div>
         <div class="inline">
@@ -1116,7 +1121,10 @@ function histTime(t) {
 }
 function renderHistory() {
   const all = S.history || [], blocked = (S.config && S.config.blocked) || [];
-  const key = JSON.stringify([all.length, all.length && all[all.length - 1], histFilter, blocked, S.netLabels]);
+  const logPass = !!(S.config && S.config.logPass);
+  if (document.activeElement !== $("histLogPass")) $("histLogPass").checked = logPass;
+  $("histShowRow").hidden = $("histPassNote").hidden = !logPass && !all.some((e) => e.pass);
+  const key = JSON.stringify([all.length, all.length && all[all.length - 1], histFilter, blocked, S.netLabels, $("histShowPass").checked]);
   if (key === histKey) return;
   histKey = key;
   $("histCount").textContent = all.length || "";
@@ -1135,11 +1143,11 @@ function renderHistory() {
   // Collapse runs of the same thing from the same device within 10 minutes into one row ("×5").
   const list = [];
   const needle = $("histSearch").value.trim().toLowerCase();
-  const matches = (e) => !needle || [(H_WORDS[e.k] || [e.k])[0], e.mac, e.mac && whoIs(e.mac), e.ip, e.note]
+  const matches = (e) => !needle || [(H_WORDS[e.k] || [e.k])[0], e.mac, e.mac && whoIs(e.mac), e.ip, e.note, $("histShowPass").checked && e.pass]
     .some((v) => v && String(v).toLowerCase().includes(needle));
   for (const e of all.filter((e) => (!want || want.includes(e.k)) && matches(e))) {
     const prev = list[list.length - 1];
-    if (prev && prev.k === e.k && prev.mac === e.mac && prev.note === e.note && e.t - prev.t < 600) { prev.n++; prev.t = e.t; }
+    if (prev && prev.k === e.k && prev.mac === e.mac && prev.note === e.note && prev.pass === e.pass && e.t - prev.t < 600) { prev.n++; prev.t = e.t; }
     else list.push({ ...e, n: 1 });
   }
   list.splice(0, Math.max(0, list.length - 200));
@@ -1154,6 +1162,11 @@ function renderHistory() {
     const what = document.createElement("div"); what.className = "what";
     what.textContent = words + (e.note ? (e.k === "try" || e.k === "joined" || e.k === "limited" ? `: "${e.note}"` : `: ${e.note}`) : "")
       + (e.n > 1 ? ` ×${e.n}` : "");
+    if (e.pass) {
+      const pw = document.createElement("div"); pw.className = "who mono";
+      pw.textContent = "password: " + ($("histShowPass").checked ? `"${e.pass}"` : "•".repeat(Math.min(e.pass.length, 12)));
+      what.appendChild(pw);
+    }
     if (e.mac || e.ip) {
       const who = document.createElement("div"); who.className = "who mono";
       who.textContent = [e.mac && whoIs(e.mac), e.ip].filter(Boolean).join(" · ");
@@ -1178,13 +1191,18 @@ armed($("histClear"), async () => {
   toast(what === "all" ? "History cleared" : what === "shown" ? "Cleared those events" : `Cleared events older than ${what} day${what === "1" ? "" : "s"}`);
 });
 $("histSearch").oninput = () => { histKey = ""; renderHistory(); };
+$("histLogPass").onchange = (e) => {
+  cmd({ cmd: "wifi", action: "logpass", on: e.target.checked });
+  toast(e.target.checked ? "Passwords typed on the setup page are logged from now on" : "Typed passwords aren't logged any more");
+};
+$("histShowPass").onchange = () => { histKey = ""; renderHistory(); };
 $("histDays").onchange = (e) => { api("/api/settings", { historyDays: +e.target.value }); toast(+e.target.value ? `Keeping ${e.target.selectedOptions[0].text} of history` : "Keeping history forever"); };
 // Everything as a spreadsheet file (opens in Excel or Google Sheets).
 $("histExport").onclick = async () => {
   const r = await api("/api/history/all", {});
   const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const rows = [["time", "event", "device", "mac", "ip", "detail"]].concat((r.items || []).map((e) =>
-    [new Date(e.t * 1000).toLocaleString(), (H_WORDS[e.k] || [e.k])[0], e.mac ? ((S.netLabels || {})[e.mac] || (S.labels || {})[e.mac] || "") : "", e.mac, e.ip, e.note]));
+  const rows = [["time", "event", "device", "mac", "ip", "detail", "password typed"]].concat((r.items || []).map((e) =>
+    [new Date(e.t * 1000).toLocaleString(), (H_WORDS[e.k] || [e.k])[0], e.mac ? ((S.netLabels || {})[e.mac] || (S.labels || {})[e.mac] || "") : "", e.mac, e.ip, e.note, e.pass || ""]));
   const blob = new Blob(["\ufeff" + rows.map((x) => x.map(q).join(",")).join("\r\n")], { type: "text/csv" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);

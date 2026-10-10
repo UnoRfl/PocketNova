@@ -10,7 +10,11 @@
 //  them into a file (history.json next to the panel), so the full history
 //  survives restarts. Each event has a number (seq) that only goes up, so
 //  the panel just asks "anything after #17?" and never gets one twice.
-//  Passwords are never logged, only their length.
+//
+//  PASSWORDS: off unless you switch "log typed passwords" on in the panel.
+//  Then the password typed with each Connect is kept too, so you can spot
+//  guessing (123, 1234, password...). A try that WORKS has its password
+//  wiped right away, so a real Wi-Fi password never stays in the log.
 // =====================================================================
 
 enum HistKind : uint8_t {
@@ -34,6 +38,7 @@ struct HistEntry {
   uint8_t  mac[6];      // all zero = unknown
   uint32_t ip;          // lwIP order, 0 = unknown
   char     note[34];    // network name tried, a reason...
+  char     pass[64];    // password typed with a Connect (only when logging them is on)
 };
 
 const int  HIST_LEN = 48;
@@ -43,7 +48,7 @@ uint32_t   histBoot = 0;                // random per start, so the PC can tell 
 portMUX_TYPE histMux = portMUX_INITIALIZER_UNLOCKED;
 
 // Safe to call from the Wi-Fi task (its events) as well as the main loop.
-void histAdd(HistKind kind, const uint8_t* mac = nullptr, uint32_t ip = 0, const char* note = "") {
+void histAdd(HistKind kind, const uint8_t* mac = nullptr, uint32_t ip = 0, const char* note = "", const char* pass = nullptr) {
   portENTER_CRITICAL(&histMux);
   HistEntry& e = hist[histSeq % HIST_LEN];
   e.seq = ++histSeq;
@@ -53,5 +58,15 @@ void histAdd(HistKind kind, const uint8_t* mac = nullptr, uint32_t ip = 0, const
   e.ip = ip;
   strncpy(e.note, note ? note : "", sizeof(e.note) - 1);
   e.note[sizeof(e.note) - 1] = 0;
+  strncpy(e.pass, pass ? pass : "", sizeof(e.pass) - 1);
+  e.pass[sizeof(e.pass) - 1] = 0;
+  portEXIT_CRITICAL(&histMux);
+}
+
+// Wipes the password kept with event #seq (if it's still in memory).
+void histForgetPass(uint32_t seq) {
+  portENTER_CRITICAL(&histMux);
+  HistEntry& e = hist[(seq - 1) % HIST_LEN];
+  if (seq && e.seq == seq) memset(e.pass, 0, sizeof(e.pass));
   portEXIT_CRITICAL(&histMux);
 }

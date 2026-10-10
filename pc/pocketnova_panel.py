@@ -165,8 +165,16 @@ class History:
         fresh = [e for e in msg.get("list", []) if e.get("n", 0) > self.last]
         with self.lock:
             for e in fresh:
-                self.items.append({"t": round(now - e.get("ago", 0) / 1000), "k": e.get("k"), "mac": e.get("mac", ""),
-                                   "ip": e.get("ip", ""), "note": e.get("note", "")})
+                item = {"t": round(now - e.get("ago", 0) / 1000), "k": e.get("k"), "mac": e.get("mac", ""),
+                        "ip": e.get("ip", ""), "note": e.get("note", "")}
+                if e.get("pass"):
+                    item["pass"] = e["pass"]
+                if item["k"] == "joined":       # that Connect worked: its password is a real one, drop it
+                    for old in reversed(self.items):
+                        if old.get("k") == "try" and old.get("ip") == item["ip"]:
+                            old.pop("pass", None)
+                            break
+                self.items.append(item)
                 self.last = e["n"]
             if fresh:
                 self._prune()

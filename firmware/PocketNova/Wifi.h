@@ -72,6 +72,7 @@ char        myApName[33] = "";     // setup network name   (auto: "<name> Setup"
 char        myApPass[64] = "";     // setup password       (auto: 8 random digits each time)
 char        myHost[32] = "";       // name on your router  (auto: made from Pocket Nova's name)
 bool        myApOpen = false;      // setup network with no password at all
+bool        myLogPass = false;     // keep the passwords typed on the setup page in the history
 WebServer*  web = nullptr;
 DNSServer*  dns = nullptr;
 bool        setupJoining = false;  // the page asked us to try a network
@@ -89,6 +90,7 @@ void wifiLoad() {
   if (prefs.isKey("apPass")) prefs.getString("apPass", myApPass, sizeof(myApPass));
   if (prefs.isKey("host")) prefs.getString("host", myHost, sizeof(myHost));
   myApOpen = prefs.getBool("apOpen", false);
+  myLogPass = prefs.getBool("logPass", false);
   prefs.end();
 }
 void wifiSave() {
@@ -99,6 +101,7 @@ void wifiSave() {
   prefs.putString("apPass", myApPass);
   prefs.putString("host", myHost);
   prefs.putBool("apOpen", myApOpen);
+  prefs.putBool("logPass", myLogPass);
   prefs.end();
 }
 bool wifiHasNetwork() { return wifiSsid[0] != 0; }
@@ -295,6 +298,7 @@ volatile int kickCount = 0;
 struct TryLog { uint32_t ip; uint8_t fails; uint32_t until; };
 TryLog      tries[8];                   // per phone (by address): failed Connects
 uint32_t    lastTryIp = 0;
+uint32_t    lastTrySeq = 0;             // history number of the last Connect (to wipe its password if it works)
 uint8_t     lastTryMac[6];
 
 void blockLoad() {
@@ -448,7 +452,8 @@ void webSave() {
   if (setupJoining && wifiState == WF_CONNECTING) { web->send(409, "application/json", "{\"busy\":true}"); return; }
   char note[34];
   snprintf(note, sizeof(note), "%s", s.c_str());   // the network name; never the password
-  histAdd(H_TRY, mac, ip, note);
+  histAdd(H_TRY, mac, ip, note, myLogPass ? p.c_str() : nullptr);
+  lastTrySeq = histSeq;
   lastTryIp = ip;
   memcpy(lastTryMac, mac, 6);
   strncpy(wifiSsid, s.c_str(), sizeof(wifiSsid) - 1);
@@ -743,6 +748,7 @@ void wifiUpdate() {
         }
         if (setupOn && setupJoining) {
           setupDoneAt = now;
+          histForgetPass(lastTrySeq);      // it worked: that's a real password, don't keep it
           histAdd(H_JOINED, lastTryMac, lastTryIp, wifiSsid);
           tryFor(lastTryIp)->fails = 0;
         }

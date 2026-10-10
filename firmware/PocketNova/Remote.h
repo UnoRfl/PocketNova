@@ -28,6 +28,7 @@
 //    findtv                       open TV and start FIND TV
 //    time  {"epoch":n,"tz":seconds}  set the clock (for night mode)
 //    wifi  {"action":"setup"|"stop"|"on"|"off"|"join"|"forget"}
+//    wifi  {"action":"logpass","on":true}   keep typed setup-page passwords in the history
 //    wifi  {"action":"names","apName":"..","apPass":"..","host":".."}
 //                                 setup network name/password and router name ("" = automatic)
 //    history {"since":n}          events after #n (History.h)
@@ -112,6 +113,7 @@ void sendConfig() {
   d["hostname"] = wifiHostname;
   d["apPassCustom"] = myApPass[0] != 0;
   d["apOpen"] = myApOpen;
+  d["logPass"] = myLogPass;
   JsonArray bl = d["blocked"].to<JsonArray>();
   for (int i = 0; i < blockedCount; i++) bl.add(macToString(blocked[i]));
   if (!replyBle) d["apPass"] = myApPass;          // the PC (USB) only, never the phone page
@@ -289,6 +291,7 @@ void sendHistory(uint32_t since) {
     if (memcmp(e.mac, ZERO, 6)) o["mac"] = macToString(e.mac);
     if (e.ip) o["ip"] = IPAddress(e.ip).toString();
     if (e.note[0]) o["note"] = e.note;
+    if (e.pass[0]) o["pass"] = e.pass;
   }
   sendJson(d);
 }
@@ -434,6 +437,11 @@ void handleRemoteLine(const char* line) {
     }
     else if (!strcmp(a, "off")) wifiSetOn(false);
     else if (!strcmp(a, "forget")) wifiForget();
+    else if (!strcmp(a, "logpass")) {         // log the passwords typed on the setup page?
+      myLogPass = in["on"] | false;
+      wifiSave();
+      sendConfig();
+    }
     else if (!strcmp(a, "names")) {
       char keep[64];                          // no "apPass" sent = keep the current one
       strcpy(keep, myApPass);
