@@ -228,6 +228,7 @@ input[type=text]:focus, input[type=password]:focus, select:focus { box-shadow: i
 .histtools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .histtools input[type=search] { flex: 1 1 200px; background: #120f1c; border: 0; box-shadow: inset 0 0 0 2px var(--line); padding: 8px 10px; min-width: 0; }
 .histtools input[type=search]:focus { box-shadow: inset 0 0 0 2px var(--nova); outline: 0; }
+.macsmall { font-family: var(--font-mono); font-size: .7rem; color: var(--muted); opacity: .7; margin-left: 8px; }
 .blocked { display: flex; flex-wrap: wrap; gap: 6px; }
 .blocked .btn { padding: 4px 9px; font-size: .78rem; }
 .apclient { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: .85rem; }
@@ -1162,9 +1163,11 @@ const H_WORDS = {
   flood: ["Joined 6 times in a minute: blocked for 10 minutes", "bad"], kick: ["Kicked and blocked from the panel", "bad"],
   code_bad: ["Wrong phone-remote code", "bad"], code_ok: ["Phone remote connected", "good"],
   home_new: ["New device on your home Wi-Fi", "warn"],
+  forget_devices: ["Forgot all known home-Wi-Fi devices (from the panel)", "warn"],
+  restart: ["Pocket Nova restarted on its own", "bad"],
 };
-const H_GROUPS = { all: null, setup: ["setup_open", "setup_close", "join", "leave", "blocked", "flood", "kick"],
-  tries: ["try", "joined", "failed", "limited"], codes: ["code_bad", "code_ok"], home: ["home_new"] };
+const H_GROUPS = { all: null, setup: ["setup_open", "setup_close", "join", "leave", "blocked", "flood", "kick", "restart"],
+  tries: ["try", "joined", "failed", "limited"], codes: ["code_bad", "code_ok"], home: ["home_new", "forget_devices"] };
 let histFilter = "all", histKey = "";
 try { histFilter = localStorage.getItem("pn-histfilter") || "all"; } catch (e) {}
 seg($("histFilter"), ["All", "Setup network", "Connect tries", "Phone codes", "Home Wi-Fi"], (i) => {
@@ -1173,10 +1176,28 @@ seg($("histFilter"), ["All", "Setup network", "Connect tries", "Phone codes", "H
   renderHistory();
 });
 const isBlocked = (mac) => ((S.config && S.config.blocked) || []).includes(mac);
-function whoIs(mac) {
-  const n = (S.netLabels || {})[mac] || (S.labels || {})[mac];
-  return n ? `${n} (${mac})` : mac;
+// READABLE NAMES. Best first: your name for it, its model (from the setup
+// page's browser info), its own name (mDNS/NetBIOS/router), its maker
+// (from the address), and when nothing's known a nickname made from the
+// address: same address, same nickname, every time.
+const NICK_A = ["Amber", "Azure", "Coral", "Crimson", "Golden", "Indigo", "Jade", "Lemon", "Lilac", "Mint", "Olive", "Peach",
+  "Plum", "Ruby", "Rusty", "Silver", "Teal", "Violet", "Ivory", "Cobalt", "Copper", "Frosty", "Misty", "Sunny"];
+const NICK_B = ["Otter", "Fox", "Panda", "Koala", "Falcon", "Badger", "Gecko", "Heron", "Lynx", "Moose", "Newt", "Owl",
+  "Puffin", "Quokka", "Raven", "Seal", "Tiger", "Walrus", "Yak", "Zebra", "Beetle", "Comet", "Pixel", "Rocket"];
+function nickname(mac) {
+  let h = 2166136261;                        // FNV-1a: a tiny, stable hash
+  for (const ch of mac.toUpperCase()) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  return `${NICK_A[h % NICK_A.length]} ${NICK_B[(h >>> 8) % NICK_B.length]}`;
 }
+function readable(mac) {
+  const n = (S.deviceNames || {})[mac] || {};
+  const label = n.label || (S.labels || {})[mac];
+  const parts = [n.model, n.name && !/^android$/i.test(n.name) ? n.name : "", n.vendor].filter(Boolean);
+  const title = label || parts[0] || n.name || nickname(mac);
+  const extra = [label ? parts[0] : parts[1], /^.[26AE]/i.test(mac) ? "private address" : ""].filter(Boolean);
+  return { title, detail: extra.join(" · ") };
+}
+function whoIs(mac) { return readable(mac).title; }
 function blockBtn(mac) {
   const b = document.createElement("button"); b.className = "btn pix" + (isBlocked(mac) ? "" : " danger");
   b.textContent = isBlocked(mac) ? "Unblock" : "Block";
@@ -1216,7 +1237,7 @@ function renderHistory() {
   // Collapse runs of the same thing from the same device within 10 minutes into one row ("×5").
   const list = [];
   const needle = $("histSearch").value.trim().toLowerCase();
-  const matches = (e) => !needle || [(H_WORDS[e.k] || [e.k])[0], e.mac, e.mac && whoIs(e.mac), e.ip, e.note, $("histShowPass").checked && e.pass]
+  const matches = (e) => !needle || [(H_WORDS[e.k] || [e.k])[0], e.mac, e.mac && whoIs(e.mac), e.mac && readable(e.mac).detail, e.ip, e.note, $("histShowPass").checked && e.pass]
     .some((v) => v && String(v).toLowerCase().includes(needle));
   for (const e of all.filter((e) => (!want || want.includes(e.k)) && matches(e))) {
     const prev = list[list.length - 1];
@@ -1242,7 +1263,12 @@ function renderHistory() {
     }
     if (e.mac || e.ip) {
       const who = document.createElement("div"); who.className = "who mono";
-      who.textContent = [e.mac && whoIs(e.mac), e.ip].filter(Boolean).join(" · ");
+      const r = e.mac ? readable(e.mac) : { title: "", detail: "" };
+      who.textContent = [r.title, r.detail, e.ip].filter(Boolean).join(" · ");
+      if (e.mac) {
+        const m = document.createElement("span"); m.className = "macsmall"; m.textContent = e.mac;
+        who.appendChild(m);
+      }
       what.appendChild(who);
     }
     const ap = e.mac && !["code_bad", "code_ok", "home_new"].includes(e.k);   // Bluetooth/home devices can't be blocked here
@@ -1320,7 +1346,8 @@ function renderNet() {
     row.className = "device pix" + (d.new ? " fresh" : "");
     const who = document.createElement("div"); who.className = "who";
     const inp = document.createElement("input"); inp.type = "text"; inp.maxLength = 40; inp.className = "pix";
-    inp.placeholder = d.nova ? (S.config && S.config.name) || "Pocket Nova" : d.name ? d.name + " (name it)" : "Unknown device: name it";
+    const rd = readable(d.mac);
+    inp.placeholder = d.nova ? (S.config && S.config.name) || "Pocket Nova" : `${rd.title} (name it)`;
     inp.value = d.label || "";
     inp.setAttribute("aria-label", "Name for " + d.mac);
     inp.onchange = () => api("/api/netlabel", { mac: d.mac, label: inp.value });
@@ -1333,7 +1360,12 @@ function renderNet() {
     if (d.nova) tags.push(`<span class="badge on">this Pocket Nova</span>`);
     if (d.pc) tags.push(`<span class="badge live">this PC</span>`);
     if (isPrivateMac(d.mac)) tags.push(`<span class="badge">private address</span>`);
-    meta.innerHTML = tags.join("") + `<span class="mono">${d.ip}</span><span class="mono muted">${d.mac}</span>`;
+    meta.innerHTML = tags.join("") + `<span class="mono">${d.ip}</span>`;
+    if (!d.nova && rd.detail) {
+      const det = document.createElement("span"); det.className = "muted"; det.textContent = rd.detail;   // text only: names come from devices
+      meta.appendChild(det);
+    }
+    meta.insertAdjacentHTML("beforeend", `<span class="macsmall">${d.mac}</span>`);
     const seen = document.createElement("span"); seen.className = "muted"; seen.style.fontSize = ".8rem";
     seen.textContent = [d.label && d.name, d.first && "first seen " + netAgo(d.first)].filter(Boolean).join(" · ");   // DNS names: text only
     meta.appendChild(seen);
@@ -1844,7 +1876,9 @@ function render() {
       cl.forEach((x) => {
         const row = document.createElement("div"); row.className = "apclient";
         const t = document.createElement("span"); t.className = "mono";
-        t.textContent = `${whoIs(x.mac)} · ${x.ip || "getting an address…"}`;
+        const r = readable(x.mac);
+        t.textContent = [r.title, r.detail, x.ip || "getting an address…"].filter(Boolean).join(" · ");
+        t.title = x.mac;
         row.append(t, blockBtn(x.mac));
         $("wfApClients").appendChild(row);
       });

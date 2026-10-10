@@ -217,7 +217,13 @@ void wifiJoin() {
   wifiLogTarget();
   wifiFailReason = 0;
   wifiRefusals = 0;
-  WiFi.begin(wifiSsid, wifiPass);
+  // If a recent scan saw the router, say which channel it's on: the radio
+  // then goes straight there instead of sweeping all 13 channels (which
+  // would also make the setup network disappear for a moment).
+  int ch = 0;
+  for (int i = 0, n = WiFi.scanComplete(); i < n; i++)
+    if (WiFi.SSID(i) == wifiSsid) { ch = WiFi.channel(i); break; }
+  WiFi.begin(wifiSsid, wifiPass, ch);
   wifiState = WF_CONNECTING;
   wifiJoinAt = millis();
   Serial.printf("[WIFI] Joining \"%s\"\n", wifiSsid);
@@ -321,7 +327,12 @@ const int   BLOCK_MAX = 16;
 uint8_t     blocked[BLOCK_MAX][6];      // your block list (saved)
 int         blockedCount = 0;
 
-struct ApGuest { uint8_t mac[6]; uint8_t joins; uint32_t windowAt, bannedUntil; };
+struct ApGuest {
+  uint8_t  mac[6];
+  uint8_t  joins;
+  uint32_t windowAt, bannedUntil;
+  char     ua[112];               // how its browser describes it ("...Android 14; SM-S918B...")
+};
 const int   GUESTS = 12;
 ApGuest     guests[GUESTS];             // recent visitors, for the flood check
 uint8_t     kickQueue[4][6];            // kicked from the main loop, not inside the Wi-Fi event
@@ -402,6 +413,7 @@ void apOnJoin(WiFiEvent_t, WiFiEventInfo_t info) {
     for (auto& x : guests) if (x.windowAt < g->windowAt) g = &x;
     memcpy(g->mac, m, 6);
     g->joins = 0; g->windowAt = now; g->bannedUntil = 0;
+    g->ua[0] = 0;
   }
   if (now - g->windowAt > 60000) { g->windowAt = now; g->joins = 0; }
   g->joins++;
@@ -428,14 +440,37 @@ TryLog* tryFor(uint32_t ip) {
   return t;
 }
 
+// WHICH DEVICE IS THIS? Every web request carries a "User-Agent" line
+// where the browser describes itself, often with the phone model:
+//   Dalvik/2.1.0 (Linux; U; Android 14; SM-S918B Build/UP1A...)   <- a Galaxy S23
+//   Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) ...
+// Phones fetch our page (and the "am I online?" check) as soon as they
+// join, so we keep the most telling one per device for the PC panel,
+// which turns it into a readable name.
+void noteClient() {
+  String ua = web->header("User-Agent");
+  if (ua.isEmpty()) return;
+  uint8_t mac[6];
+  if (!apMacOf((uint32_t)web->client().remoteIP(), mac)) return;
+  for (auto& g : guests) {
+    if (memcmp(g.mac, mac, 6)) continue;
+    bool better = !g.ua[0] || (ua.indexOf('(') >= 0 && !strchr(g.ua, '('))     // has device details
+                  || (ua.indexOf("Build/") >= 0 && !strstr(g.ua, "Build/"));  // has the Android model
+    if (better) { strncpy(g.ua, ua.c_str(), sizeof(g.ua) - 1); g.ua[sizeof(g.ua) - 1] = 0; }
+    return;
+  }
+}
+
 // Every address we don't know (the phone's connectivity checks included)
 // is sent to our page. That redirect is what triggers the sign-in pop-up.
 void webRedirect() {
+  noteClient();
   web->sendHeader("Location", "http://192.168.4.1/", true);
   web->send(302, "text/plain", "");
 }
 
 void webScan() {
+  noteClient();
   static uint32_t lastAgain = 0;
   if (web->hasArg("again") && millis() - lastAgain > 10000) {   // one fresh scan per 10 s, however often it's asked
     lastAgain = millis();
@@ -523,6 +558,11 @@ void webResult() {
 
 void wifiStartSetup() {
   if (setupOn) { setupUntil = millis() + WIFI_SETUP_MS; return; }
+  if (wifiState == WF_CONNECTING && !wifiTrying) {   // a router attempt sweeping channels would shake phones off
+    WiFi.disconnect();
+    wifiState = WF_FAILED;               // no retries while setup is open; closing it tries again at once
+    wifiFailedAt = millis();
+  }
   if (myApName[0]) strcpy(apSsid, myApName);
   else snprintf(apSsid, sizeof(apSsid), "%s Setup", cfg.name);
   if (myApPass[0]) {
@@ -549,8 +589,11 @@ void wifiStartSetup() {
   dns = new DNSServer();
   dns->start(53, "*", WiFi.softAPIP());  // "*" = answer every name with our address
   web = new WebServer(80);
+  static const char* HEADERS[] = {"User-Agent"};
+  web->collectHeaders(HEADERS, 1);       // the web server drops every header we don't ask for
   web->on("/", HTTP_GET, [] {
     if (web->hostHeader() != "192.168.4.1") { webRedirect(); return; }
+    noteClient();
     web->send_P(200, "text/html", SETUP_PAGE);
   });
   web->on("/scan", HTTP_GET, webScan);
@@ -660,9 +703,14 @@ void wifiBegin() {
   blockLoad();
   wifiMakeHostname();
   WiFi.setHostname(wifiHostname);        // must come before the radio starts
+  // NO AUTOMATIC RETRIES from the Wi-Fi library: each retry sweeps every
+  // channel looking for the router, and the setup network (same radio)
+  // vanishes from phones while it does. Phones then drop off and the setup
+  // page never pops up. wifiUpdate() does the retrying, and it waits while
+  // the setup network is open.
+  WiFi.setAutoReconnect(false);
   if (cfg.wifiOn && wifiHasNetwork()) {
     WiFi.persistent(false);
-    WiFi.setAutoReconnect(true);
     wifiRadioFor(true, false);
     wifiJoin();
   } else {
@@ -838,9 +886,8 @@ void wifiUpdate() {
       break;
     case WF_ONLINE:
       if (st != WL_CONNECTED) {          // router restarted, walked out of range...
-        wifiState = WF_CONNECTING;
-        wifiJoinAt = now;
         Serial.println("[WIFI] Lost the network, reconnecting");
+        wifiJoin();                      // one attempt (20 s); if it fails, retries wait (see WF_FAILED)
       }
       break;
     case WF_FAILED:

@@ -50,6 +50,8 @@ DATA_DIR = APP_DIR   # settings + log live next to the app (Store Python virtual
 SETTINGS_PATH = os.path.join(DATA_DIR, "settings.json")
 LOG_PATH = os.path.join(DATA_DIR, "panel.log")
 HISTORY_PATH = os.path.join(DATA_DIR, "history.json")
+VENDORS_PATH = os.path.join(DATA_DIR, "vendors.json")
+MODELS_PATH = os.path.join(DATA_DIR, "models.json")
 HTTP_PORT = 47800
 BAUD = 115200
 
@@ -203,6 +205,198 @@ class History:
 
 
 history = History()
+
+
+# ---------------------------------------------------------------- readable device names
+
+# Samsung model codes for phones people actually have (the rest show their code).
+SAMSUNG = {"S901": "S22", "S906": "S22+", "S908": "S22 Ultra", "S911": "S23", "S916": "S23+", "S918": "S23 Ultra",
+           "S921": "S24", "S926": "S24+", "S928": "S24 Ultra", "S931": "S25", "S936": "S25+", "S938": "S25 Ultra"}
+
+
+def model_from_ua(ua):
+    """Turns a browser's self-description into something like
+    "Samsung Galaxy S23 Ultra (Android 14)" or "iPhone (iOS 17.5)"."""
+    import re
+    if not ua:
+        return ""
+    m = re.search(r"(iPhone|iPad|iPod)[^)]*?OS (\d+)[_.](\d+)", ua)
+    if m:
+        return f"{m.group(1)} (iOS {m.group(2)}.{m.group(3)})"
+    if "iPhone" in ua or "iPad" in ua:
+        return "iPhone" if "iPhone" in ua else "iPad"
+    if "CaptiveNetworkSupport" in ua or "wispr" in ua:
+        return "Apple device"
+    m = re.search(r"Android ([\d.]+);(?: [a-z]{2}-[a-z]{2};)?\s*([^;)]+?)(?:\s+Build/|\)|;)", ua)
+    if m:
+        ver, model = m.group(1), m.group(2).strip()
+        if model in ("K", "U", "wv") or len(model) < 2:   # Chrome hides the model ("K")
+            return f"Android phone (Android {ver})"
+        known = models.of(model)
+        code = re.match(r"SM-([A-Z]\d{3})", model)
+        if known:
+            model = known
+        elif code:
+            nice = SAMSUNG.get(code.group(1))
+            model = f"Samsung Galaxy {nice}" if nice else f"Samsung Galaxy ({model})"
+        elif model.upper().startswith(("CPH",)):
+            model = f"OPPO ({model})"
+        elif model.upper().startswith(("RMX",)):
+            model = f"realme ({model})"
+        elif model.lower().startswith("moto"):
+            model = f"Motorola {model[4:].strip()}".strip()
+        elif model.startswith("Pixel"):
+            model = f"Google {model}"
+        elif model.startswith(("Redmi", "POCO", "Mi ")):
+            model = f"Xiaomi {model}"
+        return f"{model} (Android {ver})"
+    if "Android" in ua or "Dalvik" in ua:
+        return "Android device"
+    if "Windows" in ua or "NCSI" in ua:
+        return "Windows PC"
+    if "Macintosh" in ua or "Mac OS X" in ua:
+        return "Mac"
+    if "CrOS" in ua:
+        return "Chromebook"
+    if "Linux" in ua:
+        return "Linux computer"
+    return ""
+
+
+class Vendors:
+    """Who made a network chip, from the first half of its MAC address
+    (that part is registered to a company). Uses Wireshark's list of the
+    official IEEE registry, downloaded once a month in the background.
+    Private (made-up) addresses have no maker."""
+
+    URL = "https://www.wireshark.org/download/automated/data/manuf"
+
+    def __init__(self):
+        self.table = {}
+        try:
+            with open(VENDORS_PATH, encoding="utf-8") as f:
+                saved = json.load(f)
+            self.table = saved.get("table", {})
+            fresh = time.time() - saved.get("at", 0) < 30 * 86400
+        except (OSError, ValueError):
+            fresh = False
+        if not fresh:
+            threading.Thread(target=self._download, daemon=True).start()
+
+    def _download(self):
+        import urllib.request
+        try:
+            req = urllib.request.Request(self.URL, headers={"User-Agent": "PocketNovaPanel"})
+            text = urllib.request.urlopen(req, timeout=30).read().decode("utf-8", "replace")
+        except Exception as e:
+            log(f"Vendor list download failed (names still work without it): {e}")
+            return
+        table = {}
+        for line in text.splitlines():
+            if not line or line[0] == "#":
+                continue
+            parts = [p.strip() for p in line.split("\t")]   # columns are padded with spaces
+            if len(parts) >= 2 and len(parts[0]) == 8:      # "00:1A:2B", whole-prefix entries only
+                table[parts[0].upper()] = self._short(parts[2] if len(parts) > 2 else parts[1])
+        log(f"Vendor list: {len(table)} makers")
+        if table:
+            self.table = table
+            try:
+                with open(VENDORS_PATH, "w", encoding="utf-8") as f:
+                    json.dump({"at": time.time(), "table": table}, f)
+            except OSError:
+                pass
+
+    FILLER = {"co", "co.", "ltd", "ltd.", "inc", "inc.", "corp", "corp.", "corporation", "company", "limited", "llc", "gmbh",
+              "technologies", "technology", "electronics", "electronic", "communications", "communication", "computer",
+              "international", "telecommunication", "telecommunications", "industrial", "mobile", "&", "the", "s.a.", "ag", "corporate",
+              "guangdong", "shenzhen", "beijing", "shanghai", "hangzhou", "dongguan", "zhejiang"}
+
+    @classmethod
+    def _short(cls, full):
+        """"TP-LINK TECHNOLOGIES CO.,LTD." -> "TP-LINK", "ASUSTek COMPUTER INC." -> "ASUSTek"."""
+        words = [w for w in full.split(",")[0].replace("(", " ").replace(")", " ").split() if w.lower().strip(".") not in cls.FILLER
+                 and w.lower() not in cls.FILLER]
+        words = words[:2] or full.split()[:1]
+        # SHOUTING NAMES -> Normal, but keep short or dashed ones like HP, LG, TP-LINK as they are
+        return " ".join(w.capitalize() if w.isupper() and len(w) > 4 and "-" not in w else w for w in words)
+
+    def of(self, mac):
+        if len(mac) < 8 or mac[1].upper() in "26AE":       # private address: no maker
+            return ""
+        return self.table.get(mac[:8].upper(), "")
+
+
+vendors = Vendors()
+
+
+class Models:
+    """Android model codes -> the names on the box ("SM-S918B" -> "Samsung
+    Galaxy S23 Ultra"), from Google Play's public list of certified devices
+    (about 54,000), downloaded once a month in the background. iPhones
+    never say which model they are over Wi-Fi, so they can't be looked up."""
+
+    URL = "https://storage.googleapis.com/play_public/supported_devices.csv"
+
+    def __init__(self):
+        self.table = {}
+        try:
+            with open(MODELS_PATH, encoding="utf-8") as f:
+                saved = json.load(f)
+            self.table = saved.get("table", {})
+            fresh = time.time() - saved.get("at", 0) < 30 * 86400
+        except (OSError, ValueError):
+            fresh = False
+        if not fresh:
+            threading.Thread(target=self._download, daemon=True).start()
+
+    def _download(self):
+        import csv
+        import io
+        import urllib.request
+        try:
+            req = urllib.request.Request(self.URL, headers={"User-Agent": "PocketNovaPanel"})
+            text = urllib.request.urlopen(req, timeout=60).read().decode("utf-16")   # the file is UTF-16
+        except Exception as e:
+            log(f"Phone model list download failed (names still work without it): {e}")
+            return
+        table = {}
+        for row in csv.DictReader(io.StringIO(text)):
+            brand, name, code = (row.get("Retail Branding") or "").strip(), (row.get("Marketing Name") or "").strip(), (row.get("Model") or "").strip()
+            if not name or not code:
+                continue
+            full = name if not brand or name.lower().startswith(brand.lower()) else f"{brand} {name}"
+            table.setdefault(code.upper(), full)
+        log(f"Phone model list: {len(table)} models")
+        if table:
+            self.table = table
+            try:
+                with open(MODELS_PATH, "w", encoding="utf-8") as f:
+                    json.dump({"at": time.time(), "table": table}, f)
+            except OSError:
+                pass
+
+    def of(self, code):
+        return self.table.get(code.strip().upper(), "")
+
+
+models = Models()
+
+
+def device_names(macs):
+    """Everything known that helps a person recognise each address."""
+    with settings_lock:
+        book = settings.get("netDevices", {})
+        info = settings.get("deviceInfo", {})
+        bt = settings.get("labels", {})
+        out = {}
+        for m in macs:
+            if not m:
+                continue
+            e, i = book.get(m, {}), info.get(m, {})
+            out[m] = {"label": e.get("label") or bt.get(m, ""), "model": model_from_ua(i.get("ua", "")) or i.get("model", ""),
+                      "name": e.get("name", ""), "vendor": vendors.of(m)}
+    return out
 
 
 # ---------------------------------------------------------------- network devices
@@ -675,6 +869,18 @@ class DeviceLink:
                     self.state[t] = msg
                     if t == "hello":
                         self.state["helloAt"] = time.time()
+                elif t == "apdevices":           # browser descriptions from the setup page
+                    with settings_lock:
+                        info = settings.setdefault("deviceInfo", {})
+                        changed = False
+                        for d in msg.get("list", []):
+                            model = model_from_ua(d.get("ua", ""))
+                            old = info.get(d["mac"], {})
+                            if d.get("ua") and (old.get("ua") != d["ua"]) and (model or not old.get("model")):
+                                info[d["mac"]] = {"ua": d["ua"], "model": model}
+                                changed = True
+                        if changed:
+                            save_settings(settings)
                 elif t == "history":
                     if history.from_device(msg):
                         self._next_hist = 0.0       # more waiting: ask again right away
@@ -719,6 +925,8 @@ class DeviceLink:
                 has_history = False
             if has_history:
                 self.send({"cmd": "history", "since": history.last})
+                if tuple(int(x) for x in fw.split(".")[:2]) >= (2, 11):
+                    self.send({"cmd": "apdevices"})
             self._next_hist = now + 3
         active = self.ui_active()
         if now >= self._next_status:
@@ -1026,6 +1234,9 @@ class Handler(BaseHTTPRequestHandler):
                 "history": history.recent(),
                 "netLabels": {m: e.get("label") or e.get("name", "") for m, e in settings.get("netDevices", {}).items()
                               if e.get("label") or e.get("name")},
+                "deviceNames": device_names({e.get("mac") for e in history.recent()}
+                                            | {d["mac"] for d in (st.get("netscan") or {}).get("list", [])}
+                                            | {c["mac"] for c in ((st.get("status") or {}).get("wifi") or {}).get("apClients", [])}),
                 "firmwareDir": settings.get("firmwareDir"),
             })
         return self._send(404, {"error": "not found"})
@@ -1102,6 +1313,7 @@ class Handler(BaseHTTPRequestHandler):
             with settings_lock:
                 settings["netDevices"] = {}
                 save_settings(settings)
+            history.add({"t": int(time.time()), "k": "forget_devices", "mac": "", "ip": "", "note": ""})
             with link.lock:
                 link.state.pop("netscan", None)
             return self._send(200, {"ok": True})

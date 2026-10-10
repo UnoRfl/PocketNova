@@ -482,6 +482,19 @@ void handleRemoteLine(const char* line) {
     sendJson(d);
     return;
   }
+  if (!strcmp(cmd, "apdevices")) {         // browser descriptions of setup-network visitors (Wifi.h noteClient)
+    JsonDocument d;
+    d["t"] = "apdevices";
+    JsonArray a = d["list"].to<JsonArray>();
+    for (auto& g : guests) {
+      if (!g.ua[0]) continue;
+      JsonObject o = a.add<JsonObject>();
+      o["mac"] = macToString(g.mac);
+      o["ua"] = g.ua;
+    }
+    sendJson(d);
+    return;
+  }
   if (!strcmp(cmd, "history")) { sendHistory(in["since"] | 0); return; }
   if (!strcmp(cmd, "block")) {
     uint8_t m[6];

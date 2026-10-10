@@ -46,7 +46,7 @@
 #include "Ir.h"
 #include <esp_task_wdt.h>
 
-const char* const FW_VERSION = "2.10.0";
+const char* const FW_VERSION = "2.11.0";
 
 // Why Pocket Nova last started (for the panel and the history).
 const char* resetReasonName() {
